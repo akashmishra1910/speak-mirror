@@ -47,17 +47,16 @@ export default function ProfilePage() {
 
         if (error) throw error;
         if (data) {
-          const recordsWithSignedUrls = await Promise.all(data.map(async (record) => {
+          const recordsWithProxyUrls = data.map((record) => {
             if (record.video_url) {
               const filename = record.video_url.startsWith('http') ? record.video_url.split('/').pop() : record.video_url;
               if (filename) {
-                const { data: signedData } = await supabase.storage.from('videos').createSignedUrl(filename, 3600);
-                if (signedData) return { ...record, video_url: signedData.signedUrl };
+                return { ...record, video_url: `/api/video?file=${filename}` };
               }
             }
             return record;
-          }));
-          setRecordings(recordsWithSignedUrls);
+          });
+          setRecordings(recordsWithProxyUrls);
         }
       } catch (err) {
         console.error("Error fetching recordings:", err);
