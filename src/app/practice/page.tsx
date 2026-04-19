@@ -83,6 +83,7 @@ function PracticeContent() {
       formData1.append("audio", freeform, "recording.webm");
       const res1 = await fetch("/api/analyze", { method: "POST", body: formData1 });
       const analysis1 = await res1.json();
+      if (!res1.ok) throw new Error(analysis1.error || "Failed to analyze freeform speech");
       analysis1.title = "Freeform Speech";
       newMetrics.push(analysis1);
 
@@ -96,6 +97,7 @@ function PracticeContent() {
         formData2.append("expectedText", task.reading_text);
         const res2 = await fetch("/api/analyze", { method: "POST", body: formData2 });
         const analysis2 = await res2.json();
+        if (!res2.ok) throw new Error(analysis2.error || "Failed to analyze reading speech");
         analysis2.title = "Reading Aloud";
         newMetrics.push(analysis2);
       }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import Groq from "groq-sdk";
+import Groq, { toFile } from "groq-sdk";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'dummy' });
 
@@ -31,8 +31,9 @@ export async function POST(request: Request) {
       });
     }
 
-    // Convert Blob to File object for the SDK
-    const file = new File([audioFile], "recording.webm", { type: "video/webm" });
+    // Convert Blob to Buffer, then use toFile for SDK compatibility
+    const buffer = Buffer.from(await audioFile.arrayBuffer());
+    const file = await toFile(buffer, "recording.webm", { type: "video/webm" });
 
     // 1. Get Transcription using Whisper
     const transcription = await groq.audio.transcriptions.create({
