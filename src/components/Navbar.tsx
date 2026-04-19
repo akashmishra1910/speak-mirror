@@ -64,6 +64,17 @@ export function Navbar() {
             </Link>
           )}
 
+          <Link 
+            href="/contact" 
+            className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors hidden md:flex ${
+              pathname === "/contact" 
+                ? "bg-surface text-foreground" 
+                : "text-foreground/60 hover:text-foreground hover:bg-surface/50"
+            }`}
+          >
+            Contact
+          </Link>
+
           {!isLoading && (
             user ? (
               <button 
