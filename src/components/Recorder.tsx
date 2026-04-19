@@ -123,7 +123,9 @@ export function Recorder({ onRecordingComplete, isProcessing, readingText, taskT
     
     try {
       const mediaRecorder = new MediaRecorder(streamRef.current, {
-        mimeType: 'video/webm'
+        mimeType: 'video/webm',
+        videoBitsPerSecond: 200000, // 200 kbps to keep 90s under 3MB (Vercel limit 4.5MB)
+        audioBitsPerSecond: 64000   // 64 kbps for clear audio analysis
       });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
