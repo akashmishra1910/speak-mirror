@@ -50,7 +50,7 @@ export default function ContactPage() {
 
             {/* LinkedIn */}
             <a 
-              href="https://linkedin.com/in/akashmishra1910" 
+              href="https://linkedin.com/in/akashmishra19" 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex flex-col items-center justify-center p-8 rounded-2xl bg-surface/50 border border-surface-border hover:bg-surface transition-colors group text-center md:col-span-2"
