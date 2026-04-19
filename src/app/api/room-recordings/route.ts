@@ -41,14 +41,27 @@ export async function GET(request: Request) {
        return NextResponse.json({ recordings }); // Return without names if auth fails
     }
 
-    // 3. Map auth data to the recordings
-    const enrichedRecordings = recordings.map(rec => {
+    // 3. Map auth data and generate signed URLs for the recordings
+    const enrichedRecordings = await Promise.all(recordings.map(async (rec) => {
       const authUser = authUsers.users.find(u => u.id === rec.user_id);
+      
+      let videoUrl = rec.video_url;
+      if (videoUrl) {
+        const filename = videoUrl.startsWith('http') ? videoUrl.split('/').pop() : videoUrl;
+        if (filename) {
+          const { data: signedData } = await supabaseAdmin.storage.from('videos').createSignedUrl(filename, 3600);
+          if (signedData) {
+            videoUrl = signedData.signedUrl;
+          }
+        }
+      }
+
       return {
         ...rec,
+        video_url: videoUrl,
         user_name: authUser?.user_metadata?.full_name || "Team Member"
       };
-    });
+    }));
 
     return NextResponse.json({ recordings: enrichedRecordings });
 

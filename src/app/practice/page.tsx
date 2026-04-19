@@ -123,7 +123,7 @@ function PracticeContent() {
         // Upload Freeform
         const freeformFileName = `video_${Date.now()}_freeform.webm`;
         const { data: upload1 } = await supabase.storage.from('videos').upload(freeformFileName, freeformBlob, { contentType: 'video/webm' });
-        const url1 = upload1 ? supabase.storage.from('videos').getPublicUrl(freeformFileName).data.publicUrl : null;
+        const url1 = upload1 ? freeformFileName : null;
         
         if (url1 && metricsList[0]) {
           await supabase.from('recordings').insert({
@@ -138,7 +138,7 @@ function PracticeContent() {
         if (readingBlob && metricsList[1]) {
           const readingFileName = `video_${Date.now()}_reading.webm`;
           const { data: upload2 } = await supabase.storage.from('videos').upload(readingFileName, readingBlob, { contentType: 'video/webm' });
-          const url2 = upload2 ? supabase.storage.from('videos').getPublicUrl(readingFileName).data.publicUrl : null;
+          const url2 = upload2 ? readingFileName : null;
           
           if (url2) {
             await supabase.from('recordings').insert({
