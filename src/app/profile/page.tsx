@@ -23,11 +23,12 @@ export default function ProfilePage() {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/auth");
-    }
-  }, [user, authLoading, router]);
+  // Removed auto-redirect to prevent race conditions during OAuth
+  // useEffect(() => {
+  //   if (!authLoading && !user) {
+  //     router.push("/auth");
+  //   }
+  // }, [user, authLoading, router]);
 
   useEffect(() => {
     async function fetchRecordings() {
@@ -96,7 +97,22 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-24 text-center">
+        <div className="glass-panel p-8 rounded-3xl">
+          <h2 className="text-2xl font-bold mb-4">Not Authenticated</h2>
+          <p className="text-foreground/70 mb-6">We couldn't verify your session. If you just logged in, please wait a moment or try again.</p>
+          <button 
+            onClick={() => router.push("/auth")}
+            className="px-6 py-3 bg-brand-600 text-white font-medium rounded-xl hover:bg-brand-500 transition-colors"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
