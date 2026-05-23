@@ -66,14 +66,14 @@ export default function AuthPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-panel p-8 rounded-3xl"
+        className="glass-panel p-8 rounded-[2rem] border border-white/5 float-slow shadow-2xl relative bg-zinc-950/40 backdrop-blur-xl"
       >
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-brand-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <KeyRound className="w-8 h-8 text-brand-500" />
+          <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_15px_rgba(255,255,255,0.02)]">
+            <KeyRound className="w-8 h-8 text-zinc-300" />
           </div>
-          <h1 className="text-3xl font-bold mb-2">{isLogin ? "Welcome Back" : "Create Account"}</h1>
-          <p className="text-foreground/70">
+          <h1 className="text-3xl font-extrabold mb-2 text-white">{isLogin ? "Welcome Back" : "Create Account"}</h1>
+          <p className="text-foreground/60 font-light">
             {isLogin ? "Sign in to access your private recordings." : "Sign up to track your progress and join team rooms."}
           </p>
         </div>
@@ -93,20 +93,20 @@ export default function AuthPage() {
         <form onSubmit={handleAuth} className="space-y-4">
           {!isLogin && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
-              <label className="block text-sm font-medium mb-1.5 ml-1 text-foreground/80">Full Name</label>
+              <label className="block text-sm font-medium mb-1.5 ml-1 text-zinc-300">Full Name</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required={!isLogin}
                 placeholder="John Doe"
-                className="w-full bg-surface/50 border border-surface-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all text-foreground placeholder:text-foreground/30"
+                className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 focus:outline-none focus:border-white/20 focus:bg-white/10 transition-all text-white placeholder-zinc-500 font-light text-sm shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]"
               />
             </motion.div>
           )}
 
           <div>
-            <label className="block text-sm font-medium mb-1.5 ml-1 text-foreground/80">Email</label>
+            <label className="block text-sm font-medium mb-1.5 ml-1 text-zinc-300">Email</label>
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/40" />
               <input
@@ -115,12 +115,12 @@ export default function AuthPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="you@example.com"
-                className="w-full bg-surface/50 border border-surface-border rounded-xl px-11 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all text-foreground placeholder:text-foreground/30"
+                className="w-full bg-white/5 border border-white/5 rounded-xl px-11 py-3 focus:outline-none focus:border-white/20 focus:bg-white/10 transition-all text-white placeholder-zinc-500 font-light text-sm shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1.5 ml-1 text-foreground/80">Password</label>
+            <label className="block text-sm font-medium mb-1.5 ml-1 text-zinc-300">Password</label>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/40" />
               <input
@@ -129,7 +129,7 @@ export default function AuthPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="••••••••"
-                className="w-full bg-surface/50 border border-surface-border rounded-xl px-11 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all text-foreground placeholder:text-foreground/30"
+                className="w-full bg-white/5 border border-white/5 rounded-xl px-11 py-3 focus:outline-none focus:border-white/20 focus:bg-white/10 transition-all text-white placeholder-zinc-500 font-light text-sm shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]"
               />
             </div>
           </div>
@@ -137,16 +137,16 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold py-3.5 rounded-xl mt-4 transition-all flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-full bg-white text-zinc-950 font-semibold py-3.5 rounded-xl mt-4 transition-all flex items-center justify-center border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.08)] hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isLogin ? "Sign In" : "Sign Up")}
           </button>
         </form>
 
         <div className="my-6 flex items-center justify-center">
-          <div className="h-px bg-surface-border flex-1"></div>
-          <span className="px-4 text-xs text-foreground/50 font-medium uppercase tracking-wider">Or</span>
-          <div className="h-px bg-surface-border flex-1"></div>
+          <div className="h-px bg-white/5 flex-1"></div>
+          <span className="px-4 text-xs text-zinc-500 font-medium uppercase tracking-wider">Or</span>
+          <div className="h-px bg-white/5 flex-1"></div>
         </div>
 
         <button
@@ -159,7 +159,7 @@ export default function AuthPage() {
             });
             if (error) setError(error.message);
           }}
-          className="w-full bg-surface border border-surface-border hover:bg-surface-border text-foreground font-semibold py-3.5 rounded-xl transition-all flex items-center justify-center gap-3"
+          className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-white font-semibold py-3.5 rounded-xl transition-all flex items-center justify-center gap-3 shadow-[0_0_15px_rgba(255,255,255,0.02)]"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -170,7 +170,7 @@ export default function AuthPage() {
           Continue with Google
         </button>
 
-        <div className="mt-8 text-center text-sm text-foreground/70">
+        <div className="mt-8 text-center text-sm text-foreground/60 font-light">
           {isLogin ? "Don't have an account? " : "Already have an account? "}
           <button
             onClick={() => {
@@ -178,7 +178,7 @@ export default function AuthPage() {
               setError(null);
               setSuccessMsg(null);
             }}
-            className="text-brand-400 font-medium hover:text-brand-300 transition-colors"
+            className="text-white font-semibold hover:underline transition-colors"
           >
             {isLogin ? "Sign Up" : "Sign In"}
           </button>

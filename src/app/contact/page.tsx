@@ -13,25 +13,25 @@ export default function ContactPage() {
     <div className="min-h-[80vh] flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Let's Connect</h1>
-          <p className="text-foreground/60 text-lg">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 text-white">Let's Connect</h1>
+          <p className="text-foreground/60 text-lg font-light leading-relaxed">
             Have questions, feedback, or want to collaborate? I'd love to hear from you.
           </p>
         </div>
 
-        <div className="glass-panel p-8 md:p-12 rounded-3xl border border-surface-border">
+        <div className="glass-panel p-8 md:p-12 rounded-[2rem] border border-white/5 float-slow shadow-2xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             
             {/* Email */}
             <a 
               href="mailto:teamclassiq@gmail.com" 
-              className="flex flex-col items-center justify-center p-8 rounded-2xl bg-surface/50 border border-surface-border hover:bg-surface transition-colors group text-center"
+              className="flex flex-col items-center justify-center p-8 rounded-2xl bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 hover:border-white/10 transition-all group text-center float-slow interactive-card"
             >
-              <div className="w-16 h-16 rounded-full bg-brand-500/10 text-brand-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 text-white flex items-center justify-center mb-4 group-hover:scale-110 transition-all shadow-[0_0_15px_rgba(255,255,255,0.02)]">
                 <Mail className="w-8 h-8" />
               </div>
-              <h3 className="font-bold text-lg mb-1">Email Me</h3>
-              <p className="text-sm text-foreground/50">teamclassiq@gmail.com</p>
+              <h3 className="font-bold text-lg mb-1 text-white">Email Me</h3>
+              <p className="text-sm text-foreground/40 font-light">teamclassiq@gmail.com</p>
             </a>
 
             {/* GitHub */}
@@ -39,13 +39,13 @@ export default function ContactPage() {
               href="https://github.com/akashmishra1910" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex flex-col items-center justify-center p-8 rounded-2xl bg-surface/50 border border-surface-border hover:bg-surface transition-colors group text-center"
+              className="flex flex-col items-center justify-center p-8 rounded-2xl bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 hover:border-white/10 transition-all group text-center float-medium interactive-card"
             >
-              <div className="w-16 h-16 rounded-full bg-foreground/5 text-foreground flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 text-white flex items-center justify-center mb-4 group-hover:scale-110 transition-all shadow-[0_0_15px_rgba(255,255,255,0.02)]">
                 <GithubIcon />
               </div>
-              <h3 className="font-bold text-lg mb-1">GitHub</h3>
-              <p className="text-sm text-foreground/50">@akashmishra1910</p>
+              <h3 className="font-bold text-lg mb-1 text-white">GitHub</h3>
+              <p className="text-sm text-foreground/40 font-light">@akashmishra1910</p>
             </a>
 
             {/* LinkedIn */}
@@ -53,18 +53,18 @@ export default function ContactPage() {
               href="https://linkedin.com/in/akashmishra19" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex flex-col items-center justify-center p-8 rounded-2xl bg-surface/50 border border-surface-border hover:bg-surface transition-colors group text-center md:col-span-2"
+              className="flex flex-col items-center justify-center p-8 rounded-2xl bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 hover:border-white/10 transition-all group text-center md:col-span-2 float-fast interactive-card"
             >
-              <div className="w-16 h-16 rounded-full bg-[#0A66C2]/10 text-[#0A66C2] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 rounded-full bg-[#0A66C2]/5 border border-[#0A66C2]/20 text-[#0A66C2] flex items-center justify-center mb-4 group-hover:scale-110 transition-all shadow-[0_0_15px_rgba(10,102,194,0.02)]">
                 <LinkedinIcon />
               </div>
-              <h3 className="font-bold text-lg mb-1">LinkedIn</h3>
-              <p className="text-sm text-foreground/50">Connect with me professionally</p>
+              <h3 className="font-bold text-lg mb-1 text-white">LinkedIn</h3>
+              <p className="text-sm text-foreground/40 font-light">Connect with me professionally</p>
             </a>
 
           </div>
           
-          <div className="mt-12 text-center text-sm text-foreground/40 flex items-center justify-center gap-2">
+          <div className="mt-12 text-center text-sm text-foreground/30 flex items-center justify-center gap-2 font-light">
             <MessageSquare className="w-4 h-4" />
             Designed and built by Akash Mishra
           </div>

@@ -10,7 +10,7 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#0f172a",
+  themeColor: "#050508",
 };
 
 export const metadata: Metadata = {
@@ -31,12 +31,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${jakarta.variable} antialiased`}>
-      <body className="flex flex-col min-h-screen relative overflow-x-hidden font-sans">
-        {/* Animated Background Orbs */}
-        <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
-          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-brand-500/20 blur-[120px] animate-blob" />
-          <div className="absolute top-[20%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-500/20 blur-[120px] animate-blob animation-delay-2000" />
-          <div className="absolute bottom-[-20%] left-[20%] w-[60%] h-[60%] rounded-full bg-brand-600/10 blur-[120px] animate-blob animation-delay-4000" />
+      <body className="flex flex-col min-h-screen relative overflow-x-hidden font-sans bg-[#050508]">
+        {/* Obsidian Space Baseline: Diluted Cosmic Nebulas & Grid Matrix */}
+        <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden bg-[#050508]">
+          <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-500/5 blur-[160px] animate-blob" />
+          <div className="absolute top-[20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-500/5 blur-[160px] animate-blob animation-delay-2000" />
+          <div className="absolute bottom-[-10%] left-[10%] w-[60%] h-[60%] rounded-full bg-blue-500/4 blur-[180px] animate-blob animation-delay-4000" />
+          {/* Layout Grid Matrix */}
+          <div className="absolute inset-0 grid-matrix opacity-100" />
         </div>
 
         <AuthProvider>

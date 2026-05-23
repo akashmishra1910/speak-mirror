@@ -124,7 +124,7 @@ export function Recorder({ onRecordingComplete, isProcessing, readingText, taskT
     try {
       const mediaRecorder = new MediaRecorder(streamRef.current, {
         mimeType: 'video/webm',
-        videoBitsPerSecond: 200000, // 200 kbps to keep 90s under 3MB (Vercel limit 4.5MB)
+        videoBitsPerSecond: 400000, // 400 kbps to keep 90s well under 3MB
         audioBitsPerSecond: 64000   // 64 kbps for clear audio analysis
       });
       mediaRecorderRef.current = mediaRecorder;
@@ -165,10 +165,10 @@ export function Recorder({ onRecordingComplete, isProcessing, readingText, taskT
 
   if (hasPermission === false) {
     return (
-      <div className="glass-panel p-8 rounded-3xl flex flex-col items-center justify-center w-full max-w-sm mx-auto text-center h-[500px]">
-        <Video className="w-12 h-12 text-red-400 mb-4" />
-        <h2 className="text-xl font-bold mb-2">Camera Access Required</h2>
-        <p className="text-foreground/70">Please allow camera and microphone access to use SpeakMirror.</p>
+      <div className="glass-panel p-8 rounded-3xl flex flex-col items-center justify-center w-full max-w-sm mx-auto text-center h-[500px] float-slow">
+        <Video className="w-12 h-12 text-red-400 mb-4 animate-pulse" />
+        <h2 className="text-xl font-bold mb-2 text-white">Camera Access Required</h2>
+        <p className="text-foreground/60 text-sm">Please allow camera and microphone access to use SpeakMirror.</p>
       </div>
     );
   }
@@ -176,7 +176,7 @@ export function Recorder({ onRecordingComplete, isProcessing, readingText, taskT
   return (
     <div className="flex flex-col md:flex-row gap-6 items-center md:items-start justify-center w-full">
       {/* Main Video Card */}
-      <div className="glass-panel rounded-[2rem] flex flex-col items-center justify-center w-full max-w-sm relative overflow-hidden aspect-[9/16] max-h-[calc(100vh-120px)] shadow-2xl border border-surface-border group bg-black shrink-0">
+      <div className="glass-panel rounded-[2rem] flex flex-col items-center justify-center w-full max-w-sm relative overflow-hidden aspect-[9/16] max-h-[calc(100vh-120px)] shadow-2xl border border-white/5 group bg-black shrink-0 float-slow interactive-card">
         
         {/* Live Video Feed with Mirror Effect & Confident Filter */}
         <video 
@@ -203,10 +203,10 @@ export function Recorder({ onRecordingComplete, isProcessing, readingText, taskT
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                className="bg-black/40 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-lg"
+                className="bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-lg"
               >
                 <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                <span className="text-white font-mono font-medium tracking-wider">{formatTime(timeLeft)}</span>
+                <span className="text-white font-mono font-medium tracking-wider text-xs">{formatTime(timeLeft)}</span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -215,18 +215,18 @@ export function Recorder({ onRecordingComplete, isProcessing, readingText, taskT
           {mode === "reading" ? (
             <button 
               onClick={() => setIsAssistEnabled(!isAssistEnabled)}
-              className={`pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md transition-colors border ${isAssistEnabled ? 'bg-brand-500/80 border-brand-400 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'bg-black/40 border-white/10 text-white/70 hover:bg-black/60'}`}
+              className={`pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md transition-all border ${isAssistEnabled ? 'bg-white text-zinc-950 border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.15)] font-semibold' : 'bg-black/50 border-white/10 text-white/70 hover:bg-black/80 hover:text-white'}`}
             >
               <HelpCircle className="w-4 h-4" />
-              <span className="text-xs font-medium uppercase tracking-wider">Teleprompter</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider">Teleprompter</span>
             </button>
           ) : (
             <button 
               onClick={() => setIsAssistEnabled(!isAssistEnabled)}
-              className={`pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md transition-colors border ${isAssistEnabled ? 'bg-brand-500/80 border-brand-400 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'bg-black/40 border-white/10 text-white/70 hover:bg-black/60'}`}
+              className={`pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md transition-all border ${isAssistEnabled ? 'bg-white text-zinc-950 border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.15)] font-semibold' : 'bg-black/50 border-white/10 text-white/70 hover:bg-black/80 hover:text-white'}`}
             >
               <HelpCircle className="w-4 h-4" />
-              <span className="text-xs font-medium uppercase tracking-wider">Assist</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider">Assist</span>
             </button>
           )}
         </div>
@@ -238,28 +238,28 @@ export function Recorder({ onRecordingComplete, isProcessing, readingText, taskT
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="z-20 absolute inset-x-4 top-16 md:inset-x-6 md:top-20 bg-black/60 backdrop-blur-md p-4 md:p-5 rounded-2xl border border-white/10 shadow-xl overflow-y-auto max-h-[60%]"
+              className="z-20 absolute inset-x-4 top-16 md:inset-x-6 md:top-20 bg-black/75 backdrop-blur-md p-4 md:p-5 rounded-2xl border border-white/10 shadow-xl overflow-y-auto max-h-[60%]"
             >
               {mode === "reading" ? (
                 <>
                   <h3 className="text-white font-bold mb-3 flex items-center gap-2 text-sm md:text-base">
-                    <Lightbulb className="w-4 h-4 text-brand-400" />
+                    <Lightbulb className="w-4 h-4 text-zinc-300" />
                     Read Aloud
                   </h3>
-                  <p className="text-white/90 text-sm md:text-base leading-relaxed">
+                  <p className="text-white/90 text-sm md:text-base leading-relaxed font-light">
                     {readingText}
                   </p>
                 </>
               ) : (
                 <>
                   <h3 className="text-white font-bold mb-3 flex items-center gap-2 text-sm md:text-base">
-                    <Lightbulb className="w-4 h-4 text-brand-400" />
+                    <Lightbulb className="w-4 h-4 text-zinc-300" />
                     Guide (4W + 1H)
                   </h3>
                   <ul className="space-y-3">
                     {bullets.map((b, i) => (
                       <li key={i} className="flex flex-col md:flex-row md:items-start gap-1 md:gap-2">
-                        <span className="text-brand-400 font-bold text-[10px] md:text-xs uppercase tracking-wider md:w-10 md:mt-0.5">{b.label}</span>
+                        <span className="text-zinc-400 font-bold text-[10px] md:text-xs uppercase tracking-wider md:w-10 md:mt-0.5">{b.label}</span>
                         <span className="text-white/90 text-xs md:text-sm italic">"{b.text}"</span>
                       </li>
                     ))}
@@ -273,20 +273,20 @@ export function Recorder({ onRecordingComplete, isProcessing, readingText, taskT
         {/* Pre-recording Prompt */}
         {!isRecording && !isProcessing && !isAssistEnabled && (
            <div className="z-20 absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-             <div className="bg-black/40 backdrop-blur-sm px-6 py-4 rounded-2xl text-center">
-               <h2 className="text-xl font-bold mb-1 text-white">Looking good! ✨</h2>
-               <p className="text-sm text-white/80">Press record to start.</p>
+             <div className="bg-black/50 backdrop-blur-sm px-6 py-4 rounded-2xl text-center border border-white/5">
+               <h2 className="text-lg font-bold mb-1 text-white">Looking good! ✨</h2>
+               <p className="text-xs text-white/70">Press record to start.</p>
              </div>
            </div>
         )}
 
         {/* Processing overlay */}
         {isProcessing && (
-          <div className="absolute inset-0 z-30 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center">
-            <div className="w-20 h-20 bg-surface/50 rounded-full flex items-center justify-center border border-surface-border shadow-[0_0_40px_-10px_rgba(59,130,246,0.5)]">
-              <Loader2 className="w-8 h-8 text-brand-400 animate-spin" />
+          <div className="absolute inset-0 z-30 bg-[#050508]/80 backdrop-blur-md flex flex-col items-center justify-center">
+            <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center border border-white/10 shadow-[0_0_35px_0_rgba(255,255,255,0.05)]">
+              <Loader2 className="w-8 h-8 text-white animate-spin" />
             </div>
-            <span className="mt-4 text-sm font-medium text-white tracking-widest uppercase">Analyzing...</span>
+            <span className="mt-4 text-xs font-semibold text-white tracking-widest uppercase">Analyzing...</span>
           </div>
         )}
 
@@ -296,14 +296,14 @@ export function Recorder({ onRecordingComplete, isProcessing, readingText, taskT
             isRecording ? (
               <button
                 onClick={stopRecording}
-                className="w-16 h-16 md:w-20 md:h-20 bg-red-500/80 backdrop-blur-md text-white rounded-full flex items-center justify-center hover:bg-red-500 transition-all shadow-[0_0_30px_-10px_rgba(239,68,68,0.8)] border-2 border-red-400/50"
+                className="w-16 h-16 md:w-20 md:h-20 bg-red-600/90 hover:bg-red-500 backdrop-blur-md text-white rounded-full flex items-center justify-center transition-all shadow-[0_0_30px_0_rgba(239,68,68,0.3)] hover:shadow-[0_0_40px_0_rgba(239,68,68,0.5)] border border-red-400/30 scale-100 hover:scale-105 active:scale-95"
               >
                 <Square className="w-6 h-6 md:w-8 md:h-8 fill-current" />
               </button>
             ) : (
               <button
                 onClick={startRecording}
-                className="w-16 h-16 md:w-20 md:h-20 bg-brand-600/90 backdrop-blur-md text-white rounded-full flex items-center justify-center hover:bg-brand-500 transition-all shadow-[0_0_40px_-10px_rgba(37,99,235,0.8)] border-2 border-brand-400/50 scale-100 hover:scale-105 active:scale-95"
+                className="w-16 h-16 md:w-20 md:h-20 bg-white hover:bg-zinc-200 backdrop-blur-md text-zinc-950 rounded-full flex items-center justify-center transition-all shadow-[0_0_30px_0_rgba(255,255,255,0.15)] hover:shadow-[0_0_40px_0_rgba(255,255,255,0.25)] border border-white/20 scale-100 hover:scale-105 active:scale-95"
               >
                 <Mic className="w-6 h-6 md:w-8 md:h-8" />
               </button>
@@ -313,34 +313,34 @@ export function Recorder({ onRecordingComplete, isProcessing, readingText, taskT
       </div>
 
       {/* Side Panel: Topic display */}
-      <div className="w-full md:w-64 shrink-0 flex flex-col gap-4 mt-2 md:mt-0">
-        <div className="glass-panel p-5 md:p-6 rounded-3xl border border-surface-border">
+      <div className="w-full md:w-64 shrink-0 flex flex-col gap-4 mt-2 md:mt-0 float-medium interactive-card">
+        <div className="glass-panel p-5 md:p-6 rounded-3xl">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-brand-500">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
               {mode === "reading" ? "Reading Practice" : "Your Topic"}
             </span>
             {mode === "freeform" && !taskTopic && (
               <button 
                 onClick={() => fetchDynamicTopic(false)}
                 disabled={isRecording || isLoadingTopic}
-                className="p-2 bg-surface hover:bg-surface-border transition-colors rounded-full text-foreground/70 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1.5 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white transition-colors rounded-full text-foreground/70 disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Shuffle Topic"
               >
-                <Shuffle className={`w-4 h-4 ${isLoadingTopic ? 'animate-spin' : ''}`} />
+                <Shuffle className={`w-3.5 h-3.5 ${isLoadingTopic ? 'animate-spin' : ''}`} />
               </button>
             )}
           </div>
-          <p className="font-medium text-base md:text-lg leading-relaxed text-foreground">
+          <p className="font-semibold text-sm md:text-base leading-relaxed text-white">
             {topic}
           </p>
         </div>
 
-        <div className="glass-panel p-5 md:p-6 rounded-3xl border border-surface-border bg-brand-500/5 border-brand-500/10 hidden md:block">
-          <h3 className="text-sm font-bold mb-2 flex items-center gap-2">
-            <Lightbulb className="w-4 h-4 text-brand-500" />
+        <div className="glass-panel p-5 md:p-6 rounded-3xl bg-white/[0.01] border-white/5 hidden md:block">
+          <h3 className="text-xs font-bold mb-2 flex items-center gap-2 text-white">
+            <Lightbulb className="w-4 h-4 text-zinc-300 animate-pulse" />
             Pro Tip
           </h3>
-          <p className="text-sm text-foreground/70 leading-relaxed">
+          <p className="text-xs text-foreground/60 leading-relaxed font-light">
             {mode === "reading" 
               ? "Use the Teleprompter button on the camera view to reveal the exact text you need to read aloud. The AI will grade your pronunciation!"
               : "Use the Assist button on the camera view to reveal the 4W+1H guiding framework if you get stuck!"}

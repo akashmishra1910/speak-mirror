@@ -175,7 +175,7 @@ function PracticeContent() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col items-center relative">
       {roomId && (
-        <Link href={`/rooms/${roomId}`} className="absolute top-12 left-4 sm:left-8 flex items-center gap-2 text-sm font-medium text-foreground/60 hover:text-foreground transition-colors">
+        <Link href={`/rooms/${roomId}`} className="absolute top-12 left-4 sm:left-8 flex items-center gap-2 text-sm font-medium text-white/60 hover:text-white transition-all">
           <ArrowLeft className="w-4 h-4" />
           Back to Room
         </Link>
@@ -188,16 +188,16 @@ function PracticeContent() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-            className="text-center mb-12 overflow-hidden"
+            className="text-center mb-12 overflow-hidden float-slow"
           >
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface text-brand-400 text-sm font-medium border border-surface-border mb-4">
-              <Sparkles className="w-4 h-4" />
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 text-zinc-300 text-sm font-medium border border-white/5 mb-4 shadow-[0_0_15px_rgba(255,255,255,0.02)]">
+              <Sparkles className="w-4 h-4 text-zinc-400 animate-pulse" />
               {roomId ? "Team Practice" : "Daily Practice"}
             </span>
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            <h1 className="text-4xl md:text-5xl font-extrabold mb-4 text-white">
               {phase === "freeform_recording" ? "Part 1: Speak Freely" : "Part 2: Read Aloud"}
             </h1>
-            <p className="text-foreground/70 max-w-xl mx-auto">
+            <p className="text-foreground/60 max-w-xl mx-auto font-light leading-relaxed">
               {phase === "freeform_recording" 
                 ? "Speak naturally about the topic for 90 seconds. We'll analyze your pacing, clarity, and filler words."
                 : "Now, read the provided text using the teleprompter. We'll specifically analyze your pronunciation and articulation."}
@@ -209,8 +209,8 @@ function PracticeContent() {
       <div className="w-full flex flex-col items-center">
         {isLoadingTask ? (
           <div className="flex flex-col items-center justify-center p-24">
-            <Loader2 className="w-8 h-8 animate-spin text-brand-500 mb-4" />
-            <span className="text-sm font-medium text-foreground/70 uppercase tracking-widest">Loading Task...</span>
+            <Loader2 className="w-8 h-8 animate-spin text-white mb-4" />
+            <span className="text-xs font-semibold text-foreground/50 uppercase tracking-widest">Loading Task...</span>
           </div>
         ) : phase === "freeform_recording" || phase === "reading_recording" ? (
           <motion.div 
@@ -230,9 +230,9 @@ function PracticeContent() {
           </motion.div>
         ) : phase === "analyzing" ? (
           <div className="flex flex-col items-center justify-center p-24">
-            <Loader2 className="w-12 h-12 animate-spin text-brand-500 mb-6" />
-            <span className="text-lg font-bold text-foreground">Analyzing your speeches...</span>
-            <span className="text-sm text-foreground/50 mt-2">This usually takes about 10 seconds.</span>
+            <Loader2 className="w-12 h-12 animate-spin text-white mb-6" />
+            <span className="text-lg font-bold text-white">Analyzing your speeches...</span>
+            <span className="text-sm text-foreground/40 mt-2 font-light">This usually takes about 10 seconds.</span>
           </div>
         ) : (
           <motion.div 
@@ -242,8 +242,8 @@ function PracticeContent() {
             className="w-full"
           >
             {metricsList.map((m, idx) => (
-              <div key={idx} className="mb-12 border-b border-surface-border pb-8 last:border-0">
-                <h3 className="text-2xl font-bold mb-6 text-brand-400">{m.title}</h3>
+              <div key={idx} className="mb-12 border-b border-white/5 pb-8 last:border-0">
+                <h3 className="text-2xl font-bold mb-6 text-zinc-300">{m.title}</h3>
                 <FeedbackDashboard 
                   metrics={m} 
                   videoUrl={videoUrls[idx]} 
@@ -257,15 +257,15 @@ function PracticeContent() {
             
             <div className="mt-8 text-center flex flex-col items-center gap-4">
               {isSaved ? (
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-500/10 text-green-400 font-medium">
-                  <Sparkles className="w-4 h-4" />
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.05)]">
+                  <Sparkles className="w-4 h-4 animate-pulse" />
                   Progress Saved
                 </div>
               ) : null}
               
               <Link 
                 href={roomId ? `/rooms/${roomId}` : "/profile"}
-                className="px-8 py-3 rounded-xl bg-surface border border-surface-border hover:bg-surface-border transition-colors font-semibold"
+                className="px-8 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all font-semibold shadow-[0_0_15px_rgba(255,255,255,0.02)]"
               >
                 {roomId ? "Return to Room" : "View Profile"}
               </Link>
@@ -279,7 +279,7 @@ function PracticeContent() {
 
 export default function PracticePage() {
   return (
-    <Suspense fallback={<div className="flex justify-center p-24">Loading practice environment...</div>}>
+    <Suspense fallback={<div className="flex justify-center p-24 text-zinc-400 font-light">Loading practice environment...</div>}>
       <PracticeContent />
     </Suspense>
   );

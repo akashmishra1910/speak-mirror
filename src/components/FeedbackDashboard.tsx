@@ -1,8 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CheckCircle2, AlertCircle, Activity, Info, Download, Share2, Sparkles, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, AlertCircle, Activity, Info, Download, Share2, Sparkles, Loader2, Play, Pause } from "lucide-react";
+import { useState, useRef } from "react";
 
 export interface AnalysisMetrics {
   confidence: number;
@@ -26,22 +26,35 @@ interface DashboardProps {
 
 export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved, onRetake }: DashboardProps) {
   const [isCopied, setIsCopied] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
 
   if (!metrics) return null;
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-400 bg-green-400/10 border-green-400/20";
-    if (score >= 60) return "text-yellow-400 bg-yellow-400/10 border-yellow-400/20";
-    return "text-red-400 bg-red-400/10 border-red-400/20";
+    if (score >= 80) return "text-emerald-400 bg-emerald-500/5 border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.05)]";
+    if (score >= 60) return "text-amber-400 bg-amber-500/5 border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.05)]";
+    return "text-rose-400 bg-rose-500/5 border-rose-500/20 shadow-[0_0_20px_rgba(244,63,94,0.05)]";
   };
 
   const getIconForType = (type: string) => {
     switch(type) {
-      case 'filler': return <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />;
-      case 'pace': return <Info className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />;
-      case 'confidence': return <Sparkles className="w-5 h-5 text-brand-500 shrink-0 mt-0.5" />;
-      case 'clarity': return <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />;
-      default: return <Activity className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />;
+      case 'filler': return <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />;
+      case 'pace': return <Info className="w-5 h-5 text-zinc-400 shrink-0 mt-0.5" />;
+      case 'confidence': return <Sparkles className="w-5 h-5 text-white shrink-0 mt-0.5 animate-pulse" />;
+      case 'clarity': return <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />;
+      default: return <Activity className="w-5 h-5 text-zinc-400 shrink-0 mt-0.5" />;
     }
   };
 
@@ -95,19 +108,31 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
       className="w-full max-w-6xl mx-auto flex flex-col lg:flex-row gap-6 md:gap-8"
     >
       {/* Left Column: Video Playback */}
-      <motion.div variants={itemVariants} className="w-full lg:w-1/3 flex flex-col gap-4">
+      <motion.div variants={itemVariants} className="w-full lg:w-1/3 flex flex-col gap-4 float-slow interactive-card">
         {videoUrl ? (
-          <div className="glass-panel rounded-[2rem] overflow-hidden aspect-[9/16] max-h-[calc(100vh-120px)] shadow-2xl border border-surface-border relative bg-black">
+          <div className="glass-panel rounded-[2rem] overflow-hidden aspect-[9/16] max-h-[calc(100vh-120px)] shadow-2xl border border-white/5 relative bg-black group">
             <video 
+              ref={videoRef}
               src={videoUrl} 
-              controls 
               className="absolute inset-0 w-full h-full object-cover"
               playsInline
+              style={{ transform: 'scaleX(-1)' }}
+              onEnded={() => setIsPlaying(false)}
+              onClick={togglePlay}
             />
+            {/* Custom Play/Pause Overlay */}
+            <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${isPlaying ? 'opacity-0 group-hover:opacity-100' : 'opacity-100 bg-black/20'}`}>
+              <button 
+                onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+                className="w-16 h-16 md:w-20 md:h-20 bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md rounded-full flex items-center justify-center pointer-events-auto transition-all text-white shadow-xl"
+              >
+                {isPlaying ? <Pause className="w-8 h-8 md:w-10 md:h-10 fill-current" /> : <Play className="w-8 h-8 md:w-10 md:h-10 fill-current ml-2" />}
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="glass-panel rounded-[2rem] aspect-[9/16] max-h-[60vh] border border-surface-border flex items-center justify-center bg-surface/30">
-            <p className="text-foreground/50 text-sm">No video recorded</p>
+          <div className="glass-panel rounded-[2rem] aspect-[9/16] max-h-[60vh] border border-white/5 flex items-center justify-center bg-white/[0.01]">
+            <p className="text-foreground/40 text-sm">No video recorded</p>
           </div>
         )}
         
@@ -117,7 +142,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
             <button 
               onClick={onSave}
               disabled={isSaving || isSaved || !videoUrl}
-              className={`flex items-center justify-center gap-2 px-3 py-3 transition-colors rounded-xl font-medium text-sm md:text-base col-span-2 lg:col-span-1 ${isSaved ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-brand-600 text-white hover:bg-brand-500 disabled:opacity-50'}`}
+              className={`flex items-center justify-center gap-2 px-3 py-3 transition-all rounded-xl font-semibold text-sm md:text-base col-span-2 lg:col-span-1 ${isSaved ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-white text-zinc-950 hover:bg-zinc-200 border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.08)] disabled:opacity-50'}`}
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : isSaved ? <CheckCircle2 className="w-4 h-4" /> : <Activity className="w-4 h-4" />}
               {isSaving ? "Saving..." : isSaved ? "Saved" : "Save"}
@@ -127,7 +152,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
             <button 
               onClick={onRetake}
               disabled={isSaving || isSaved}
-              className="flex items-center justify-center gap-2 px-3 py-3 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors rounded-xl font-medium text-sm md:text-base col-span-2 lg:col-span-1 disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-3 py-3 bg-red-950/20 text-red-400 border border-red-500/10 hover:bg-red-500/20 hover:border-red-500/25 transition-all rounded-xl font-medium text-sm md:text-base col-span-2 lg:col-span-1 disabled:opacity-50"
             >
               Retake
             </button>
@@ -135,14 +160,14 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
           <button 
             onClick={handleDownload}
             disabled={!videoUrl}
-            className="flex items-center justify-center gap-2 px-3 py-3 bg-surface border border-surface-border hover:bg-surface-border transition-colors rounded-xl font-medium disabled:opacity-50 text-sm md:text-base"
+            className="flex items-center justify-center gap-2 px-3 py-3 bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all rounded-xl font-medium text-white disabled:opacity-50 text-sm md:text-base"
           >
             <Download className="w-4 h-4" />
             Download
           </button>
           <button 
             onClick={handleShare}
-            className="flex items-center justify-center gap-2 px-3 py-3 bg-surface border border-surface-border text-foreground hover:bg-surface-border transition-colors rounded-xl font-medium text-sm md:text-base"
+            className="flex items-center justify-center gap-2 px-3 py-3 bg-white/5 border border-white/5 text-white hover:bg-white/10 hover:border-white/10 transition-all rounded-xl font-medium text-sm md:text-base"
           >
             <Share2 className="w-4 h-4" />
             {isCopied ? "Copied!" : "Share"}
@@ -153,62 +178,62 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
       {/* Right Column: Metrics */}
       <div className="w-full lg:w-2/3 flex flex-col gap-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <motion.div variants={itemVariants} className="glass-panel p-4 md:p-6 rounded-2xl flex flex-col items-center justify-center text-center">
-            <span className="text-foreground/60 text-xs md:text-sm font-medium mb-2 uppercase tracking-wider">Confidence</span>
+          <motion.div variants={itemVariants} className="glass-panel p-4 md:p-6 rounded-2xl flex flex-col items-center justify-center text-center float-slow interactive-card">
+            <span className="text-foreground/40 text-xs md:text-sm font-medium mb-2 uppercase tracking-wider">Confidence</span>
             <div className={`w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center border-4 text-xl md:text-3xl font-bold ${getScoreColor(metrics.confidence)}`}>
               {metrics.confidence}%
             </div>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="glass-panel p-4 md:p-6 rounded-2xl flex flex-col items-center justify-center text-center">
-            <span className="text-foreground/60 text-xs md:text-sm font-medium mb-2 uppercase tracking-wider">Clarity</span>
+          <motion.div variants={itemVariants} className="glass-panel p-4 md:p-6 rounded-2xl flex flex-col items-center justify-center text-center float-medium interactive-card">
+            <span className="text-foreground/40 text-xs md:text-sm font-medium mb-2 uppercase tracking-wider">Clarity</span>
             <div className={`w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center border-4 text-xl md:text-3xl font-bold ${getScoreColor(metrics.clarity)}`}>
               {metrics.clarity}%
             </div>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="glass-panel p-4 md:p-6 rounded-2xl flex flex-col items-center justify-center text-center">
-            <span className="text-foreground/60 text-xs md:text-sm font-medium mb-2 uppercase tracking-wider">Filler Words</span>
-            <div className={`w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center border-4 text-xl md:text-3xl font-bold ${metrics.fillerWords > 5 ? "text-yellow-400 bg-yellow-400/10 border-yellow-400/20" : "text-green-400 bg-green-400/10 border-green-400/20"}`}>
+          <motion.div variants={itemVariants} className="glass-panel p-4 md:p-6 rounded-2xl flex flex-col items-center justify-center text-center float-fast interactive-card">
+            <span className="text-foreground/40 text-xs md:text-sm font-medium mb-2 uppercase tracking-wider">Filler Words</span>
+            <div className={`w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center border-4 text-xl md:text-3xl font-bold ${metrics.fillerWords > 5 ? "text-amber-400 bg-amber-500/5 border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.05)]" : "text-emerald-400 bg-emerald-500/5 border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.05)]"}`}>
               {metrics.fillerWords}
             </div>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="glass-panel p-4 md:p-6 rounded-2xl flex flex-col items-center justify-center text-center">
-            <span className="text-foreground/60 text-xs md:text-sm font-medium mb-2 uppercase tracking-wider">Pace (WPM)</span>
-            <div className="w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center border-4 border-brand-500/30 text-brand-400 bg-brand-500/10 text-xl md:text-3xl font-bold">
+          <motion.div variants={itemVariants} className="glass-panel p-4 md:p-6 rounded-2xl flex flex-col items-center justify-center text-center float-slow interactive-card">
+            <span className="text-foreground/40 text-xs md:text-sm font-medium mb-2 uppercase tracking-wider">Pace (WPM)</span>
+            <div className="w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center border-4 border-white/10 text-zinc-300 bg-white/5 text-xl md:text-3xl font-bold shadow-[0_0_20px_rgba(255,255,255,0.02)]">
               {metrics.wpm}
             </div>
           </motion.div>
         </div>
 
-        <motion.div variants={itemVariants} className="glass-panel p-6 md:p-8 rounded-3xl flex-1">
-          <h3 className="text-lg md:text-xl font-bold mb-4 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-brand-500" />
+        <motion.div variants={itemVariants} className="glass-panel p-6 md:p-8 rounded-3xl flex-1 float-slow interactive-card">
+          <h3 className="text-lg md:text-xl font-bold mb-4 flex items-center gap-2 text-white">
+            <Activity className="w-5 h-5 text-zinc-400" />
             AI Insights
           </h3>
           <ul className="space-y-4">
             {metrics.suggestions && metrics.suggestions.length > 0 ? (
               metrics.suggestions.map((suggestion, i) => (
-                <li key={i} className="flex items-start gap-3 text-foreground/90 text-sm md:text-base leading-relaxed">
+                <li key={i} className="flex items-start gap-3 text-foreground/80 text-sm md:text-base leading-relaxed font-light">
                   {getIconForType(suggestion.type)}
                   <span>{suggestion.text}</span>
                 </li>
               ))
             ) : (
               // Fallback if AI didn't provide suggestions
-              <li className="flex items-start gap-3 text-foreground/80">
-                <Info className="w-5 h-5 text-brand-500 shrink-0 mt-0.5" />
-                <span>Keep practicing! Consistent daily recording will drastically improve your communication over time.</span>
+              <li className="flex items-start gap-3 text-foreground/60">
+                <Info className="w-5 h-5 text-zinc-400 shrink-0 mt-0.5" />
+                <span className="font-light">Keep practicing! Consistent daily recording will drastically improve your communication over time.</span>
               </li>
             )}
           </ul>
         </motion.div>
         
         {metrics.transcript && (
-          <motion.div variants={itemVariants} className="glass-panel p-6 md:p-8 rounded-3xl">
-            <h3 className="text-lg md:text-xl font-bold mb-4">Transcript</h3>
-            <p className="text-foreground/70 leading-relaxed italic border-l-2 border-brand-500/50 pl-4 py-2 text-sm md:text-base">
+          <motion.div variants={itemVariants} className="glass-panel p-6 md:p-8 rounded-3xl float-medium interactive-card">
+            <h3 className="text-lg md:text-xl font-bold mb-4 text-white">Transcript</h3>
+            <p className="text-foreground/60 leading-relaxed italic border-l border-white/20 pl-4 py-2 text-sm md:text-base bg-white/[0.01] rounded-r-xl">
               "{metrics.transcript}"
             </p>
           </motion.div>

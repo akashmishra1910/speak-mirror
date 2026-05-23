@@ -92,7 +92,7 @@ export default function ProfilePage() {
   if (authLoading || isLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 flex justify-center items-center">
-        <Loader2 className="w-10 h-10 animate-spin text-brand-500" />
+        <Loader2 className="w-10 h-10 animate-spin text-white" />
       </div>
     );
   }
@@ -100,12 +100,12 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <div className="max-w-md mx-auto px-4 py-24 text-center">
-        <div className="glass-panel p-8 rounded-3xl">
-          <h2 className="text-2xl font-bold mb-4">Not Authenticated</h2>
-          <p className="text-foreground/70 mb-6">We couldn't verify your session. If you just logged in, please wait a moment or try again.</p>
+        <div className="glass-panel p-8 rounded-3xl border border-white/5 float-slow">
+          <h2 className="text-2xl font-extrabold mb-4 text-white">Not Authenticated</h2>
+          <p className="text-foreground/60 mb-6 font-light">We couldn't verify your session. If you just logged in, please wait a moment or try again.</p>
           <button 
             onClick={() => router.push("/auth")}
-            className="px-6 py-3 bg-brand-600 text-white font-medium rounded-xl hover:bg-brand-500 transition-colors"
+            className="px-6 py-3 bg-white text-zinc-950 font-semibold rounded-xl hover:bg-zinc-200 transition-all border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.08)]"
           >
             Go to Login
           </button>
@@ -121,10 +121,10 @@ export default function ProfilePage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-12"
       >
-        <h1 className="text-4xl md:text-5xl font-bold mb-4">
+        <h1 className="text-4xl md:text-5xl font-extrabold mb-4 text-white">
           {user?.user_metadata?.full_name ? `${user.user_metadata.full_name}'s Progress` : "Your Progress"}
         </h1>
-        <p className="text-foreground/70 max-w-xl">
+        <p className="text-foreground/60 max-w-xl font-light leading-relaxed">
           Track your personal communication journey and see how you're improving over time.
         </p>
       </motion.div>
@@ -134,14 +134,14 @@ export default function ProfilePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glass-panel p-6 rounded-3xl flex items-center gap-6"
+          className="glass-panel p-6 rounded-3xl flex items-center gap-6 float-slow interactive-card"
         >
-          <div className="w-16 h-16 rounded-2xl bg-orange-500/20 flex items-center justify-center">
+          <div className="w-16 h-16 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shadow-[0_0_15px_rgba(249,115,22,0.02)]">
             <Flame className="w-8 h-8 text-orange-500" />
           </div>
           <div>
-            <div className="text-3xl font-bold">{streak} Days</div>
-            <div className="text-foreground/60 text-sm font-medium uppercase tracking-wider">Active Streak</div>
+            <div className="text-3xl font-extrabold text-white">{streak} Days</div>
+            <div className="text-foreground/40 text-xs font-semibold uppercase tracking-wider">Active Streak</div>
           </div>
         </motion.div>
 
@@ -149,14 +149,14 @@ export default function ProfilePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="glass-panel p-6 rounded-3xl flex items-center gap-6"
+          className="glass-panel p-6 rounded-3xl flex items-center gap-6 float-medium interactive-card"
         >
-          <div className="w-16 h-16 rounded-2xl bg-brand-500/20 flex items-center justify-center">
-            <Target className="w-8 h-8 text-brand-500" />
+          <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.02)]">
+            <Target className="w-8 h-8 text-white" />
           </div>
           <div>
-            <div className="text-3xl font-bold">{avgConfidence}%</div>
-            <div className="text-foreground/60 text-sm font-medium uppercase tracking-wider">Avg. Confidence</div>
+            <div className="text-3xl font-extrabold text-white">{avgConfidence}%</div>
+            <div className="text-foreground/40 text-xs font-semibold uppercase tracking-wider">Avg. Confidence</div>
           </div>
         </motion.div>
 
@@ -164,14 +164,14 @@ export default function ProfilePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="glass-panel p-6 rounded-3xl flex items-center gap-6"
+          className="glass-panel p-6 rounded-3xl flex items-center gap-6 float-fast interactive-card"
         >
-          <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center">
+          <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shadow-[0_0_15px_rgba(168,85,247,0.02)]">
             <Trophy className="w-8 h-8 text-purple-500" />
           </div>
           <div>
-            <div className="text-3xl font-bold">{recordings.length}</div>
-            <div className="text-foreground/60 text-sm font-medium uppercase tracking-wider">Sessions Logged</div>
+            <div className="text-3xl font-extrabold text-white">{recordings.length}</div>
+            <div className="text-foreground/40 text-xs font-semibold uppercase tracking-wider">Sessions Logged</div>
           </div>
         </motion.div>
       </div>
@@ -180,30 +180,30 @@ export default function ProfilePage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="glass-panel p-8 rounded-3xl"
+        className="glass-panel p-8 rounded-3xl border border-white/5 float-medium interactive-card"
       >
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Calendar className="w-6 h-6 text-brand-500" />
+          <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
+            <Calendar className="w-6 h-6 text-zinc-300" />
             Recent Recordings
           </h2>
         </div>
 
         <div className="space-y-4">
           {recordings.length === 0 ? (
-            <div className="text-center py-8 text-foreground/50">
+            <div className="text-center py-8 text-foreground/40 font-light">
               No recordings found. Go practice and be the first!
             </div>
           ) : (
             recordings.map((item) => (
-              <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-surface-border/30 hover:bg-surface-border/50 transition-colors border border-surface-border/50 gap-4">
+              <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 hover:border-white/10 transition-all gap-4">
                 <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center font-bold ${item.confidence >= 80 ? "bg-green-500/20 text-green-400" : item.confidence >= 70 ? "bg-brand-500/20 text-brand-400" : "bg-yellow-500/20 text-yellow-400"}`}>
+                  <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center font-bold border ${item.confidence >= 80 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : item.confidence >= 70 ? "bg-white/5 text-zinc-300 border-white/10" : "bg-amber-500/10 text-amber-400 border-amber-500/20"}`}>
                     {item.confidence}%
                   </div>
                   <div>
-                    <div className="font-semibold line-clamp-1">{item.topic || "Free Practice"}</div>
-                    <div className="text-sm text-foreground/50">{formatDate(item.created_at)} • {item.clarity}% Clarity</div>
+                    <div className="font-bold text-white line-clamp-1">{item.topic || "Free Practice"}</div>
+                    <div className="text-xs text-foreground/40 font-light">{formatDate(item.created_at)} • {item.clarity}% Clarity</div>
                   </div>
                 </div>
                 
@@ -212,7 +212,7 @@ export default function ProfilePage() {
                     href={item.video_url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-brand-500/10 text-brand-400 hover:bg-brand-500/20 transition-colors rounded-xl font-medium text-sm sm:w-auto w-full"
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-white/5 border border-white/5 text-white hover:bg-white/10 hover:border-white/10 transition-all rounded-xl font-semibold text-sm sm:w-auto w-full"
                   >
                     <Play className="w-4 h-4" />
                     Watch

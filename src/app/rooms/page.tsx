@@ -139,7 +139,7 @@ export default function RoomsPage() {
   if (isLoading || !user) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-white" />
       </div>
     );
   }
@@ -148,22 +148,22 @@ export default function RoomsPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
         <div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Team Rooms</h1>
-          <p className="text-foreground/70 max-w-xl">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 text-white">Team Rooms</h1>
+          <p className="text-foreground/60 max-w-xl font-light leading-relaxed">
             Collaborate with peers, practice together, and view each other's progress in private spaces.
           </p>
         </div>
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setIsJoinModalOpen(true)}
-            className="px-5 py-3 rounded-xl border border-surface-border bg-surface hover:bg-surface-border transition-colors font-medium text-sm flex items-center gap-2"
+            className="px-5 py-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-white transition-all font-semibold text-sm flex items-center gap-2 shadow-[0_0_15px_rgba(255,255,255,0.02)]"
           >
-            <Key className="w-4 h-4" />
+            <Key className="w-4 h-4 text-zinc-400" />
             Join Room
           </button>
           <button 
             onClick={() => setIsCreateModalOpen(true)}
-            className="px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white transition-colors font-medium text-sm flex items-center gap-2"
+            className="px-5 py-3 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all font-semibold text-sm flex items-center gap-2 border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.08)]"
           >
             <Plus className="w-4 h-4" />
             Create Room
@@ -173,36 +173,36 @@ export default function RoomsPage() {
 
       {fetchingRooms ? (
         <div className="py-24 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+          <Loader2 className="w-8 h-8 animate-spin text-white" />
         </div>
       ) : rooms.length === 0 ? (
-        <div className="glass-panel p-12 rounded-3xl text-center flex flex-col items-center">
-          <div className="w-20 h-20 bg-brand-500/10 rounded-full flex items-center justify-center mb-6">
-            <Users className="w-10 h-10 text-brand-500" />
+        <div className="glass-panel p-12 rounded-3xl text-center flex flex-col items-center float-slow">
+          <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-full flex items-center justify-center mb-6 shadow-[0_0_15px_rgba(255,255,255,0.02)]">
+            <Users className="w-10 h-10 text-zinc-300" />
           </div>
-          <h2 className="text-2xl font-bold mb-2">No Rooms Yet</h2>
-          <p className="text-foreground/70 mb-8 max-w-md">
+          <h2 className="text-2xl font-extrabold mb-2 text-white">No Rooms Yet</h2>
+          <p className="text-foreground/60 mb-8 max-w-md font-light leading-relaxed">
             You haven't joined any team rooms. Create one to invite your peers or join an existing one using a passkey!
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {rooms.map((room) => (
+          {rooms.map((room, idx) => (
             <Link key={room.id} href={`/rooms/${room.id}`}>
               <motion.div 
                 whileHover={{ y: -4 }}
-                className="glass-panel p-6 rounded-3xl group cursor-pointer border border-surface-border hover:border-brand-500/30 transition-all"
+                className={`glass-panel p-6 rounded-3xl group cursor-pointer border border-white/5 transition-all ${idx % 3 === 0 ? 'float-slow' : idx % 3 === 1 ? 'float-medium' : 'float-fast'} interactive-card`}
               >
                 <div className="flex items-start justify-between mb-6">
-                  <div className="w-12 h-12 rounded-2xl bg-brand-500/10 flex items-center justify-center text-brand-500 group-hover:scale-110 transition-transform">
+                  <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white group-hover:scale-110 transition-all shadow-[0_0_15px_rgba(255,255,255,0.02)]">
                     <Users className="w-6 h-6" />
                   </div>
-                  <div className="px-3 py-1 rounded-lg bg-surface text-xs font-mono tracking-widest text-foreground/70 border border-surface-border">
+                  <div className="px-3 py-1 rounded-lg bg-white/5 border border-white/5 text-xs font-mono tracking-widest text-zinc-300">
                     {room.passkey}
                   </div>
                 </div>
-                <h3 className="text-xl font-bold mb-2 group-hover:text-brand-400 transition-colors">{room.name}</h3>
-                <div className="flex items-center text-brand-500 text-sm font-medium mt-4 opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0">
+                <h3 className="text-xl font-bold mb-2 text-white group-hover:text-white transition-colors">{room.name}</h3>
+                <div className="flex items-center text-white text-sm font-medium mt-4 opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0">
                   Enter Room <ArrowRight className="w-4 h-4 ml-1" />
                 </div>
               </motion.div>
@@ -214,38 +214,38 @@ export default function RoomsPage() {
       {/* Create Room Modal */}
       <AnimatePresence>
         {isCreateModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-surface border border-surface-border p-8 rounded-3xl w-full max-w-md shadow-2xl"
+              className="glass-panel p-8 rounded-[2rem] w-full max-w-md shadow-2xl relative z-10 border border-white/10 bg-zinc-950/90"
             >
-              <h2 className="text-2xl font-bold mb-2">Create a Room</h2>
-              <p className="text-foreground/70 mb-6 text-sm">A secure passkey will be generated automatically for your team.</p>
+              <h2 className="text-2xl font-extrabold mb-2 text-white">Create a Room</h2>
+              <p className="text-foreground/60 mb-6 text-sm font-light leading-relaxed">A secure passkey will be generated automatically for your team.</p>
               
               <form onSubmit={handleCreateRoom}>
-                <label className="block text-sm font-medium mb-2">Room Name</label>
+                <label className="block text-sm font-medium mb-2 text-zinc-300">Room Name</label>
                 <input 
                   type="text" 
                   required
                   value={newRoomName}
                   onChange={e => setNewRoomName(e.target.value)}
                   placeholder="e.g. Sales Pitch Practice"
-                  className="w-full bg-background border border-surface-border rounded-xl px-4 py-3 mb-6 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                  className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 mb-6 focus:outline-none focus:border-white/20 focus:bg-white/10 transition-all text-white placeholder-zinc-500 font-light text-sm"
                 />
                 <div className="flex items-center justify-end gap-3">
                   <button 
                     type="button"
                     onClick={() => setIsCreateModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-foreground/70 hover:bg-surface-border transition-colors font-medium text-sm"
+                    className="px-4 py-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all font-semibold text-sm"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit"
                     disabled={actionLoading}
-                    className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white transition-colors font-medium text-sm flex items-center gap-2 disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all font-semibold text-sm flex items-center gap-2 border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.08)] disabled:opacity-50"
                   >
                     {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                     Create Room
@@ -260,18 +260,18 @@ export default function RoomsPage() {
       {/* Join Room Modal */}
       <AnimatePresence>
         {isJoinModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-surface border border-surface-border p-8 rounded-3xl w-full max-w-md shadow-2xl"
+              className="glass-panel p-8 rounded-[2rem] w-full max-w-md shadow-2xl relative z-10 border border-white/10 bg-zinc-950/90"
             >
-              <h2 className="text-2xl font-bold mb-2">Join a Room</h2>
-              <p className="text-foreground/70 mb-6 text-sm">Enter the 6-character passkey provided by the room creator.</p>
+              <h2 className="text-2xl font-extrabold mb-2 text-white">Join a Room</h2>
+              <p className="text-foreground/60 mb-6 text-sm font-light leading-relaxed">Enter the 6-character passkey provided by the room creator.</p>
               
               <form onSubmit={handleJoinRoom}>
-                <label className="block text-sm font-medium mb-2">Passkey</label>
+                <label className="block text-sm font-medium mb-2 text-zinc-300">Passkey</label>
                 <input 
                   type="text" 
                   required
@@ -279,20 +279,20 @@ export default function RoomsPage() {
                   value={joinPasskey}
                   onChange={e => setJoinPasskey(e.target.value.toUpperCase())}
                   placeholder="e.g. AB12CD"
-                  className="w-full bg-background border border-surface-border rounded-xl px-4 py-3 mb-6 focus:outline-none focus:ring-2 focus:ring-brand-500/50 font-mono tracking-widest uppercase"
+                  className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 mb-6 focus:outline-none focus:border-white/20 focus:bg-white/10 transition-all text-white placeholder-zinc-500 font-mono tracking-widest uppercase text-sm"
                 />
                 <div className="flex items-center justify-end gap-3">
                   <button 
                     type="button"
                     onClick={() => setIsJoinModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-foreground/70 hover:bg-surface-border transition-colors font-medium text-sm"
+                    className="px-4 py-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all font-semibold text-sm"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit"
                     disabled={actionLoading}
-                    className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white transition-colors font-medium text-sm flex items-center gap-2 disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all font-semibold text-sm flex items-center gap-2 border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.08)] disabled:opacity-50"
                   >
                     {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                     Join Room

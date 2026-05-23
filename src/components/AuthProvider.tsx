@@ -31,13 +31,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(data.session.user);
           // Clean up the URL to prevent re-exchange
           window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (error) {
+          console.warn("OAuth exchange failed, clearing session storage:", error.message);
+          supabase.auth.signOut().catch(() => {});
+          setUser(null);
         }
         setIsLoading(false);
       });
     } else {
       // Get initial session
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setUser(session?.user ?? null);
+      supabase.auth.getSession().then(({ data: { session }, error }) => {
+        if (error) {
+          console.warn("Session restoration failed, clearing session storage:", error.message);
+          supabase.auth.signOut().catch(() => {});
+          setUser(null);
+        } else {
+          setUser(session?.user ?? null);
+        }
         if (!isHandlingAuth) {
           setIsLoading(false);
         }
