@@ -151,7 +151,7 @@ drop policy if exists "Users can update mapped organizations" on public.organiza
 
 create policy "Users can view mapped organizations"
   on public.organizations for select
-  using (public.is_member_of_org(id));
+  using (public.is_member_of_org(id) or created_by = auth.uid());
 
 create policy "Users can update mapped organizations"
   on public.organizations for update
