@@ -44,14 +44,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase
         .from("organization_users")
-        .select("organization_id, organizations(name)")
+        .select("organization_id, organizations(name, is_personal)")
         .eq("user_id", userId);
 
       if (!error && data) {
-        const orgWorkspaces = data.map((item: any) => ({
-          id: item.organization_id,
-          name: item.organizations?.name || "Unnamed Team"
-        }));
+        const orgWorkspaces = data
+          .filter((item: any) => !item.organizations?.is_personal)
+          .map((item: any) => ({
+            id: item.organization_id,
+            name: item.organizations?.name || "Unnamed Team"
+          }));
         const allWorkspaces = [
           { id: "personal", name: "Personal Space" },
           ...orgWorkspaces
