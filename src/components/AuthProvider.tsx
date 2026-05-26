@@ -18,6 +18,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let active = true;
 
+    const syncCookies = (session: any) => {
+      if (typeof document !== "undefined") {
+        if (session) {
+          const maxAge = session.expires_in || 3600;
+          document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
+          document.cookie = `sb-refresh-token=${session.refresh_token}; path=/; max-age=${maxAge * 24}; SameSite=Lax; Secure`;
+        } else {
+          document.cookie = "sb-access-token=; path=/; max-age=0; SameSite=Lax; Secure";
+          document.cookie = "sb-refresh-token=; path=/; max-age=0; SameSite=Lax; Secure";
+        }
+      }
+    };
+
     const trackLoginSession = async (currUser: User) => {
       if (typeof window === "undefined") return;
       const isTracked = sessionStorage.getItem("speak_mirror_session_tracked");
@@ -73,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUser(null);
             } else if (data.session) {
               setUser(data.session.user);
+              syncCookies(data.session);
               await trackLoginSession(data.session.user);
             }
             // Clean URL query parameters to prevent re-exchange
@@ -103,6 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUser(null);
             } else if (data.session) {
               setUser(data.session.user);
+              syncCookies(data.session);
               await trackLoginSession(data.session.user);
             }
             // Clean URL hash parameters to prevent re-processing
@@ -151,7 +166,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUser(null);
             } else {
               setUser(session?.user ?? null);
-              if (session?.user) {
+              if (session) {
+                syncCookies(session);
                 await trackLoginSession(session.user);
               }
             }
@@ -171,6 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (active) {
         console.log("Auth state changed:", event, session?.user?.email);
         setUser(session?.user ?? null);
+        syncCookies(session);
         
         if (event === "SIGNED_OUT") {
           sessionStorage.removeItem("speak_mirror_session_tracked");
