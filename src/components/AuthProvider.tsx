@@ -4,16 +4,80 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 
+export interface Workspace {
+  id: string;
+  name: string;
+}
+
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
+  activeWorkspace: Workspace;
+  setActiveWorkspace: (workspace: Workspace) => void;
+  workspaces: Workspace[];
+  fetchWorkspaces: (userId: string) => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, isLoading: true });
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  isLoading: true,
+  activeWorkspace: { id: "personal", name: "Personal Space" },
+  setActiveWorkspace: () => {},
+  workspaces: [{ id: "personal", name: "Personal Space" }],
+  fetchWorkspaces: async () => {},
+});
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([{ id: "personal", name: "Personal Space" }]);
+  const [activeWorkspace, setActiveWorkspaceState] = useState<Workspace>({ id: "personal", name: "Personal Space" });
+
+  const setActiveWorkspace = (workspace: Workspace) => {
+    setActiveWorkspaceState(workspace);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("speak_mirror_active_workspace", JSON.stringify(workspace));
+    }
+  };
+
+  const fetchWorkspaces = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("organization_users")
+        .select("organization_id, organizations(name)")
+        .eq("user_id", userId);
+
+      if (!error && data) {
+        const orgWorkspaces = data.map((item: any) => ({
+          id: item.organization_id,
+          name: item.organizations?.name || "Unnamed Team"
+        }));
+        const allWorkspaces = [
+          { id: "personal", name: "Personal Space" },
+          ...orgWorkspaces
+        ];
+        setWorkspaces(allWorkspaces);
+
+        // Restore active workspace if it's still valid
+        const saved = localStorage.getItem("speak_mirror_active_workspace");
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            const exists = allWorkspaces.some((w) => w.id === parsed.id);
+            if (exists) {
+              setActiveWorkspaceState(parsed);
+              return;
+            }
+          } catch (e) {
+            console.error("Failed to parse active workspace:", e);
+          }
+        }
+        setActiveWorkspaceState({ id: "personal", name: "Personal Space" });
+      }
+    } catch (e) {
+      console.error("Error fetching workspaces:", e);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -87,6 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } else if (data.session) {
               setUser(data.session.user);
               syncCookies(data.session);
+              await fetchWorkspaces(data.session.user.id);
               await trackLoginSession(data.session.user);
             }
             // Clean URL query parameters to prevent re-exchange
@@ -118,6 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } else if (data.session) {
               setUser(data.session.user);
               syncCookies(data.session);
+              await fetchWorkspaces(data.session.user.id);
               await trackLoginSession(data.session.user);
             }
             // Clean URL hash parameters to prevent re-processing
@@ -168,6 +234,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUser(session?.user ?? null);
               if (session) {
                 syncCookies(session);
+                await fetchWorkspaces(session.user.id);
                 await trackLoginSession(session.user);
               }
             }
@@ -191,7 +258,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (event === "SIGNED_OUT") {
           sessionStorage.removeItem("speak_mirror_session_tracked");
+          setWorkspaces([{ id: "personal", name: "Personal Space" }]);
+          setActiveWorkspaceState({ id: "personal", name: "Personal Space" });
+          localStorage.removeItem("speak_mirror_active_workspace");
         } else if (session?.user) {
+          fetchWorkspaces(session.user.id);
           trackLoginSession(session.user);
         }
 
@@ -220,7 +291,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading }}>
+    <AuthContext.Provider value={{ user, isLoading, activeWorkspace, setActiveWorkspace, workspaces, fetchWorkspaces }}>
       {children}
     </AuthContext.Provider>
   );

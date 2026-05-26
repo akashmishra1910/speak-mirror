@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { supabase } from "@/lib/supabase";
+import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -17,12 +18,21 @@ export function Navbar() {
   return (
     <nav className="fixed top-0 inset-x-0 h-16 border-b border-white/5 bg-[#050508]/60 backdrop-blur-2xl z-50 shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.02)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.02)]">
-            <Mic className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-bold text-lg tracking-tight text-white">SpeakMirror</span>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.02)]">
+              <Mic className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-bold text-lg tracking-tight text-white">SpeakMirror</span>
+          </Link>
+          
+          {user && (
+            <>
+              <div className="h-4 w-px bg-white/10 hidden sm:block"></div>
+              <WorkspaceSwitcher />
+            </>
+          )}
+        </div>
         
         <div className="flex items-center gap-2 md:gap-4">
           <Link 
