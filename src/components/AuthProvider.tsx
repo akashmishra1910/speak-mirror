@@ -16,60 +16,103 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if we are currently handling an OAuth redirect
-    const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-    const code = searchParams?.get('code');
-    const isHandlingAuth = typeof window !== 'undefined' && 
-      (code !== null || 
-       window.location.hash.includes('access_token=') || 
-       window.location.search.includes('error='));
+    let active = true;
 
-    if (code) {
-      // Explicitly exchange the code for a session
-      supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
-        if (!error && data.session) {
-          setUser(data.session.user);
-          // Clean up the URL to prevent re-exchange
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } else if (error) {
-          console.warn("OAuth exchange failed, clearing session storage:", error.message);
-          supabase.auth.signOut().catch(() => {});
-          setUser(null);
+    async function initializeAuth() {
+      // Check if there is an auth code or error in the URL
+      const searchParams = new URLSearchParams(window.location.search);
+      const code = searchParams.get("code");
+      const errorType = searchParams.get("error");
+      const errorDesc = searchParams.get("error_description");
+
+      if (code) {
+        try {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (active) {
+            if (error) {
+              console.warn("OAuth exchange failed, signing out:", error.message);
+              await supabase.auth.signOut().catch(() => {});
+              setUser(null);
+            } else if (data.session) {
+              setUser(data.session.user);
+            }
+            // Clean URL query parameters to prevent re-exchange
+            const url = new URL(window.location.href);
+            url.searchParams.delete("code");
+            window.history.replaceState({}, document.title, url.pathname + url.search);
+          }
+        } catch (err) {
+          console.error("Error exchanging code:", err);
+          if (active) {
+            setUser(null);
+          }
+        } finally {
+          if (active) {
+            setIsLoading(false);
+          }
         }
-        setIsLoading(false);
-      });
-    } else {
-      // Get initial session
-      supabase.auth.getSession().then(({ data: { session }, error }) => {
-        if (error) {
-          console.warn("Session restoration failed, clearing session storage:", error.message);
-          supabase.auth.signOut().catch(() => {});
+      } else if (errorType || errorDesc) {
+        console.error("OAuth error redirect:", errorType, errorDesc);
+        if (active) {
           setUser(null);
-        } else {
-          setUser(session?.user ?? null);
-        }
-        if (!isHandlingAuth) {
           setIsLoading(false);
+          
+          // Display a user-friendly alert explaining the authentication error
+          const decodedDesc = errorDesc ? decodeURIComponent(errorDesc.replace(/\+/g, " ")) : "Authentication failed";
+          alert(`Authentication Error: ${decodedDesc}\n\nPlease check your Supabase and Google Cloud Console configurations.`);
+          
+          // Clean URL query parameters
+          const url = new URL(window.location.href);
+          url.searchParams.delete("error");
+          url.searchParams.delete("error_description");
+          url.searchParams.delete("error_code");
+          window.history.replaceState({}, document.title, url.pathname + url.search);
         }
-      });
+      } else {
+        // Standard session retrieval
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
+          if (active) {
+            if (error) {
+              console.warn("Session check failed, clearing storage:", error.message);
+              await supabase.auth.signOut().catch(() => {});
+              setUser(null);
+            } else {
+              setUser(session?.user ?? null);
+            }
+          }
+        } catch (err) {
+          console.error("Error getting session:", err);
+        } finally {
+          if (active) {
+            setIsLoading(false);
+          }
+        }
+      }
     }
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setIsLoading(false);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (active) {
+        console.log("Auth state changed:", event, session?.user?.email);
+        setUser(session?.user ?? null);
+        // Only resolve loading if we are NOT currently handling code exchange/redirect
+        const searchParams = new URLSearchParams(window.location.search);
+        const hasCode = searchParams.has("code");
+        const hasError = searchParams.has("error");
+        if (!hasCode && !hasError) {
+          setIsLoading(false);
+        }
+      }
     });
 
-    // Fallback timeout in case onAuthStateChange doesn't fire during OAuth
-    if (isHandlingAuth) {
-      const timer = setTimeout(() => setIsLoading(false), 4000);
-      return () => {
-        clearTimeout(timer);
-        subscription.unsubscribe();
-      };
-    }
+    // Run async initializer
+    initializeAuth();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (
