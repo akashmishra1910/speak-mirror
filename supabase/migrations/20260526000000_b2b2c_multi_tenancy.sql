@@ -70,6 +70,25 @@ create trigger on_auth_user_signup
   after insert on auth.users
   for each row execute procedure public.handle_new_user_signup();
 
+-- Trigger to automatically map the creator of a manually created organization as OWNER
+create or replace function public.handle_new_organization_created()
+returns trigger as $$
+begin
+  insert into public.organization_users (organization_id, user_id, role)
+  values (new.id, new.created_by, 'OWNER')
+  on conflict (organization_id, user_id) do nothing;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+-- Bind trigger to public.organizations
+drop trigger if exists on_organization_created on public.organizations;
+create trigger on_organization_created
+  after insert on public.organizations
+  for each row
+  when (new.created_by is not null)
+  execute procedure public.handle_new_organization_created();
+
 -- 5. recordings Table Update (with Production Data Backfill)
 -- Add column as nullable initially
 alter table public.recordings 
@@ -148,10 +167,15 @@ $$ language plpgsql security definer;
 -- Organizations Policies
 drop policy if exists "Users can view mapped organizations" on public.organizations;
 drop policy if exists "Users can update mapped organizations" on public.organizations;
+drop policy if exists "Authenticated users can create organizations" on public.organizations;
 
 create policy "Users can view mapped organizations"
   on public.organizations for select
   using (public.is_member_of_org(id) or created_by = auth.uid());
+
+create policy "Authenticated users can create organizations"
+  on public.organizations for insert
+  with check (auth.role() = 'authenticated' and created_by = auth.uid());
 
 create policy "Users can update mapped organizations"
   on public.organizations for update
