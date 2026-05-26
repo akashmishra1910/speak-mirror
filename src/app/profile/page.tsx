@@ -73,9 +73,44 @@ export default function ProfilePage() {
     ? Math.round(recordings.reduce((acc, curr) => acc + (curr.confidence || 0), 0) / recordings.length) 
     : 0;
 
-  // Calculate a simple global streak based on unique days
-  const uniqueDays = new Set(recordings.map(r => new Date(r.created_at).toDateString()));
-  const streak = uniqueDays.size;
+  // Calculate true consecutive daily practice streak (updates if practiced daily at least once)
+  const calculateStreak = () => {
+    if (recordings.length === 0) return 0;
+    
+    // Convert all recording dates to local midnight timestamps
+    const dates = recordings.map(r => {
+      const d = new Date(r.created_at);
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    });
+    
+    // Sort unique timestamps descending (most recent first)
+    const uniqueTimestamps = Array.from(new Set(dates)).sort((a, b) => b - a);
+    
+    const today = new Date();
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const yesterdayMidnight = todayMidnight - 86400000;
+    
+    const mostRecent = uniqueTimestamps[0];
+    
+    // Streak is broken (0) if there's no practice today or yesterday
+    if (mostRecent !== todayMidnight && mostRecent !== yesterdayMidnight) {
+      return 0;
+    }
+    
+    let currentStreak = 1;
+    for (let i = 0; i < uniqueTimestamps.length - 1; i++) {
+      const diff = uniqueTimestamps[i] - uniqueTimestamps[i + 1];
+      if (diff === 86400000) {
+        currentStreak++;
+      } else if (diff > 86400000) {
+        // Gap is larger than 1 day, streak is broken
+        break;
+      }
+    }
+    return currentStreak;
+  };
+
+  const streak = calculateStreak();
 
   const formatDate = (dateString: string) => {
     const d = new Date(dateString);
@@ -170,8 +205,8 @@ export default function ProfilePage() {
             <Trophy className="w-8 h-8 text-purple-500" />
           </div>
           <div>
-            <div className="text-3xl font-extrabold text-white">{recordings.length}</div>
-            <div className="text-foreground/40 text-xs font-semibold uppercase tracking-wider">Sessions Logged</div>
+            <div className="text-3xl font-extrabold text-white">{user?.user_metadata?.login_count || 1}</div>
+            <div className="text-foreground/40 text-xs font-semibold uppercase tracking-wider">Login Sessions</div>
           </div>
         </motion.div>
       </div>

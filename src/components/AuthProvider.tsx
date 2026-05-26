@@ -18,6 +18,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let active = true;
 
+    const trackLoginSession = async (currUser: User) => {
+      if (typeof window === "undefined") return;
+      const isTracked = sessionStorage.getItem("speak_mirror_session_tracked");
+      if (!isTracked) {
+        sessionStorage.setItem("speak_mirror_session_tracked", "true");
+        const currentCount = Number(currUser.user_metadata?.login_count || 0);
+        const newCount = currentCount + 1;
+        
+        try {
+          const { data, error } = await supabase.auth.updateUser({
+            data: { login_count: newCount }
+          });
+          if (active) {
+            if (error) {
+              console.error("Failed to update user login count:", error.message);
+              sessionStorage.removeItem("speak_mirror_session_tracked");
+            } else if (data.user) {
+              setUser(data.user);
+            }
+          }
+        } catch (err) {
+          console.error("Error updating user login count:", err);
+          sessionStorage.removeItem("speak_mirror_session_tracked");
+        }
+      }
+    };
+
     async function initializeAuth() {
       // Check if there is an auth code or error in the URL query params
       const searchParams = new URLSearchParams(window.location.search);
@@ -46,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUser(null);
             } else if (data.session) {
               setUser(data.session.user);
+              await trackLoginSession(data.session.user);
             }
             // Clean URL query parameters to prevent re-exchange
             const url = new URL(window.location.href);
@@ -75,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUser(null);
             } else if (data.session) {
               setUser(data.session.user);
+              await trackLoginSession(data.session.user);
             }
             // Clean URL hash parameters to prevent re-processing
             const url = new URL(window.location.href);
@@ -122,6 +151,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUser(null);
             } else {
               setUser(session?.user ?? null);
+              if (session?.user) {
+                await trackLoginSession(session.user);
+              }
             }
           }
         } catch (err) {
@@ -139,6 +171,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (active) {
         console.log("Auth state changed:", event, session?.user?.email);
         setUser(session?.user ?? null);
+        
+        if (event === "SIGNED_OUT") {
+          sessionStorage.removeItem("speak_mirror_session_tracked");
+        } else if (session?.user) {
+          trackLoginSession(session.user);
+        }
+
         // Only resolve loading if we are NOT currently handling code exchange/redirect
         const searchParams = new URLSearchParams(window.location.search);
         const hasCode = searchParams.has("code");
