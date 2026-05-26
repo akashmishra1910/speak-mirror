@@ -19,11 +19,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let active = true;
 
     async function initializeAuth() {
-      // Check if there is an auth code or error in the URL
+      // Check if there is an auth code or error in the URL query params
       const searchParams = new URLSearchParams(window.location.search);
       const code = searchParams.get("code");
       const errorType = searchParams.get("error");
       const errorDesc = searchParams.get("error_description");
+
+      // Check URL hash parameters (for Implicit Grant Flow redirects)
+      const hash = typeof window !== "undefined" ? window.location.hash : "";
+      let hashParams = new URLSearchParams();
+      if (hash && hash.startsWith("#")) {
+        hashParams = new URLSearchParams(hash.substring(1));
+      }
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
+      const hashErrorType = hashParams.get("error");
+      const hashErrorDesc = hashParams.get("error_description");
 
       if (code) {
         try {
@@ -51,21 +62,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsLoading(false);
           }
         }
-      } else if (errorType || errorDesc) {
-        console.error("OAuth error redirect:", errorType, errorDesc);
+      } else if (accessToken && refreshToken) {
+        try {
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+          if (active) {
+            if (error) {
+              console.warn("Setting session from hash failed, signing out:", error.message);
+              await supabase.auth.signOut().catch(() => {});
+              setUser(null);
+            } else if (data.session) {
+              setUser(data.session.user);
+            }
+            // Clean URL hash parameters to prevent re-processing
+            const url = new URL(window.location.href);
+            url.hash = "";
+            window.history.replaceState({}, document.title, url.pathname + url.search);
+          }
+        } catch (err) {
+          console.error("Error setting session from hash:", err);
+          if (active) {
+            setUser(null);
+          }
+        } finally {
+          if (active) {
+            setIsLoading(false);
+          }
+        }
+      } else if (errorType || errorDesc || hashErrorType || hashErrorDesc) {
+        const finalErrorType = errorType || hashErrorType;
+        const finalErrorDesc = errorDesc || hashErrorDesc;
+        console.error("OAuth error redirect:", finalErrorType, finalErrorDesc);
         if (active) {
           setUser(null);
           setIsLoading(false);
           
           // Display a user-friendly alert explaining the authentication error
-          const decodedDesc = errorDesc ? decodeURIComponent(errorDesc.replace(/\+/g, " ")) : "Authentication failed";
+          const decodedDesc = finalErrorDesc ? decodeURIComponent(finalErrorDesc.replace(/\+/g, " ")) : "Authentication failed";
           alert(`Authentication Error: ${decodedDesc}\n\nPlease check your Supabase and Google Cloud Console configurations.`);
           
-          // Clean URL query parameters
+          // Clean URL query and hash parameters
           const url = new URL(window.location.href);
           url.searchParams.delete("error");
           url.searchParams.delete("error_description");
           url.searchParams.delete("error_code");
+          url.hash = "";
           window.history.replaceState({}, document.title, url.pathname + url.search);
         }
       } else {
@@ -100,7 +143,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const searchParams = new URLSearchParams(window.location.search);
         const hasCode = searchParams.has("code");
         const hasError = searchParams.has("error");
-        if (!hasCode && !hasError) {
+        
+        // Also check hash parameters
+        const hash = typeof window !== "undefined" ? window.location.hash : "";
+        const hasHashToken = hash.includes("access_token=") || hash.includes("error=");
+        
+        if (!hasCode && !hasError && !hasHashToken) {
           setIsLoading(false);
         }
       }
