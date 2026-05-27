@@ -6,14 +6,15 @@ import { FeedbackDashboard, AnalysisMetrics } from "@/components/FeedbackDashboa
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, ArrowLeft, Loader2, Flame, Clock, AlertCircle, BookOpen, ChevronRight, Calendar } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
-import { useEffect, Suspense } from "react";
+import { useEffect, Suspense, useRef, useCallback } from "react";
 
 function PracticeContent() {
   const { user, activeWorkspace } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const roomId = searchParams.get("roomId");
   const taskId = searchParams.get("taskId");
 
@@ -42,6 +43,24 @@ function PracticeContent() {
   // Team Assignments State
   const [pendingAssignments, setPendingAssignments] = useState<any[]>([]);
   const [isLoadingAssignments, setIsLoadingAssignments] = useState(false);
+
+  const isFirstWorkspaceChange = useRef(true);
+
+  // Clear query parameters and selected task states when user switches workspaces manually
+  useEffect(() => {
+    if (isFirstWorkspaceChange.current) {
+      isFirstWorkspaceChange.current = false;
+      return;
+    }
+    
+    setActiveRoomId(null);
+    setActiveTaskId(null);
+    setTask(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("roomId");
+    url.searchParams.delete("taskId");
+    router.replace(url.pathname);
+  }, [activeWorkspace.id]);
 
   // Sync Search Params to Local State initially
   useEffect(() => {
@@ -128,13 +147,13 @@ function PracticeContent() {
   }, [user, activeWorkspace.id]);
 
   // Fetch Team Pending Assignments
-  const fetchTeamAssignments = async () => {
+  const fetchTeamAssignments = useCallback(async (active = true) => {
     if (!user || activeWorkspace.id === "personal") {
-      setPendingAssignments([]);
+      if (active) setPendingAssignments([]);
       return;
     }
     
-    setIsLoadingAssignments(true);
+    if (active) setIsLoadingAssignments(true);
     try {
       // 1. Fetch rooms under current team workspace
       const { data: rooms, error: roomsError } = await supabase
@@ -143,8 +162,10 @@ function PracticeContent() {
         .eq("organization_id", activeWorkspace.id);
         
       if (roomsError || !rooms || rooms.length === 0) {
-        setPendingAssignments([]);
-        setIsLoadingAssignments(false);
+        if (active) {
+          setPendingAssignments([]);
+          setIsLoadingAssignments(false);
+        }
         return;
       }
       
@@ -158,8 +179,10 @@ function PracticeContent() {
         .order("created_at", { ascending: false });
         
       if (tasksError || !tasks) {
-        setPendingAssignments([]);
-        setIsLoadingAssignments(false);
+        if (active) {
+          setPendingAssignments([]);
+          setIsLoadingAssignments(false);
+        }
         return;
       }
       
@@ -205,17 +228,21 @@ function PracticeContent() {
           };
         });
         
-      setPendingAssignments(pending);
+      if (active) setPendingAssignments(pending);
     } catch (err) {
       console.error("Error fetching team assignments:", err);
     } finally {
-      setIsLoadingAssignments(false);
+      if (active) setIsLoadingAssignments(false);
     }
-  };
+  }, [user, activeWorkspace.id]);
 
   useEffect(() => {
-    fetchTeamAssignments();
-  }, [user, activeWorkspace.id]);
+    let active = true;
+    fetchTeamAssignments(active);
+    return () => {
+      active = false;
+    };
+  }, [fetchTeamAssignments]);
 
   const selectAssignment = (assignment: any) => {
     setActiveTaskId(assignment.id);
