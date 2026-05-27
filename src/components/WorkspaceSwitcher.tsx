@@ -324,7 +324,7 @@ export function WorkspaceSwitcher() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: "spring", damping: 25, stiffness: 350 }}
-              className="relative w-full max-w-md rounded-3xl bg-[#09090d]/90 backdrop-blur-3xl border border-white/10 p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-10"
+              className="relative w-full max-w-md rounded-[1.5rem] sm:rounded-3xl bg-[#09090d]/90 backdrop-blur-3xl border border-white/10 p-5 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-10"
             >
               {/* Close Button */}
               <button
@@ -447,7 +447,7 @@ export function WorkspaceSwitcher() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: "spring", damping: 25, stiffness: 350 }}
-              className="relative w-full max-w-md rounded-3xl bg-[#09090d]/90 backdrop-blur-3xl border border-white/10 p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-10"
+              className="relative w-full max-w-md rounded-[1.5rem] sm:rounded-3xl bg-[#09090d]/90 backdrop-blur-3xl border border-white/10 p-5 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-10"
             >
               {/* Close Button */}
               <button
