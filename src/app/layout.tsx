@@ -4,6 +4,7 @@ import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { AuthProvider } from "@/components/AuthProvider";
 import Link from "next/link";
+import { CookieConsent } from "@/components/CookieConsent";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -44,6 +45,7 @@ export default function RootLayout({
 
         <AuthProvider>
           <Navbar />
+          <CookieConsent />
           <main className="flex-1 pt-16 relative z-10">
             {children}
           </main>
