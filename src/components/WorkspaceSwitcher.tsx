@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth, Workspace } from "./AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronDown, Folder, Users, Plus, Loader2, X, Key, Copy, CheckCircle } from "lucide-react";
+import { Check, ChevronDown, Folder, Users, Plus, Loader2, X, Key, Copy, CheckCircle, Trash2 } from "lucide-react";
 
 export function WorkspaceSwitcher() {
   const { user, activeWorkspace, setActiveWorkspace, workspaces, fetchWorkspaces } = useAuth();
@@ -107,6 +107,35 @@ export function WorkspaceSwitcher() {
     setIsOpen(false);
   };
 
+  const handleDeleteTeam = async (ws: Workspace) => {
+    const confirmDelete = confirm(
+      `Are you sure you want to permanently delete the team "${ws.name}"? This action cannot be undone and will delete the team workspace for all members.`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("organizations")
+        .delete()
+        .eq("id", ws.id);
+
+      if (error) throw error;
+
+      alert(`Team "${ws.name}" has been permanently deleted.`);
+
+      // If the deleted team was active, switch back to personal
+      if (activeWorkspace.id === ws.id) {
+        setActiveWorkspace({ id: "personal", name: "Personal Space" });
+      }
+
+      // Re-fetch workspaces list
+      await fetchWorkspaces(user.id);
+    } catch (err: any) {
+      console.error("Error deleting team:", err);
+      alert("Failed to delete team: " + err.message);
+    }
+  };
+
   return (
     <div className="relative" ref={containerRef}>
       {/* Switcher Trigger Button */}
@@ -168,7 +197,21 @@ export function WorkspaceSwitcher() {
                         )}
                         <span className="truncate">{ws.name}</span>
                       </div>
-                      {isActive && <Check className="w-4 h-4 text-white shrink-0" />}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {ws.id !== "personal" && (ws.created_by === user.id || ws.role === "OWNER") && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteTeam(ws);
+                            }}
+                            className="p-1 rounded-md text-red-500 hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer flex items-center justify-center"
+                            title="Delete Team Workspace"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {isActive && <Check className="w-4 h-4 text-white shrink-0" />}
+                      </div>
                     </div>
 
                     {ws.id !== "personal" && ws.invite_token && (

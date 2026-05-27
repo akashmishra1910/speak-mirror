@@ -8,6 +8,8 @@ export interface Workspace {
   id: string;
   name: string;
   invite_token?: string;
+  role?: string;
+  created_by?: string;
 }
 
 interface AuthContextType {
@@ -45,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase
         .from("organization_users")
-        .select("organization_id, organizations(name, is_personal, invite_token)")
+        .select("organization_id, role, organizations(name, is_personal, invite_token, created_by)")
         .eq("user_id", userId);
 
       if (!error && data) {
@@ -54,7 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .map((item: any) => ({
             id: item.organization_id,
             name: item.organizations?.name || "Unnamed Team",
-            invite_token: item.organizations?.invite_token
+            invite_token: item.organizations?.invite_token,
+            role: item.role,
+            created_by: item.organizations?.created_by
           }));
         const allWorkspaces = [
           { id: "personal", name: "Personal Space" },
