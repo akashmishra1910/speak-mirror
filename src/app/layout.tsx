@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { AuthProvider } from "@/components/AuthProvider";
+import Link from "next/link";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -46,6 +47,21 @@ export default function RootLayout({
           <main className="flex-1 pt-16 relative z-10">
             {children}
           </main>
+          <footer className="border-t border-white/5 bg-[#050508]/80 py-8 relative z-10">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500 font-light">
+              <div>
+                &copy; {new Date().getFullYear()} SpeakMirror. All rights reserved.
+              </div>
+              <div className="flex gap-6">
+                <Link href="/terms" className="hover:text-white transition-colors">
+                  Terms of Service
+                </Link>
+                <Link href="/privacy" className="hover:text-white transition-colors">
+                  Privacy Policy
+                </Link>
+              </div>
+            </div>
+          </footer>
         </AuthProvider>
       </body>
     </html>
