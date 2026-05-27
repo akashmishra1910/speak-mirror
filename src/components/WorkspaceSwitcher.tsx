@@ -5,10 +5,12 @@ import { useAuth, Workspace } from "./AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronDown, Folder, Users, Plus, Loader2, X, Key, Copy, CheckCircle, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export function WorkspaceSwitcher() {
   const { user, activeWorkspace, setActiveWorkspace, workspaces, fetchWorkspaces } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const router = useRouter();
   
   // Create Team Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -94,6 +96,24 @@ export function WorkspaceSwitcher() {
       setIsJoinModalOpen(false);
       setIsOpen(false);
       alert(`Successfully joined team: ${joinedWorkspace.name}`);
+
+      // Auto-redirect to the newly joined team's room
+      try {
+        const { data: roomData } = await supabase
+          .from("rooms")
+          .select("id")
+          .eq("organization_id", joinedWorkspace.id)
+          .maybeSingle();
+
+        if (roomData) {
+          router.push(`/rooms/${roomData.id}`);
+        } else {
+          router.push("/rooms");
+        }
+      } catch (err) {
+        console.error("Error auto-redirecting to team room:", err);
+        router.push("/rooms");
+      }
     } catch (err: any) {
       alert("Error joining team: " + err.message);
     } finally {
@@ -105,6 +125,7 @@ export function WorkspaceSwitcher() {
     setCreatedOrg(null);
     setIsModalOpen(false);
     setIsOpen(false);
+    router.push("/rooms");
   };
 
   const handleDeleteTeam = async (ws: Workspace) => {
@@ -178,9 +199,31 @@ export function WorkspaceSwitcher() {
                 return (
                   <div
                     key={ws.id}
-                    onClick={() => {
+                    onClick={async () => {
                       setActiveWorkspace(ws);
                       setIsOpen(false);
+
+                      // Automatically open that particular team's room (or practice for personal space)
+                      if (ws.id === "personal") {
+                        router.push("/practice");
+                      } else {
+                        try {
+                          const { data: roomData } = await supabase
+                            .from("rooms")
+                            .select("id")
+                            .eq("organization_id", ws.id)
+                            .maybeSingle();
+
+                          if (roomData) {
+                            router.push(`/rooms/${roomData.id}`);
+                          } else {
+                            router.push("/rooms");
+                          }
+                        } catch (err) {
+                          console.error("Error auto-redirecting to team room:", err);
+                          router.push("/rooms");
+                        }
+                      }
                     }}
                     className={`w-full flex flex-col p-2.5 rounded-xl border transition-all duration-150 cursor-pointer ${
                       isActive 
