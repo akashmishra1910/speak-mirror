@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase
         .from("organization_users")
-        .select("organization_id, organizations(name, is_personal)")
+        .select("organization_id, organizations(name, is_personal, invite_token)")
         .eq("user_id", userId);
 
       if (!error && data) {
@@ -53,7 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .filter((item: any) => !item.organizations?.is_personal)
           .map((item: any) => ({
             id: item.organization_id,
-            name: item.organizations?.name || "Unnamed Team"
+            name: item.organizations?.name || "Unnamed Team",
+            invite_token: item.organizations?.invite_token
           }));
         const allWorkspaces = [
           { id: "personal", name: "Personal Space" },

@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
-import { Loader2, Play, Users, Mic, ArrowLeft, Sparkles, Trash2, Mail } from "lucide-react";
+import { Loader2, Play, Users, Mic, ArrowLeft, Sparkles, Trash2, Mail, Copy, Check } from "lucide-react";
 import Link from "next/link";
 
 interface Room {
@@ -13,6 +13,9 @@ interface Room {
   name: string;
   passkey: string;
   created_by: string;
+  organizations?: {
+    invite_token: string;
+  };
 }
 
 interface RoomTask {
@@ -46,6 +49,15 @@ export default function RoomDetailPage() {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [activeTask, setActiveTask] = useState<RoomTask | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copiedTeamId, setCopiedTeamId] = useState(false);
+
+  const handleCopyTeamId = () => {
+    if (room?.organizations?.invite_token) {
+      navigator.clipboard.writeText(room.organizations.invite_token);
+      setCopiedTeamId(true);
+      setTimeout(() => setCopiedTeamId(false), 2000);
+    }
+  };
 
   // Host Controls State
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -66,10 +78,10 @@ export default function RoomDetailPage() {
     const fetchRoomDetails = async () => {
       if (!user || !id) return;
       try {
-        // Fetch room
+        // Fetch room with organization invite_token
         const { data: roomData, error: roomError } = await supabase
           .from("rooms")
-          .select("*")
+          .select("*, organizations(invite_token)")
           .eq("id", id)
           .single();
 
@@ -279,9 +291,24 @@ export default function RoomDetailPage() {
             <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.02)]">
               <Users className="w-5 h-5 text-zinc-300" />
             </div>
-            <span className="px-3 py-1 bg-white/5 border border-white/5 rounded-lg text-xs font-mono tracking-widest text-zinc-300">
-              PASSKEY: {room.passkey}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="px-3 py-1 bg-white/5 border border-white/5 rounded-lg text-xs font-mono tracking-widest text-zinc-300">
+                TEAM ID: {room.organizations?.invite_token || "N/A"}
+              </span>
+              {room.organizations?.invite_token && (
+                <button
+                  onClick={handleCopyTeamId}
+                  className="p-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 text-zinc-300 hover:text-white transition-all cursor-pointer shadow-[0_0_15px_rgba(255,255,255,0.02)] flex items-center justify-center"
+                  title="Copy Team ID"
+                >
+                  {copiedTeamId ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              )}
+            </div>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-white">{room.name}</h1>
         </div>
