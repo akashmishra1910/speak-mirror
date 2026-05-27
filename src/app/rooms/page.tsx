@@ -10,7 +10,6 @@ import { Plus, Users, Loader2, Key, Sparkles } from "lucide-react";
 interface Room {
   id: string;
   name: string;
-  passkey: string;
 }
 
 export default function RoomsPage() {
@@ -59,7 +58,7 @@ export default function RoomsPage() {
         // Fetch the room scoped to this organization
         const { data: roomData } = await supabase
           .from("rooms")
-          .select("id, name, passkey")
+          .select("id, name")
           .eq("organization_id", activeWorkspace.id)
           .maybeSingle();
 
@@ -80,24 +79,17 @@ export default function RoomsPage() {
     }
   }, [user, activeWorkspace, router]);
 
-  const generatePasskey = () => {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
-  };
-
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !activeWorkspace) return;
     setActionLoading(true);
     
     try {
-      const passkey = generatePasskey();
-      
       // Insert room linked to the active organization
       const { data: roomData, error: roomError } = await supabase
         .from("rooms")
         .insert({ 
           name: newRoomName.trim(), 
-          passkey, 
           created_by: user.id,
           organization_id: activeWorkspace.id
         })

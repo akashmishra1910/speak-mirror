@@ -147,54 +147,51 @@ export function WorkspaceSwitcher() {
               {workspaces.map((ws) => {
                 const isActive = ws.id === activeWorkspace.id;
                 return (
-                  <button
+                  <div
                     key={ws.id}
                     onClick={() => {
                       setActiveWorkspace(ws);
                       setIsOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs md:text-sm transition-all duration-150 cursor-pointer ${
+                    className={`w-full flex flex-col p-2.5 rounded-xl border transition-all duration-150 cursor-pointer ${
                       isActive 
-                        ? "bg-white/[0.06] text-white font-semibold" 
-                        : "text-zinc-400 hover:text-white hover:bg-white/[0.03]"
+                        ? "bg-white/[0.06] border-white/10 text-white font-semibold" 
+                        : "border-transparent text-zinc-400 hover:text-white hover:bg-white/[0.03]"
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {ws.id === "personal" ? (
-                        <Folder className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-zinc-500"}`} />
-                      ) : (
-                        <Users className={`w-4 h-4 shrink-0 ${isActive ? "text-indigo-400" : "text-indigo-400/60"}`} />
-                      )}
-                      <span className="truncate">{ws.name}</span>
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {ws.id === "personal" ? (
+                          <Folder className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-zinc-500"}`} />
+                        ) : (
+                          <Users className={`w-4 h-4 shrink-0 ${isActive ? "text-indigo-400" : "text-indigo-400/60"}`} />
+                        )}
+                        <span className="truncate">{ws.name}</span>
+                      </div>
+                      {isActive && <Check className="w-4 h-4 text-white shrink-0" />}
                     </div>
-                    {isActive && <Check className="w-4 h-4 text-white shrink-0" />}
-                  </button>
+
+                    {ws.id !== "personal" && ws.invite_token && (
+                      <div className="mt-2 flex items-center justify-between gap-1.5 bg-black/40 px-2 py-1.5 rounded-lg border border-white/5 font-mono text-[9px] text-white overflow-hidden">
+                        <span className="truncate select-all opacity-85" title={ws.invite_token}>
+                          {ws.invite_token}
+                        </span>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(ws.invite_token || "");
+                            alert(`Copied Invite Key for ${ws.name}!`);
+                          }}
+                          className="px-1.5 py-0.5 rounded bg-white text-zinc-950 font-bold hover:bg-zinc-200 transition-all cursor-pointer shrink-0 text-[8px]"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
-
-            {/* Active Team Invite Link/Key */}
-            {activeWorkspace.id !== "personal" && activeWorkspace.invite_token && (
-              <div className="mx-2 mb-2 p-2.5 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col gap-1.5 text-[10px]">
-                <div className="flex items-center justify-between text-zinc-500 font-semibold uppercase tracking-wider">
-                  <span>Invite Key</span>
-                  <span className="text-[8px] text-zinc-400 bg-white/5 px-1 py-0.5 rounded border border-white/5">Share key</span>
-                </div>
-                <div className="flex items-center justify-between gap-2 bg-black/40 px-2 py-1.5 rounded-lg border border-white/5 font-mono text-[9px] text-white overflow-hidden">
-                  <span className="truncate select-all">{activeWorkspace.invite_token}</span>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigator.clipboard.writeText(activeWorkspace.invite_token || "");
-                      alert("Copied Team Invite Key to Clipboard!");
-                    }}
-                    className="px-1.5 py-0.5 rounded bg-white text-zinc-950 font-bold hover:bg-zinc-200 transition-all cursor-pointer shrink-0"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Footer options - Create new team / Join team */}
             <div className="p-1.5 border-t border-white/5 bg-white/[0.01] flex flex-col gap-1">

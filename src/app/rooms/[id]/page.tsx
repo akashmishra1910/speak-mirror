@@ -11,13 +11,9 @@ import Link from "next/link";
 interface Room {
   id: string;
   name: string;
-  passkey: string;
   created_by: string;
   organization_id?: string;
   invite_token?: string;
-  organizations?: {
-    invite_token: string;
-  };
 }
 
 interface RoomTask {
@@ -58,6 +54,29 @@ export default function RoomDetailPage() {
       navigator.clipboard.writeText(room.invite_token);
       setCopiedTeamId(true);
       setTimeout(() => setCopiedTeamId(false), 2000);
+    }
+  };
+
+  const handleDeleteRoom = async () => {
+    if (!room) return;
+    const confirmDelete = confirm(
+      "Are you sure you want to permanently delete this room? This action will remove the practice room for you and all team members."
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("rooms")
+        .delete()
+        .eq("id", room.id);
+
+      if (error) throw error;
+      
+      alert("Room has been permanently deleted.");
+      router.replace("/rooms");
+    } catch (err: any) {
+      console.error("Error deleting room:", err);
+      alert("Failed to delete room: " + err.message);
     }
   };
 
@@ -293,9 +312,17 @@ export default function RoomDetailPage() {
 
   if (!room) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-24 text-center">
-        <h1 className="text-2xl font-bold mb-4 text-white">Room not found</h1>
-        <Link href="/rooms" className="text-white/60 hover:text-white transition-all hover:underline">Return to Rooms</Link>
+      <div className="max-w-7xl mx-auto px-4 py-24 text-center flex flex-col items-center justify-center min-h-[50vh]">
+        <h1 className="text-2xl md:text-3xl font-extrabold mb-4 text-white">Room was deleted by owner or does not exist</h1>
+        <p className="text-zinc-400 mb-8 font-light text-sm max-w-sm leading-relaxed">
+          The collaborative practice room for this team has been permanently deleted by the team creator.
+        </p>
+        <Link 
+          href="/rooms" 
+          className="px-6 py-3 rounded-xl bg-white text-zinc-950 font-bold hover:bg-zinc-200 transition-all text-sm shadow-[0_0_20px_rgba(255,255,255,0.08)] border border-white/10"
+        >
+          Return to Rooms
+        </Link>
       </div>
     );
   }
@@ -338,13 +365,24 @@ export default function RoomDetailPage() {
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-white">{room.name}</h1>
         </div>
-        <Link 
-          href={activeTask ? `/practice?roomId=${room.id}&taskId=${activeTask.id}` : `/practice?roomId=${room.id}`}
-          className="px-6 py-3 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all font-semibold text-sm flex items-center justify-center gap-2 border border-white/10 shadow-[0_0_25px_rgba(255,255,255,0.08)]"
-        >
-          <Mic className="w-4 h-4" />
-          {activeTask ? "Start Daily Task" : "Practice for Team"}
-        </Link>
+        <div className="flex items-center gap-3 flex-wrap md:flex-nowrap">
+          {user?.id === room.created_by && (
+            <button
+              onClick={handleDeleteRoom}
+              className="px-6 py-3 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-500 hover:text-red-400 border border-red-500/20 hover:border-red-500/30 transition-all font-semibold text-sm flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(239,68,68,0.05)] cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete Room
+            </button>
+          )}
+          <Link 
+            href={activeTask ? `/practice?roomId=${room.id}&taskId=${activeTask.id}` : `/practice?roomId=${room.id}`}
+            className="px-6 py-3 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all font-semibold text-sm flex items-center justify-center gap-2 border border-white/10 shadow-[0_0_25px_rgba(255,255,255,0.08)]"
+          >
+            <Mic className="w-4 h-4" />
+            {activeTask ? "Start Daily Task" : "Practice for Team"}
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
