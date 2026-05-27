@@ -93,9 +93,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const syncCookies = (session: any) => {
       if (typeof document !== "undefined") {
         if (session) {
-          const maxAge = session.expires_in || 3600;
-          document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
-          document.cookie = `sb-refresh-token=${session.refresh_token}; path=/; max-age=${maxAge * 24}; SameSite=Lax; Secure`;
+          document.cookie = `sb-access-token=${session.access_token}; path=/; SameSite=Lax; Secure`;
+          document.cookie = `sb-refresh-token=${session.refresh_token}; path=/; SameSite=Lax; Secure`;
         } else {
           document.cookie = "sb-access-token=; path=/; max-age=0; SameSite=Lax; Secure";
           document.cookie = "sb-refresh-token=; path=/; max-age=0; SameSite=Lax; Secure";
@@ -269,6 +268,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setWorkspaces([{ id: "personal", name: "Personal Space" }]);
           setActiveWorkspaceState({ id: "personal", name: "Personal Space" });
           localStorage.removeItem("speak_mirror_active_workspace");
+          localStorage.removeItem("speak_mirror_last_activity");
         } else if (session?.user) {
           fetchWorkspaces(session.user.id);
           trackLoginSession(session.user);
@@ -297,6 +297,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Synchronized inactivity session timeout logic (15 minutes threshold)
+  useEffect(() => {
+    if (!user) return;
+
+    let timeoutId: NodeJS.Timeout;
+    const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
+
+    const handleTimeout = async () => {
+      console.log("Session timed out due to user inactivity.");
+      alert("Your session has timed out due to inactivity. Please sign in again.");
+      await supabase.auth.signOut();
+    };
+
+    const resetTimer = (isLocalActivity = true) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(handleTimeout, INACTIVITY_TIMEOUT);
+      
+      if (isLocalActivity && typeof window !== "undefined") {
+        localStorage.setItem("speak_mirror_last_activity", Date.now().toString());
+      }
+    };
+
+    // Listen to local user activity
+    const activityEvents = ["mousedown", "mousemove", "keypress", "scroll", "touchstart", "click"];
+    const handleLocalActivity = () => resetTimer(true);
+
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, handleLocalActivity);
+    });
+
+    // Listen to storage events from other tabs to sync activity
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "speak_mirror_last_activity") {
+        // Reset timer without writing to storage again
+        resetTimer(false);
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+
+    // Initialize timer on load/login
+    resetTimer(true);
+
+    return () => {
+      clearTimeout(timeoutId);
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, handleLocalActivity);
+      });
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, [user]);
 
   return (
     <AuthContext.Provider value={{ user, isLoading, activeWorkspace, setActiveWorkspace, workspaces, fetchWorkspaces }}>

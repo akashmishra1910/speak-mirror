@@ -9,6 +9,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     detectSessionInUrl: false,
     persistSession: true,
-    autoRefreshToken: true
+    autoRefreshToken: true,
+    storage: typeof window !== 'undefined' ? window.sessionStorage : undefined
   }
 });
