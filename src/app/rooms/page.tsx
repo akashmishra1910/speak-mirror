@@ -5,8 +5,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Users, ArrowRight, Loader2, Key } from "lucide-react";
-import Link from "next/link";
+import { Plus, Users, Loader2, Key, Sparkles } from "lucide-react";
 
 interface Room {
   id: string;
@@ -15,55 +14,71 @@ interface Room {
 }
 
 export default function RoomsPage() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, activeWorkspace } = useAuth();
   const router = useRouter();
-  const [rooms, setRooms] = useState<Room[]>([]);
   const [fetchingRooms, setFetchingRooms] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
-  // Modals
+  // Modals & Forms
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
-
-  // Forms
   const [newRoomName, setNewRoomName] = useState("");
-  const [joinPasskey, setJoinPasskey] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
+  // 1. Guard route: redirect to practice if in personal workspace
   useEffect(() => {
     if (!isLoading && !user) {
       router.push("/auth");
+      return;
     }
-  }, [user, isLoading, router]);
 
-  const fetchRooms = async () => {
-    if (!user) return;
-    setFetchingRooms(true);
-    try {
-      // Fetch rooms the user is a member of
-      const { data, error } = await supabase
-        .from("room_members")
-        .select(`
-          room_id,
-          rooms ( id, name, passkey )
-        `)
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-      
-      const formattedRooms = (data || []).map((rm: any) => rm.rooms as Room);
-      setRooms(formattedRooms);
-    } catch (err) {
-      console.error("Error fetching rooms", err);
-    } finally {
-      setFetchingRooms(false);
+    if (activeWorkspace?.id === "personal") {
+      router.replace("/practice");
+      return;
     }
-  };
+  }, [user, isLoading, activeWorkspace, router]);
 
+  // 2. Fetch workspace room and user role
   useEffect(() => {
-    if (user) {
-      fetchRooms();
+    async function fetchWorkspaceRoom() {
+      if (!user || !activeWorkspace || activeWorkspace.id === "personal") return;
+      
+      setFetchingRooms(true);
+      try {
+        // Fetch user's role in the active organization
+        const { data: memberData } = await supabase
+          .from("organization_users")
+          .select("role")
+          .eq("organization_id", activeWorkspace.id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+          
+        if (memberData) {
+          setUserRole(memberData.role);
+        }
+
+        // Fetch the room scoped to this organization
+        const { data: roomData } = await supabase
+          .from("rooms")
+          .select("id, name, passkey")
+          .eq("organization_id", activeWorkspace.id)
+          .maybeSingle();
+
+        if (roomData) {
+          // Room already exists! Redirect to it immediately
+          router.replace(`/rooms/${roomData.id}`);
+          return;
+        }
+      } catch (err) {
+        console.error("Error fetching room for workspace:", err);
+      } finally {
+        setFetchingRooms(false);
+      }
     }
-  }, [user]);
+
+    if (user && activeWorkspace && activeWorkspace.id !== "personal") {
+      fetchWorkspaceRoom();
+    }
+  }, [user, activeWorkspace, router]);
 
   const generatePasskey = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -71,22 +86,27 @@ export default function RoomsPage() {
 
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !activeWorkspace) return;
     setActionLoading(true);
     
     try {
       const passkey = generatePasskey();
       
-      // Insert room
+      // Insert room linked to the active organization
       const { data: roomData, error: roomError } = await supabase
         .from("rooms")
-        .insert({ name: newRoomName, passkey, created_by: user.id })
+        .insert({ 
+          name: newRoomName.trim(), 
+          passkey, 
+          created_by: user.id,
+          organization_id: activeWorkspace.id
+        })
         .select()
         .single();
         
       if (roomError) throw roomError;
 
-      // Add user to room_members
+      // Add user to room_members as host
       const { error: memberError } = await supabase
         .from("room_members")
         .insert({ room_id: roomData.id, user_id: user.id });
@@ -95,7 +115,9 @@ export default function RoomsPage() {
 
       setIsCreateModalOpen(false);
       setNewRoomName("");
-      fetchRooms();
+      
+      // Redirect to the newly created room immediately
+      router.replace(`/rooms/${roomData.id}`);
     } catch (err: any) {
       alert("Error creating room: " + err.message);
     } finally {
@@ -103,113 +125,55 @@ export default function RoomsPage() {
     }
   };
 
-  const handleJoinRoom = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    setActionLoading(true);
+  const isAuthorizedToCreate = userRole === "OWNER" || userRole === "MENTOR";
 
-    try {
-      // Find room by passkey
-      const { data: roomData, error: roomError } = await supabase
-        .from("rooms")
-        .select("*")
-        .eq("passkey", joinPasskey.toUpperCase())
-        .single();
-
-      if (roomError || !roomData) throw new Error("Invalid passkey or room not found.");
-
-      // Add user to room_members (ignore if already added, handled by unique constraint or silent fail)
-      const { error: memberError } = await supabase
-        .from("room_members")
-        .insert({ room_id: roomData.id, user_id: user.id });
-
-      // If violation, they are already in the room, which is fine
-      if (memberError && memberError.code !== '23505') throw memberError;
-
-      setIsJoinModalOpen(false);
-      setJoinPasskey("");
-      fetchRooms();
-    } catch (err: any) {
-      alert(err.message);
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  if (isLoading || !user) {
+  if (isLoading || fetchingRooms) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-white" />
+        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">Loading Room...</span>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
-        <div>
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 text-white">Team Rooms</h1>
-          <p className="text-foreground/60 max-w-xl font-light leading-relaxed">
-            Collaborate with peers, practice together, and view each other's progress in private spaces.
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setIsJoinModalOpen(true)}
-            className="px-5 py-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-white transition-all font-semibold text-sm flex items-center gap-2 shadow-[0_0_15px_rgba(255,255,255,0.02)]"
-          >
-            <Key className="w-4 h-4 text-zinc-400" />
-            Join Room
-          </button>
-          <button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="px-5 py-3 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all font-semibold text-sm flex items-center gap-2 border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.08)]"
-          >
-            <Plus className="w-4 h-4" />
-            Create Room
-          </button>
-        </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative flex flex-col items-center justify-center min-h-[70vh]">
+      <div className="text-center mb-12">
+        <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 text-zinc-300 text-xs md:text-sm font-medium border border-white/5 mb-4 shadow-[0_0_15px_rgba(255,255,255,0.02)]">
+          <Sparkles className="w-4 h-4 text-zinc-400 animate-pulse" />
+          {activeWorkspace?.name || "Team Workspace"}
+        </span>
+        <h1 className="text-4xl md:text-5xl font-extrabold mb-4 text-white">Team Practice Room</h1>
+        <p className="text-foreground/60 max-w-xl mx-auto font-light leading-relaxed text-sm md:text-base">
+          Collaborate with peers, practice together, and view each other's progress in private spaces.
+        </p>
       </div>
 
-      {fetchingRooms ? (
-        <div className="py-24 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-white" />
+      <div className="w-full max-w-lg glass-panel p-12 rounded-[2rem] text-center flex flex-col items-center border border-white/5 float-slow bg-white/[0.01]">
+        <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-full flex items-center justify-center mb-6 shadow-[0_0_15px_rgba(255,255,255,0.02)]">
+          <Users className="w-10 h-10 text-zinc-300" />
         </div>
-      ) : rooms.length === 0 ? (
-        <div className="glass-panel p-12 rounded-3xl text-center flex flex-col items-center float-slow">
-          <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-full flex items-center justify-center mb-6 shadow-[0_0_15px_rgba(255,255,255,0.02)]">
-            <Users className="w-10 h-10 text-zinc-300" />
-          </div>
-          <h2 className="text-2xl font-extrabold mb-2 text-white">No Rooms Yet</h2>
-          <p className="text-foreground/60 mb-8 max-w-md font-light leading-relaxed">
-            You haven't joined any team rooms. Create one to invite your peers or join an existing one using a passkey!
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {rooms.map((room, idx) => (
-            <Link key={room.id} href={`/rooms/${room.id}`}>
-              <motion.div 
-                whileHover={{ y: -4 }}
-                className={`glass-panel p-6 rounded-3xl group cursor-pointer border border-white/5 transition-all ${idx % 3 === 0 ? 'float-slow' : idx % 3 === 1 ? 'float-medium' : 'float-fast'} interactive-card`}
-              >
-                <div className="flex items-start justify-between mb-6">
-                  <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white group-hover:scale-110 transition-all shadow-[0_0_15px_rgba(255,255,255,0.02)]">
-                    <Users className="w-6 h-6" />
-                  </div>
-                  <div className="px-3 py-1 rounded-lg bg-white/5 border border-white/5 text-xs font-mono tracking-widest text-zinc-300">
-                    {room.passkey}
-                  </div>
-                </div>
-                <h3 className="text-xl font-bold mb-2 text-white group-hover:text-white transition-colors">{room.name}</h3>
-                <div className="flex items-center text-white text-sm font-medium mt-4 opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0">
-                  Enter Room <ArrowRight className="w-4 h-4 ml-1" />
-                </div>
-              </motion.div>
-            </Link>
-          ))}
-        </div>
-      )}
+        <h2 className="text-2xl font-extrabold mb-3 text-white">No Room Setup</h2>
+        <p className="text-zinc-400 mb-8 max-w-sm font-light text-sm leading-relaxed">
+          {isAuthorizedToCreate
+            ? "Your team workspace doesn't have a practice room yet. Initialize the room to get started."
+            : "Your team owner or mentor hasn't created a practice room yet. Please contact them to initialize the space."
+          }
+        </p>
+
+        {isAuthorizedToCreate && (
+          <button 
+            onClick={() => {
+              setNewRoomName(`${activeWorkspace?.name || "Team"} Practice Room`);
+              setIsCreateModalOpen(true);
+            }}
+            className="px-6 py-3 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all font-bold text-sm flex items-center gap-2 border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.08)] cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            Create Team Room
+          </button>
+        )}
+      </div>
 
       {/* Create Room Modal */}
       <AnimatePresence>
@@ -219,83 +183,38 @@ export default function RoomsPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-panel p-8 rounded-[2rem] w-full max-w-md shadow-2xl relative z-10 border border-white/10 bg-zinc-950/90"
+              className="glass-panel p-8 rounded-[2rem] w-full max-w-md shadow-2xl relative z-10 border border-white/10 bg-[#09090d]/90 backdrop-blur-3xl"
             >
               <h2 className="text-2xl font-extrabold mb-2 text-white">Create a Room</h2>
-              <p className="text-foreground/60 mb-6 text-sm font-light leading-relaxed">A secure passkey will be generated automatically for your team.</p>
+              <p className="text-zinc-400 mb-6 text-sm font-light leading-relaxed">
+                Setting up the practice space for <strong>{activeWorkspace?.name}</strong>.
+              </p>
               
               <form onSubmit={handleCreateRoom}>
-                <label className="block text-sm font-medium mb-2 text-zinc-300">Room Name</label>
+                <label className="block text-xs font-semibold mb-2 text-zinc-500 uppercase tracking-wider">Room Name</label>
                 <input 
                   type="text" 
                   required
                   value={newRoomName}
                   onChange={e => setNewRoomName(e.target.value)}
                   placeholder="e.g. Sales Pitch Practice"
-                  className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 mb-6 focus:outline-none focus:border-white/20 focus:bg-white/10 transition-all text-white placeholder-zinc-500 font-light text-sm"
+                  className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 mb-6 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-white placeholder-zinc-600 font-light text-sm"
                 />
                 <div className="flex items-center justify-end gap-3">
                   <button 
                     type="button"
                     onClick={() => setIsCreateModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all font-semibold text-sm"
+                    className="px-4 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all font-semibold text-xs cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit"
                     disabled={actionLoading}
-                    className="px-5 py-2.5 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all font-semibold text-sm flex items-center gap-2 border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.08)] disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all font-bold text-xs flex items-center gap-2 border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.08)] disabled:opacity-50 cursor-pointer"
                   >
-                    {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                    Create Room
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Join Room Modal */}
-      <AnimatePresence>
-        {isJoinModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-panel p-8 rounded-[2rem] w-full max-w-md shadow-2xl relative z-10 border border-white/10 bg-zinc-950/90"
-            >
-              <h2 className="text-2xl font-extrabold mb-2 text-white">Join a Room</h2>
-              <p className="text-foreground/60 mb-6 text-sm font-light leading-relaxed">Enter the 6-character passkey provided by the room creator.</p>
-              
-              <form onSubmit={handleJoinRoom}>
-                <label className="block text-sm font-medium mb-2 text-zinc-300">Passkey</label>
-                <input 
-                  type="text" 
-                  required
-                  maxLength={6}
-                  value={joinPasskey}
-                  onChange={e => setJoinPasskey(e.target.value.toUpperCase())}
-                  placeholder="e.g. AB12CD"
-                  className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 mb-6 focus:outline-none focus:border-white/20 focus:bg-white/10 transition-all text-white placeholder-zinc-500 font-mono tracking-widest uppercase text-sm"
-                />
-                <div className="flex items-center justify-end gap-3">
-                  <button 
-                    type="button"
-                    onClick={() => setIsJoinModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all font-semibold text-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    disabled={actionLoading}
-                    className="px-5 py-2.5 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all font-semibold text-sm flex items-center gap-2 border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.08)] disabled:opacity-50"
-                  >
-                    {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                    Join Room
+                    {actionLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>Create Room</span>
                   </button>
                 </div>
               </form>

@@ -9,7 +9,7 @@ import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 
 export function Navbar() {
   const pathname = usePathname();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, activeWorkspace } = useAuth();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -46,7 +46,7 @@ export function Navbar() {
             Practice
           </Link>
 
-          {user && (
+          {user && activeWorkspace && activeWorkspace.id !== "personal" && (
             <Link 
               href="/rooms" 
               className={`text-sm font-medium px-4 py-2 rounded-lg transition-all hidden sm:flex items-center gap-2 ${

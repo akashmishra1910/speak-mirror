@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 
     const { data: tasks, error: tasksError } = await supabaseAdmin
       .from('room_tasks')
-      .select('id, room_id, topic_of_the_day, rooms(name)')
+      .select('id, room_id, topic_of_the_day, rooms(name, organization_id)')
       .gte('created_at', today.toISOString());
 
     if (tasksError || !tasks || tasks.length === 0) {
@@ -41,13 +41,31 @@ export async function GET(request: Request) {
 
     // 3. For each task, find users in that room who HAVEN'T submitted a recording today
     for (const task of tasks) {
-      // Get all members of the room
-      const { data: members } = await supabaseAdmin
-        .from('room_members')
-        .select('user_id')
-        .eq('room_id', task.room_id);
+      // Get all members of the room or organization
+      const organizationId = (task.rooms as any)?.organization_id;
+      let memberIds: string[] = [];
 
-      if (!members) continue;
+      if (organizationId) {
+        const { data: orgUsers } = await supabaseAdmin
+          .from('organization_users')
+          .select('user_id')
+          .eq('organization_id', organizationId);
+        
+        if (orgUsers) {
+          memberIds = orgUsers.map(ou => ou.user_id);
+        }
+      } else {
+        const { data: members } = await supabaseAdmin
+          .from('room_members')
+          .select('user_id')
+          .eq('room_id', task.room_id);
+        
+        if (members) {
+          memberIds = members.map(m => m.user_id);
+        }
+      }
+
+      if (memberIds.length === 0) continue;
 
       // Get all users who HAVE submitted for this task
       const { data: submissions } = await supabaseAdmin
@@ -58,9 +76,7 @@ export async function GET(request: Request) {
       const submittedUserIds = new Set(submissions?.map(s => s.user_id) || []);
 
       // Find members who haven't submitted
-      const pendingUserIds = members
-        .map(m => m.user_id)
-        .filter(id => !submittedUserIds.has(id));
+      const pendingUserIds = memberIds.filter(id => !submittedUserIds.has(id));
 
       if (pendingUserIds.length === 0) continue;
 

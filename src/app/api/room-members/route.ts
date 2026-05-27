@@ -16,14 +16,46 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Missing roomId" }, { status: 400 });
     }
 
-    // 1. Get all members of the room
-    const { data: members, error: membersError } = await supabaseAdmin
-      .from('room_members')
-      .select('user_id, joined_at')
-      .eq('room_id', roomId);
+    // 1. Fetch room details to check if it's organization-scoped
+    const { data: roomData, error: roomError } = await supabaseAdmin
+      .from('rooms')
+      .select('organization_id')
+      .eq('id', roomId)
+      .single();
 
-    if (membersError || !members) {
-      return NextResponse.json({ error: 'Failed to fetch members' }, { status: 500 });
+    if (roomError || !roomData) {
+      return NextResponse.json({ error: 'Failed to fetch room details' }, { status: 500 });
+    }
+
+    let members: { user_id: string; joined_at: string }[] = [];
+
+    if (roomData.organization_id) {
+      // Fetch members from organization_users mapping table instead
+      const { data: orgUsers, error: orgUsersError } = await supabaseAdmin
+        .from('organization_users')
+        .select('user_id, created_at')
+        .eq('organization_id', roomData.organization_id);
+
+      if (orgUsersError || !orgUsers) {
+        return NextResponse.json({ error: 'Failed to fetch organization members' }, { status: 500 });
+      }
+
+      members = orgUsers.map(ou => ({
+        user_id: ou.user_id,
+        joined_at: ou.created_at
+      }));
+    } else {
+      // Fallback: Get all members of the room from room_members
+      const { data: dbMembers, error: membersError } = await supabaseAdmin
+        .from('room_members')
+        .select('user_id, joined_at')
+        .eq('room_id', roomId);
+
+      if (membersError || !dbMembers) {
+        return NextResponse.json({ error: 'Failed to fetch room members' }, { status: 500 });
+      }
+
+      members = dbMembers;
     }
 
     if (members.length === 0) {

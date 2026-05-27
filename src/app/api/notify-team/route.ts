@@ -25,17 +25,48 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing roomId or task details" }, { status: 400 });
     }
 
-    // 1. Get all members of the room
-    const { data: members, error: membersError } = await supabaseAdmin
-      .from('room_members')
-      .select('user_id')
-      .eq('room_id', roomId);
+    // 1. Fetch room details to check if it's organization-scoped
+    const { data: roomData, error: roomError } = await supabaseAdmin
+      .from('rooms')
+      .select('organization_id')
+      .eq('id', roomId)
+      .single();
 
-    if (membersError || !members || members.length === 0) {
-      return NextResponse.json({ message: 'No members found in this room.' });
+    if (roomError || !roomData) {
+      return NextResponse.json({ error: 'Failed to fetch room details' }, { status: 500 });
     }
 
-    const memberIds = members.map(m => m.user_id);
+    let memberIds: string[] = [];
+
+    if (roomData.organization_id) {
+      // Fetch members from organization_users mapping table instead
+      const { data: orgUsers, error: orgUsersError } = await supabaseAdmin
+        .from('organization_users')
+        .select('user_id')
+        .eq('organization_id', roomData.organization_id);
+
+      if (orgUsersError || !orgUsers) {
+        return NextResponse.json({ error: 'Failed to fetch organization members' }, { status: 500 });
+      }
+
+      memberIds = orgUsers.map(ou => ou.user_id);
+    } else {
+      // Fallback: Get all members of the room from room_members
+      const { data: dbMembers, error: membersError } = await supabaseAdmin
+        .from('room_members')
+        .select('user_id')
+        .eq('room_id', roomId);
+
+      if (membersError || !dbMembers) {
+        return NextResponse.json({ error: 'Failed to fetch room members' }, { status: 500 });
+      }
+
+      memberIds = dbMembers.map(m => m.user_id);
+    }
+
+    if (memberIds.length === 0) {
+      return NextResponse.json({ message: 'No members found in this room.' });
+    }
 
     // 2. Fetch emails for members from auth.users (requires service_role)
     const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
