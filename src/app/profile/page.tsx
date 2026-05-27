@@ -32,7 +32,12 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function fetchRecordings() {
-      if (!user) return;
+      if (!user) {
+        if (!authLoading) {
+          setIsLoading(false);
+        }
+        return;
+      }
       try {
         if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
           setIsLoading(false);
@@ -67,7 +72,7 @@ export default function ProfilePage() {
     }
 
     fetchRecordings();
-  }, []);
+  }, [user, authLoading]);
 
   const avgConfidence = recordings.length > 0 
     ? Math.round(recordings.reduce((acc, curr) => acc + (curr.confidence || 0), 0) / recordings.length) 
