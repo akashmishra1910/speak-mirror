@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 export interface Workspace {
   id: string;
   name: string;
+  invite_token?: string;
 }
 
 interface AuthContextType {
@@ -65,9 +66,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
-            const exists = allWorkspaces.some((w) => w.id === parsed.id);
+            const exists = allWorkspaces.find((w) => w.id === parsed.id);
             if (exists) {
-              setActiveWorkspaceState(parsed);
+              setActiveWorkspaceState(exists);
               return;
             }
           } catch (e) {
