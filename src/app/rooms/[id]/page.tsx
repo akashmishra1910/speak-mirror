@@ -13,6 +13,8 @@ interface Room {
   name: string;
   passkey: string;
   created_by: string;
+  organization_id?: string;
+  invite_token?: string;
   organizations?: {
     invite_token: string;
   };
@@ -52,8 +54,8 @@ export default function RoomDetailPage() {
   const [copiedTeamId, setCopiedTeamId] = useState(false);
 
   const handleCopyTeamId = () => {
-    if (room?.organizations?.invite_token) {
-      navigator.clipboard.writeText(room.organizations.invite_token);
+    if (room?.invite_token) {
+      navigator.clipboard.writeText(room.invite_token);
       setCopiedTeamId(true);
       setTimeout(() => setCopiedTeamId(false), 2000);
     }
@@ -86,6 +88,30 @@ export default function RoomDetailPage() {
           .single();
 
         if (roomError) throw roomError;
+
+        // Safe extraction of invite_token with dual object/array fallback and direct query fallback
+        let inviteToken = null;
+        if (roomData) {
+          if (roomData.organizations) {
+            inviteToken = Array.isArray(roomData.organizations)
+              ? roomData.organizations[0]?.invite_token
+              : (roomData.organizations as any).invite_token;
+          }
+          
+          if (!inviteToken && roomData.organization_id) {
+            const { data: orgData } = await supabase
+              .from("organizations")
+              .select("invite_token")
+              .eq("id", roomData.organization_id)
+              .single();
+            if (orgData) {
+              inviteToken = orgData.invite_token;
+            }
+          }
+          
+          roomData.invite_token = inviteToken;
+        }
+
         setRoom(roomData);
 
         // Fetch recordings
@@ -293,9 +319,9 @@ export default function RoomDetailPage() {
             </div>
             <div className="flex items-center gap-1.5">
               <span className="px-3 py-1 bg-white/5 border border-white/5 rounded-lg text-xs font-mono tracking-widest text-zinc-300">
-                TEAM ID: {room.organizations?.invite_token || "N/A"}
+                TEAM ID: {room.invite_token || "N/A"}
               </span>
-              {room.organizations?.invite_token && (
+              {room.invite_token && (
                 <button
                   onClick={handleCopyTeamId}
                   className="p-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 text-zinc-300 hover:text-white transition-all cursor-pointer shadow-[0_0_15px_rgba(255,255,255,0.02)] flex items-center justify-center"
