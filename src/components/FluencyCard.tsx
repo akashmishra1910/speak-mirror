@@ -198,14 +198,42 @@ export function FluencyCard({ metrics, userName }: FluencyCardProps) {
         ctx.fillText(item.val, x + 30, y + 105);
       });
 
+      // Helper to wrap text on canvas
+      const wrapText = (
+        context: CanvasRenderingContext2D,
+        text: string,
+        x: number,
+        y: number,
+        maxWidth: number,
+        lineHeight: number
+      ) => {
+        const words = text.split(" ");
+        let line = "";
+        let currentY = y;
+
+        for (let n = 0; n < words.length; n++) {
+          const testLine = line + words[n] + " ";
+          const metrics = context.measureText(testLine);
+          const testWidth = metrics.width;
+          if (testWidth > maxWidth && n > 0) {
+            context.fillText(line, x, currentY);
+            line = words[n] + " ";
+            currentY += lineHeight;
+          } else {
+            line = testLine;
+          }
+        }
+        context.fillText(line, x, currentY);
+      };
+
       // 8. Draw Branding Footer info
       ctx.font = "light 16px sans-serif";
       ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
-      ctx.fillText("SpeakMirror uses advanced AI speech analysis to score delivery and reduce filler words.", 80, 580);
+      wrapText(ctx, "SpeakMirror uses advanced AI speech analysis to score delivery and reduce filler words.", 80, 570, 800, 22);
 
       ctx.font = "bold 18px sans-serif";
       ctx.fillStyle = "#818cf8";
-      ctx.fillText("speakmirror.app", 1030, 580);
+      ctx.fillText("speakmirror.app", 1030, 575);
 
       // Convert to Data URL
       const dataUrl = canvas.toDataURL("image/png");

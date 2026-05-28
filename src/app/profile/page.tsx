@@ -375,7 +375,7 @@ export default function ProfilePage() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
               transition={{ type: "spring", duration: 0.4 }}
-              className="relative max-w-2xl w-full max-h-[95vh] overflow-y-auto"
+              className="relative max-w-3xl w-full max-h-[95vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Close Button */}
