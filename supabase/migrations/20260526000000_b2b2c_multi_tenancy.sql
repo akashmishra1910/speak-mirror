@@ -56,9 +56,10 @@ begin
   values ('Personal Space', true, 'FREE', new.id)
   returning id into personal_org_id;
 
-  -- Map the new user as OWNER of their personal organization
+  -- Map the new user as OWNER of their personal organization (on conflict do nothing)
   insert into public.organization_users (organization_id, user_id, role)
-  values (personal_org_id, new.id, 'OWNER');
+  values (personal_org_id, new.id, 'OWNER')
+  on conflict (organization_id, user_id) do nothing;
 
   return new;
 end;

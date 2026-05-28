@@ -18,7 +18,7 @@ interface AuthContextType {
   activeWorkspace: Workspace;
   setActiveWorkspace: (workspace: Workspace) => void;
   workspaces: Workspace[];
-  fetchWorkspaces: (userId: string) => Promise<void>;
+  fetchWorkspaces: (userId: string, attemptedAutoCreate?: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const fetchWorkspaces = async (userId: string) => {
+  const fetchWorkspaces = async (userId: string, attemptedAutoCreate = false) => {
     try {
       const { data, error } = await supabase
         .from("organization_users")
@@ -51,6 +51,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq("user_id", userId);
 
       if (!error && data) {
+        // Check if user has a personal space mapping
+        const hasPersonalSpace = data.some((item: any) => item.organizations?.is_personal);
+
+        if (!hasPersonalSpace && !attemptedAutoCreate) {
+          console.warn("Personal space not found for user, auto-creating...");
+          try {
+            const { data: newOrg, error: orgError } = await supabase
+              .from("organizations")
+              .insert({ name: "Personal Space", is_personal: true, created_by: userId })
+              .select()
+              .single();
+
+            if (!orgError && newOrg) {
+              // Re-fetch workspaces to load the newly created personal organization and its mapping
+              await fetchWorkspaces(userId, true);
+              return;
+            } else {
+              console.error("Failed to auto-create personal space:", orgError);
+            }
+          } catch (orgErr) {
+            console.error("Exception during personal space auto-creation:", orgErr);
+          }
+        }
+
         const orgWorkspaces = data
           .filter((item: any) => !item.organizations?.is_personal)
           .map((item: any) => ({
