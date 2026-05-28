@@ -34,8 +34,22 @@ export async function POST(request: Request) {
     // Convert Blob to Buffer, then use toFile for SDK compatibility
     const buffer = Buffer.from(await audioFile.arrayBuffer());
     const mimeType = audioFile.type || "audio/webm";
-    const extension = mimeType.split("/")[1] || "webm";
-    const file = await toFile(buffer, `recording.${extension}`, { type: mimeType });
+    
+    // Strip codecs parameters (e.g. 'audio/webm;codecs=opus' -> 'audio/webm')
+    const baseMimeType = mimeType.split(";")[0];
+    let extension = baseMimeType.split("/")[1] || "webm";
+    
+    // Map extensions to Groq's allowed Whisper types: [flac mp3 mp4 mpeg mpga m4a ogg opus wav webm]
+    const supportedExtensions = ["flac", "mp3", "mp4", "mpeg", "mpga", "m4a", "ogg", "opus", "wav", "webm"];
+    if (!supportedExtensions.includes(extension)) {
+      if (extension === "aac" || extension === "x-m4a") {
+        extension = "m4a";
+      } else {
+        extension = "webm"; // safe fallback
+      }
+    }
+    
+    const file = await toFile(buffer, `recording.${extension}`, { type: baseMimeType });
 
     // 1. Get Transcription using Whisper
     const transcription = await groq.audio.transcriptions.create({
