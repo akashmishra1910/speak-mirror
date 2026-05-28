@@ -30,10 +30,10 @@ export function FluencyCard({ metrics, userName }: FluencyCardProps) {
   const [imgUrl, setImgUrl] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(true);
+  const [isSharing, setIsSharing] = useState(false);
 
   const cleanName = userName || "A Speaker";
-  const shareText = `I just hit ${metrics.wpm} WPM with ${metrics.clarity}% Clarity on SpeakMirror! 🚀 Practicing daily to refine my technical speaking fluency. Check it out:`;
-  const shareUrl = "https://speakmirror.app";
+  const shareText = `I just hit ${metrics.wpm} WPM with ${metrics.clarity}% Clarity on SpeakMirror! 🚀 Practicing daily to refine my technical speaking fluency.`;
 
   useEffect(() => {
     const drawCard = async () => {
@@ -234,21 +234,39 @@ export function FluencyCard({ metrics, userName }: FluencyCardProps) {
   };
 
   const handleCopyText = () => {
-    navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+    navigator.clipboard.writeText(shareText);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  const getTwitterShareUrl = () => {
-    const text = encodeURIComponent(`${shareText} `);
-    const url = encodeURIComponent(shareUrl);
-    return `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
-  };
+  const handleShareCard = async () => {
+    if (!imgUrl) return;
+    setIsSharing(true);
+    try {
+      const res = await fetch(imgUrl);
+      const blob = await res.blob();
+      const file = new File([blob], `speakmirror-fluency-${cleanName.toLowerCase().replace(/\s+/g, "-")}.png`, { type: "image/png" });
 
-  const getLinkedinShareUrl = () => {
-    const url = encodeURIComponent(shareUrl);
-    const summary = encodeURIComponent(shareText);
-    return `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "SpeakMirror Fluency Card 🚀",
+          text: shareText
+        });
+      } else {
+        // Fallback: download the file and copy text
+        handleDownload();
+        handleCopyText();
+        alert("Direct card sharing is not supported by your browser on this device. We've downloaded your fluency card PNG and copied the share text to your clipboard so you can post it directly!");
+      }
+    } catch (err) {
+      console.error("Share failed:", err);
+      // Fallback
+      handleDownload();
+      handleCopyText();
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   return (
@@ -266,10 +284,10 @@ export function FluencyCard({ metrics, userName }: FluencyCardProps) {
         <button
           onClick={handleDownload}
           disabled={isGenerating}
-          className="px-4 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all font-bold text-xs flex items-center gap-2 shadow-[0_0_15px_rgba(255,255,255,0.08)] disabled:opacity-50"
+          className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all font-bold text-xs flex items-center gap-2"
         >
-          <Download className="w-4.5 h-4.5" />
-          Download PNG
+          <Download className="w-4 h-4" />
+          Save Local PNG
         </button>
       </div>
 
@@ -293,41 +311,29 @@ export function FluencyCard({ metrics, userName }: FluencyCardProps) {
         )}
       </div>
 
-      {/* Share Actions */}
-      <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 border-t border-white/5 pt-6">
-        <div className="flex items-center gap-2 bg-white/[0.02] border border-white/5 px-3 py-2 rounded-xl max-w-full sm:max-w-[70%]">
-          <span className="text-xs text-zinc-400 truncate italic">
-            "{shareText} {shareUrl}"
-          </span>
+      {/* Share Actions - Premium Quote and Unified Share Button */}
+      <div className="mt-6 flex flex-col md:flex-row items-stretch gap-4 border-t border-white/5 pt-6">
+        <div className="flex-1 flex items-start justify-between gap-3 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
+          <p className="text-xs md:text-sm text-zinc-300 italic leading-relaxed whitespace-pre-wrap">
+            "{shareText}"
+          </p>
           <button
             onClick={handleCopyText}
-            className="ml-2 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-all shrink-0"
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 hover:text-white transition-all shrink-0 border border-white/5 text-zinc-400"
             title="Copy Share Text"
           >
-            {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            {isCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
           </button>
         </div>
 
-        <div className="flex gap-2.5">
-          <a
-            href={getTwitterShareUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#1d9bf0]/10 border border-[#1d9bf0]/20 hover:bg-[#1d9bf0]/20 text-[#1d9bf0] font-semibold text-xs transition-all flex items-center justify-center gap-2"
-          >
-            <TwitterIcon className="w-4 h-4 fill-current" />
-            Post on X
-          </a>
-          <a
-            href={getLinkedinShareUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#0a66c2]/10 border border-[#0a66c2]/20 hover:bg-[#0a66c2]/20 text-[#0a66c2] font-semibold text-xs transition-all flex items-center justify-center gap-2"
-          >
-            <LinkedinIcon className="w-4 h-4 fill-current" />
-            Share on LinkedIn
-          </a>
-        </div>
+        <button
+          onClick={handleShareCard}
+          disabled={isGenerating || isSharing}
+          className="px-6 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-extrabold text-xs md:text-sm transition-all shadow-[0_0_20px_rgba(99,102,241,0.25)] flex items-center justify-center gap-2 md:w-[220px]"
+        >
+          {isSharing ? <Loader2 className="w-4.5 h-4.5 animate-spin" /> : <Share2 className="w-4.5 h-4.5" />}
+          Share Card Direct
+        </button>
       </div>
     </div>
   );
