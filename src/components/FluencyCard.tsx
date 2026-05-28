@@ -198,7 +198,7 @@ export function FluencyCard({ metrics, userName }: FluencyCardProps) {
         ctx.fillText(item.val, x + 30, y + 105);
       });
 
-      // Helper to wrap text on canvas
+      // Helper to wrap text on canvas and align it baseline-up
       const wrapText = (
         context: CanvasRenderingContext2D,
         text: string,
@@ -208,32 +208,36 @@ export function FluencyCard({ metrics, userName }: FluencyCardProps) {
         lineHeight: number
       ) => {
         const words = text.split(" ");
-        let line = "";
-        let currentY = y;
+        const lines: string[] = [];
+        let currentLine = "";
 
         for (let n = 0; n < words.length; n++) {
-          const testLine = line + words[n] + " ";
+          const testLine = currentLine + words[n] + " ";
           const metrics = context.measureText(testLine);
           const testWidth = metrics.width;
           if (testWidth > maxWidth && n > 0) {
-            context.fillText(line, x, currentY);
-            line = words[n] + " ";
-            currentY += lineHeight;
+            lines.push(currentLine.trim());
+            currentLine = words[n] + " ";
           } else {
-            line = testLine;
+            currentLine = testLine;
           }
         }
-        context.fillText(line, x, currentY);
+        lines.push(currentLine.trim());
+
+        const startY = y - (lines.length - 1) * lineHeight;
+        lines.forEach((line, idx) => {
+          context.fillText(line, x, startY + idx * lineHeight);
+        });
       };
 
       // 8. Draw Branding Footer info
-      ctx.font = "light 16px sans-serif";
+      ctx.font = "300 13px sans-serif";
       ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
-      wrapText(ctx, "SpeakMirror uses advanced AI speech analysis to score delivery and reduce filler words.", 80, 570, 800, 22);
+      wrapText(ctx, "SpeakMirror uses advanced AI speech analysis to score delivery and reduce filler words.", 80, 580, 800, 18);
 
       ctx.font = "bold 18px sans-serif";
       ctx.fillStyle = "#818cf8";
-      ctx.fillText("speakmirror.app", 1030, 575);
+      ctx.fillText("speakmirror.app", 1030, 580);
 
       // Convert to Data URL
       const dataUrl = canvas.toDataURL("image/png");
