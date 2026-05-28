@@ -11,6 +11,7 @@ import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import { useEffect, Suspense, useRef, useCallback } from "react";
 import { dailyChallenges, getRandomChallenge, Challenge } from "@/lib/challenges";
+import { FluencyCard } from "@/components/FluencyCard";
 
 function PracticeContent() {
   const { user, activeWorkspace } = useAuth();
@@ -587,6 +588,15 @@ function PracticeContent() {
                   isSaved={isSaved}
                   onRetake={handleRetake}
                 />
+                <FluencyCard 
+                  metrics={{
+                    confidence: m.confidence,
+                    clarity: m.clarity,
+                    wpm: m.wpm,
+                    fillerWords: m.fillerWords
+                  }}
+                  userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || "A Speaker"}
+                />
               </div>
             ))}
             
@@ -642,26 +652,10 @@ function PracticeContent() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.2 }}
-                      className="mt-6 w-full glass-panel px-5 py-4 rounded-2xl flex items-center gap-4 border border-white/5 bg-white/[0.01]"
+                      className="mt-4 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 font-extrabold text-xs shadow-[0_0_15px_rgba(249,115,22,0.05)] w-fit mx-auto"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shadow-[0_0_10px_rgba(249,115,22,0.1)]">
-                        {isLoadingStreak ? (
-                          <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
-                        ) : (
-                          <Flame className="w-5 h-5 text-orange-500 animate-pulse" />
-                        )}
-                      </div>
-                      <div className="text-left">
-                        <div className="text-xs font-bold text-white uppercase tracking-wide">Daily Streak</div>
-                        <div className="text-lg font-extrabold text-white leading-tight">
-                          {isLoadingStreak ? "..." : `${streak} Day${streak === 1 ? "" : "s"}`}
-                        </div>
-                        <div className="text-[10px] text-zinc-400 font-light mt-0.5">
-                          {streak > 0 
-                            ? "Practice at least once today to extend your streak!"
-                            : "Record your first speech today to kick off a new streak!"}
-                        </div>
-                      </div>
+                      <span>🔥</span>
+                      <span>{isLoadingStreak ? "..." : streak}</span>
                     </motion.div>
                   )}
 
