@@ -415,7 +415,18 @@ function PracticeContent() {
       const formData1 = new FormData();
       formData1.append("audio", freeformAudio, "recording.webm");
       const res1 = await fetch("/api/analyze", { method: "POST", body: formData1 });
-      const analysis1 = await res1.json();
+      
+      let analysis1;
+      const resText1 = await res1.text();
+      try {
+        analysis1 = JSON.parse(resText1);
+      } catch (jsonErr) {
+        throw new Error(res1.status === 413 
+          ? "Recording is too large for the Vercel Serverless Function limit. Please try speaking a bit closer to the time limit or shorten your speech."
+          : `Server error (${res1.status}): ${resText1.substring(0, 150)}`
+        );
+      }
+
       if (!res1.ok) throw new Error(analysis1.error || "Failed to analyze freeform speech");
       analysis1.title = "Freeform Speech";
       newMetrics.push(analysis1);
@@ -428,7 +439,18 @@ function PracticeContent() {
         formData2.append("audio", readingAudio, "recording.webm");
         formData2.append("expectedText", task.reading_text);
         const res2 = await fetch("/api/analyze", { method: "POST", body: formData2 });
-        const analysis2 = await res2.json();
+        
+        let analysis2;
+        const resText2 = await res2.text();
+        try {
+          analysis2 = JSON.parse(resText2);
+        } catch (jsonErr) {
+          throw new Error(res2.status === 413 
+            ? "Reading recording is too large for the Vercel Serverless Function limit."
+            : `Server error (${res2.status}): ${resText2.substring(0, 150)}`
+          );
+        }
+
         if (!res2.ok) throw new Error(analysis2.error || "Failed to analyze reading speech");
         analysis2.title = "Reading Aloud";
         newMetrics.push(analysis2);

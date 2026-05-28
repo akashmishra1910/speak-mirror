@@ -150,11 +150,11 @@ export function Recorder({
     if (!streamRef.current) return;
     
     try {
-      // 1. Setup Video Recorder
+      // 1. Setup Video Recorder (lowered bitrate to keep fallbacks under 3MB)
       const mediaRecorder = new MediaRecorder(streamRef.current, {
         mimeType: 'video/webm',
-        videoBitsPerSecond: 400000, // 400 kbps to keep 90s well under 3MB
-        audioBitsPerSecond: 64000   // 64 kbps for clear audio analysis
+        videoBitsPerSecond: 250000, // 250 kbps (keeps a 90s recording ~2.8MB in total)
+        audioBitsPerSecond: 48000   // 48 kbps
       });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
@@ -184,7 +184,7 @@ export function Recorder({
 
           audioRecorder = new MediaRecorder(audioStream, {
             mimeType: audioMime,
-            audioBitsPerSecond: 64000
+            audioBitsPerSecond: 48000
           });
           audioRecorderRef.current = audioRecorder;
 
@@ -198,15 +198,29 @@ export function Recorder({
         console.warn("Failed to initialize separate audio recorder:", audioErr);
       }
 
-      mediaRecorder.onstop = () => {
-        const videoBlob = new Blob(chunksRef.current, { type: "video/webm" });
-        let audioBlob = videoBlob; // fallback
-        if (audioChunksRef.current.length > 0) {
-          const audioMimeType = audioRecorderRef.current?.mimeType || "audio/webm";
-          audioBlob = new Blob(audioChunksRef.current, { type: audioMimeType });
+      // Synchronize both recorder stops to prevent race conditions
+      let videoBlob: Blob | null = null;
+      let audioBlob: Blob | null = null;
+
+      const checkComplete = () => {
+        // If we have the video blob, and either we have the audio blob OR the audio recorder failed to start
+        if (videoBlob && (audioBlob || !audioRecorder)) {
+          onRecordingComplete(videoBlob, audioBlob || videoBlob);
         }
-        onRecordingComplete(videoBlob, audioBlob);
       };
+
+      mediaRecorder.onstop = () => {
+        videoBlob = new Blob(chunksRef.current, { type: "video/webm" });
+        checkComplete();
+      };
+
+      if (audioRecorder) {
+        audioRecorder.onstop = () => {
+          const audioMimeType = audioRecorder?.mimeType || "audio/webm";
+          audioBlob = new Blob(audioChunksRef.current as any, { type: audioMimeType });
+          checkComplete();
+        };
+      }
 
       mediaRecorder.start();
       if (audioRecorder) {
