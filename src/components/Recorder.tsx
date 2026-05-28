@@ -10,12 +10,27 @@ interface RecorderProps {
   readingText?: string | null;
   taskTopic?: string | null;
   userId?: string | null;
-  mode?: "freeform" | "reading";
+  mode?: "freeform" | "reading" | "warmup";
+  timeLimit?: number;
+  wordOfTheDay?: string | null;
+  wordDefinition?: string | null;
+  tips?: string[] | null;
 }
 
-export function Recorder({ onRecordingComplete, isProcessing, readingText, taskTopic, userId, mode = "freeform" }: RecorderProps) {
+export function Recorder({ 
+  onRecordingComplete, 
+  isProcessing, 
+  readingText, 
+  taskTopic, 
+  userId, 
+  mode = "freeform",
+  timeLimit = 90,
+  wordOfTheDay,
+  wordDefinition,
+  tips
+}: RecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(90);
+  const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [topic, setTopic] = useState("Generating topic...");
   const [bullets, setBullets] = useState<{label: string, text: string}[]>([]);
@@ -27,7 +42,7 @@ export function Recorder({ onRecordingComplete, isProcessing, readingText, taskT
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Initialize camera preview on mount
+  // Initialize camera preview on mount (runs once)
   useEffect(() => {
     const initCamera = async () => {
       try {
@@ -48,9 +63,26 @@ export function Recorder({ onRecordingComplete, isProcessing, readingText, taskT
     };
 
     initCamera();
-    
+
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  // Sync timeLeft when timeLimit or mode changes
+  useEffect(() => {
+    setTimeLeft(timeLimit);
+  }, [timeLimit, mode]);
+
+  // Initialize topic and bullets when mode/taskTopic changes
+  useEffect(() => {
     if (mode === "reading") {
       setTopic(taskTopic || "Reading Task");
+      setIsLoadingTopic(false);
+    } else if (mode === "warmup") {
+      setTopic(taskTopic || "Daily Warm-up Challenge");
       setIsLoadingTopic(false);
     } else {
       if (taskTopic) {
@@ -62,13 +94,7 @@ export function Recorder({ onRecordingComplete, isProcessing, readingText, taskT
         fetchDynamicTopic();
       }
     }
-
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, []);
+  }, [mode, taskTopic]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -317,7 +343,7 @@ export function Recorder({ onRecordingComplete, isProcessing, readingText, taskT
         <div className="glass-panel p-5 md:p-6 rounded-3xl">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-              {mode === "reading" ? "Reading Practice" : "Your Topic"}
+              {mode === "reading" ? "Reading Practice" : (mode === "warmup" ? "Daily Warm-up" : "Your Topic")}
             </span>
             {mode === "freeform" && !taskTopic && (
               <button 
@@ -335,17 +361,47 @@ export function Recorder({ onRecordingComplete, isProcessing, readingText, taskT
           </p>
         </div>
 
-        <div className="glass-panel p-5 md:p-6 rounded-3xl bg-white/[0.01] border-white/5 hidden md:block">
-          <h3 className="text-xs font-bold mb-2 flex items-center gap-2 text-white">
-            <Lightbulb className="w-4 h-4 text-zinc-300 animate-pulse" />
-            Pro Tip
-          </h3>
-          <p className="text-xs text-foreground/60 leading-relaxed font-light">
-            {mode === "reading" 
-              ? "Use the Teleprompter button on the camera view to reveal the exact text you need to read aloud. The AI will grade your pronunciation!"
-              : "Use the Assist button on the camera view to reveal the 4W+1H guiding framework if you get stuck!"}
-          </p>
-        </div>
+        {mode === "warmup" && wordOfTheDay && (
+          <div className="glass-panel p-5 md:p-6 rounded-3xl bg-indigo-500/[0.02] border-indigo-500/10">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
+              Vocabulary Word
+            </span>
+            <p className="font-extrabold text-lg text-white mt-1.5 leading-tight">
+              {wordOfTheDay}
+            </p>
+            {wordDefinition && (
+              <p className="text-[11px] text-zinc-400 font-light mt-1.5 leading-relaxed">
+                {wordDefinition}
+              </p>
+            )}
+          </div>
+        )}
+
+        {mode === "warmup" && tips && tips.length > 0 ? (
+          <div className="glass-panel p-5 md:p-6 rounded-3xl bg-white/[0.01] border-white/5 hidden md:block">
+            <h3 className="text-xs font-bold mb-2 flex items-center gap-2 text-white">
+              <Lightbulb className="w-4 h-4 text-zinc-300 animate-pulse" />
+              Warm-up Tips
+            </h3>
+            <ul className="space-y-2 text-xs text-foreground/60 leading-relaxed font-light list-disc list-inside">
+              {tips.map((tip, i) => (
+                <li key={i}>{tip}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="glass-panel p-5 md:p-6 rounded-3xl bg-white/[0.01] border-white/5 hidden md:block">
+            <h3 className="text-xs font-bold mb-2 flex items-center gap-2 text-white">
+              <Lightbulb className="w-4 h-4 text-zinc-300 animate-pulse" />
+              Pro Tip
+            </h3>
+            <p className="text-xs text-foreground/60 leading-relaxed font-light">
+              {mode === "reading" 
+                ? "Use the Teleprompter button on the camera view to reveal the exact text you need to read aloud. The AI will grade your pronunciation!"
+                : "Use the Assist button on the camera view to reveal the 4W+1H guiding framework if you get stuck!"}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

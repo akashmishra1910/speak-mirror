@@ -4,12 +4,13 @@ import { useState } from "react";
 import { Recorder } from "@/components/Recorder";
 import { FeedbackDashboard, AnalysisMetrics } from "@/components/FeedbackDashboard";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ArrowLeft, Loader2, Flame, Clock, AlertCircle, BookOpen, ChevronRight, Calendar } from "lucide-react";
+import { Sparkles, ArrowLeft, Loader2, Flame, Clock, AlertCircle, BookOpen, ChevronRight, Calendar, Bell } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import { useEffect, Suspense, useRef, useCallback } from "react";
+import { dailyChallenges, getRandomChallenge, Challenge } from "@/lib/challenges";
 
 function PracticeContent() {
   const { user, activeWorkspace } = useAuth();
@@ -39,10 +40,33 @@ function PracticeContent() {
   // Daily Streak State
   const [streak, setStreak] = useState<number>(0);
   const [isLoadingStreak, setIsLoadingStreak] = useState(false);
+  const [completedWarmupToday, setCompletedWarmupToday] = useState(false);
 
   // Team Assignments State
   const [pendingAssignments, setPendingAssignments] = useState<any[]>([]);
   const [isLoadingAssignments, setIsLoadingAssignments] = useState(false);
+
+  // Daily Challenge State
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
+  
+  // Notification Permission State
+  const [notificationPermission, setNotificationPermission] = useState<string>("default");
+
+  // Initialize Daily Challenge & Notification Permission on Mount
+  useEffect(() => {
+    // Select deterministic challenge based on current date
+    const dayIndex = Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % dailyChallenges.length;
+    setSelectedChallenge(dailyChallenges[dayIndex]);
+
+    // Check Notification Permission
+    if (typeof window !== "undefined") {
+      if (!("Notification" in window)) {
+        setNotificationPermission("unsupported");
+      } else {
+        setNotificationPermission(Notification.permission);
+      }
+    }
+  }, []);
 
   const isFirstWorkspaceChange = useRef(true);
 
@@ -78,8 +102,26 @@ function PracticeContent() {
       }
       setIsLoadingTask(true);
       try {
-        const { data } = await supabase.from("room_tasks").select("*").eq("id", activeTaskId).single();
-        if (data) setTask(data);
+        if (activeTaskId.startsWith("challenge-")) {
+          const challengeId = activeTaskId.replace("challenge-", "");
+          const { dailyChallenges } = await import("@/lib/challenges");
+          const found = dailyChallenges.find(c => c.id === challengeId);
+          if (found) {
+            setTask({
+              id: activeTaskId,
+              topic_of_the_day: found.prompt,
+              word_of_the_day: found.word_of_the_day,
+              definition: found.definition,
+              reading_text: null,
+              isChallenge: true,
+              timeLimit: found.suggestedDuration,
+              tips: found.tips
+            });
+          }
+        } else {
+          const { data } = await supabase.from("room_tasks").select("*").eq("id", activeTaskId).single();
+          if (data) setTask(data);
+        }
       } catch (err) {
         console.error("Error fetching task:", err);
       } finally {
@@ -90,61 +132,68 @@ function PracticeContent() {
   }, [activeTaskId]);
 
   // Fetch Personal Daily Streak
-  useEffect(() => {
-    async function fetchPersonalStreak() {
-      if (!user || activeWorkspace.id !== "personal") return;
-      setIsLoadingStreak(true);
-      try {
-        const { data, error } = await supabase
-          .from("recordings")
-          .select("created_at")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
+  const fetchPersonalStreak = useCallback(async () => {
+    if (!user || activeWorkspace.id !== "personal") return;
+    setIsLoadingStreak(true);
+    try {
+      const { data, error } = await supabase
+        .from("recordings")
+        .select("created_at, recording_type")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
-        if (error) throw error;
-        if (data) {
-          const dates = data.map(r => {
-            const d = new Date(r.created_at);
-            return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-          });
-          const uniqueTimestamps = Array.from(new Set(dates)).sort((a, b) => b - a);
-          
-          if (uniqueTimestamps.length === 0) {
-            setStreak(0);
-            return;
-          }
-          
-          const today = new Date();
-          const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-          const yesterdayMidnight = todayMidnight - 86400000;
-          
-          const mostRecent = uniqueTimestamps[0];
-          
-          if (mostRecent !== todayMidnight && mostRecent !== yesterdayMidnight) {
-            setStreak(0);
-            return;
-          }
-          
-          let currentStreak = 1;
-          for (let i = 0; i < uniqueTimestamps.length - 1; i++) {
-            const diff = uniqueTimestamps[i] - uniqueTimestamps[i + 1];
-            if (diff === 86400000) {
-              currentStreak++;
-            } else if (diff > 86400000) {
-              break;
-            }
-          }
-          setStreak(currentStreak);
+      if (error) throw error;
+      if (data) {
+        const dates = data.map(r => {
+          const d = new Date(r.created_at);
+          return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+        });
+        const uniqueTimestamps = Array.from(new Set(dates)).sort((a, b) => b - a);
+        
+        // Also check if completed warmup today
+        const todayStr = new Date().toDateString();
+        const hasCompletedWarmupToday = data.some(r => 
+          r.recording_type === 'warmup' && new Date(r.created_at).toDateString() === todayStr
+        );
+        setCompletedWarmupToday(hasCompletedWarmupToday);
+
+        if (uniqueTimestamps.length === 0) {
+          setStreak(0);
+          return;
         }
-      } catch (err) {
-        console.error("Error fetching streak:", err);
-      } finally {
-        setIsLoadingStreak(false);
+        
+        const today = new Date();
+        const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+        const yesterdayMidnight = todayMidnight - 86400000;
+        
+        const mostRecent = uniqueTimestamps[0];
+        
+        if (mostRecent !== todayMidnight && mostRecent !== yesterdayMidnight) {
+          setStreak(0);
+          return;
+        }
+        
+        let currentStreak = 1;
+        for (let i = 0; i < uniqueTimestamps.length - 1; i++) {
+          const diff = uniqueTimestamps[i] - uniqueTimestamps[i + 1];
+          if (diff === 86400000) {
+            currentStreak++;
+          } else if (diff > 86400000) {
+            break;
+          }
+        }
+        setStreak(currentStreak);
       }
+    } catch (err) {
+      console.error("Error fetching streak:", err);
+    } finally {
+      setIsLoadingStreak(false);
     }
-
-    fetchPersonalStreak();
   }, [user, activeWorkspace.id]);
+
+  useEffect(() => {
+    fetchPersonalStreak();
+  }, [fetchPersonalStreak]);
 
   // Fetch Team Pending Assignments
   const fetchTeamAssignments = useCallback(async (active = true) => {
@@ -278,8 +327,48 @@ function PracticeContent() {
     window.history.replaceState({}, "", url.pathname + url.search);
   };
 
+  const handleShuffleChallenge = () => {
+    const next = getRandomChallenge(selectedChallenge?.id);
+    setSelectedChallenge(next);
+  };
+
+  const startChallenge = () => {
+    if (!selectedChallenge) return;
+    setActiveTaskId(`challenge-${selectedChallenge.id}`);
+    setActiveRoomId(null);
+    setPhase("freeform_recording");
+    setFreeformBlob(null);
+    setReadingBlob(null);
+    setMetricsList([]);
+    setVideoUrls([]);
+    setIsSaved(false);
+  };
+
+  const handleRequestNotificationPermission = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+      if (permission === "granted") {
+        new Notification("SpeakMirror Streak Reminders Active! 🔔", {
+          body: "We'll nudge you in the evening if you haven't completed your daily warm-up.",
+          icon: "/icons/icon-192x192.png"
+        });
+        localStorage.setItem("speak_mirror_push_reminders", "true");
+      }
+    } catch (err) {
+      console.error("Error requesting notification permission:", err);
+    }
+  };
+
   const handleRecordingComplete = async (mediaBlob: Blob) => {
     if (activeTaskId && phase === "freeform_recording") {
+      if (task?.isChallenge) {
+        setFreeformBlob(mediaBlob);
+        setPhase("analyzing");
+        processRecordings(mediaBlob, null);
+        return;
+      }
       setFreeformBlob(mediaBlob);
       setPhase("reading_recording");
       return;
@@ -376,12 +465,12 @@ function PracticeContent() {
           await supabase.from('recordings').insert({
             user_id: user.id,
             room_id: activeRoomId || null,
-            task_id: activeTaskId || null,
+            task_id: activeTaskId && !task?.isChallenge ? activeTaskId : null,
             video_url: url1,
             confidence: metricsList[0].confidence,
             clarity: metricsList[0].clarity,
             topic: task?.topic_of_the_day || "Free Practice",
-            recording_type: 'freeform',
+            recording_type: task?.isChallenge ? 'warmup' : 'freeform',
             organization_id: currentOrgId
           });
         }
@@ -410,6 +499,9 @@ function PracticeContent() {
         setIsSaved(true);
         // Refresh assignments list so completed one gets removed
         await fetchTeamAssignments();
+        if (isPersonal) {
+          await fetchPersonalStreak();
+        }
       }
     } catch (error) {
       console.error("Error saving recording:", error);
@@ -514,12 +606,11 @@ function PracticeContent() {
               </Link>
             </div>
           </motion.div>
-        ) : (
-          /* Main Layout Split Logic */
-          <div className={`w-full ${isPersonal ? "flex flex-col items-center" : "grid grid-cols-1 lg:grid-cols-3 gap-8 items-start"}`}>
+        ) : (        /* Main Layout Split Logic */
+          <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             
             {/* Left side/Centered Recorder Column */}
-            <div className={`${isPersonal ? "w-full max-w-md flex flex-col items-center" : "lg:col-span-2 flex flex-col items-center"}`}>
+            <div className="lg:col-span-2 flex flex-col items-center w-full">
               {isLoadingTask ? (
                 <div className="flex flex-col items-center justify-center p-24 w-full glass-panel rounded-3xl border border-white/5">
                   <Loader2 className="w-8 h-8 animate-spin text-white mb-4" />
@@ -538,7 +629,11 @@ function PracticeContent() {
                     readingText={phase === "reading_recording" ? task?.reading_text : undefined}
                     taskTopic={task?.topic_of_the_day}
                     userId={user?.id}
-                    mode={phase === "reading_recording" ? "reading" : "freeform"}
+                    mode={phase === "reading_recording" ? "reading" : (task?.isChallenge ? "warmup" : "freeform")}
+                    timeLimit={task?.timeLimit || 90}
+                    wordOfTheDay={task?.word_of_the_day}
+                    wordDefinition={task?.definition}
+                    tips={task?.tips}
                   />
                   
                   {/* Personal Streak displayed cleanly below recorder */}
@@ -569,6 +664,47 @@ function PracticeContent() {
                       </div>
                     </motion.div>
                   )}
+
+                  {/* Daily Push Reminders Toggle Card */}
+                  {isPersonal && notificationPermission !== "unsupported" && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="mt-4 w-full glass-panel px-5 py-4 rounded-2xl flex items-center justify-between border border-white/5 bg-white/[0.01]"
+                    >
+                      <div className="flex items-center gap-4 text-left">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shadow-[0_0_10px_rgba(99,102,241,0.1)]">
+                          <Bell className="w-5 h-5 text-indigo-400" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-white uppercase tracking-wide">PWA Reminders</div>
+                          <div className="text-xs text-zinc-400 font-light mt-0.5 leading-tight">
+                            {notificationPermission === "granted" 
+                              ? "Daily nudge at 8:00 PM is active."
+                              : notificationPermission === "denied"
+                                ? "Notifications blocked in browser."
+                                : "Get nudged to keep your streak active."}
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        {notificationPermission !== "granted" ? (
+                          <button
+                            onClick={handleRequestNotificationPermission}
+                            disabled={notificationPermission === "denied"}
+                            className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-[10px] text-white font-semibold transition-all shadow-[0_0_15px_rgba(99,102,241,0.2)]"
+                          >
+                            {notificationPermission === "denied" ? "Blocked" : "Enable"}
+                          </button>
+                        ) : (
+                          <span className="text-[10px] font-bold text-emerald-400 uppercase bg-emerald-400/5 px-2 py-1 rounded border border-emerald-400/10">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
                 </motion.div>
               ) : (
                 <div className="flex flex-col items-center justify-center p-24 w-full glass-panel rounded-3xl border border-white/5">
@@ -579,8 +715,99 @@ function PracticeContent() {
               )}
             </div>
 
-            {/* Right side Team Assignments Column */}
-            {!isPersonal && (
+            {/* Right side Column (Team Assignments OR Personal Challenges) */}
+            {isPersonal ? (
+              <motion.div 
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="lg:col-span-1 glass-panel p-6 rounded-3xl border border-white/10 bg-[#09090d]/90 backdrop-blur-3xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] w-full text-left"
+              >
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-orange-400 animate-pulse" />
+                    Daily Challenge
+                  </h3>
+                  {completedWarmupToday && (
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      Done Today
+                    </span>
+                  )}
+                </div>
+
+                {completedWarmupToday ? (
+                  <div className="p-5 text-center border border-emerald-500/20 bg-emerald-500/5 rounded-2xl mb-4">
+                    <Sparkles className="w-8 h-8 text-emerald-400 mx-auto mb-3 animate-bounce" />
+                    <h4 className="text-sm font-bold text-white mb-1.5">Streak Safe! 🔥</h4>
+                    <p className="text-[11px] text-zinc-400 font-light leading-relaxed">
+                      You've completed today's warm-up challenge. Keep up the consistency to improve your speaking fluency!
+                    </p>
+                  </div>
+                ) : activeTaskId?.startsWith("challenge-") ? (
+                  <div className="p-4 border border-indigo-500/20 bg-indigo-500/5 rounded-2xl mb-4">
+                    <div className="flex justify-between items-start gap-2 mb-2">
+                      <span className="text-[10px] font-semibold text-indigo-400 bg-indigo-400/5 px-2 py-0.5 rounded-md border border-indigo-400/10 uppercase">
+                        Active Challenge
+                      </span>
+                    </div>
+                    <h4 className="text-xs font-bold leading-snug text-white mb-2">
+                      {selectedChallenge?.prompt}
+                    </h4>
+                    <p className="text-[10px] text-zinc-400 font-light mb-4">
+                      Word of the day: <strong className="text-white font-bold">{selectedChallenge?.word_of_the_day}</strong> - {selectedChallenge?.definition}
+                    </p>
+                    <button
+                      onClick={clearAssignment}
+                      className="w-full py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all font-bold text-[11px] text-white flex items-center justify-center gap-1.5"
+                    >
+                      Exit Challenge
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 hover:border-white/10 transition-all">
+                      <div className="flex justify-between items-start gap-2 mb-2">
+                        <span className="text-[10px] font-semibold text-zinc-400 bg-white/5 px-2 py-0.5 rounded-md border border-white/10 uppercase">
+                          Today's Prompt
+                        </span>
+                        <span className="text-[10px] font-bold text-zinc-500">
+                          {selectedChallenge?.suggestedDuration}s limit
+                        </span>
+                      </div>
+                      <h4 className="text-xs font-extrabold text-white leading-relaxed mb-2.5">
+                        {selectedChallenge?.prompt}
+                      </h4>
+                      <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 text-[11px] mb-4 text-left leading-relaxed">
+                        <span className="font-bold text-indigo-400">Word of the Day:</span> <strong className="text-white">{selectedChallenge?.word_of_the_day}</strong>
+                        <p className="text-zinc-400 font-light mt-0.5 text-[10px]">{selectedChallenge?.definition}</p>
+                      </div>
+                      
+                      <div className="flex gap-2.5">
+                        <button
+                          onClick={handleShuffleChallenge}
+                          className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-semibold text-[11px] text-white flex items-center justify-center gap-1.5"
+                        >
+                          Shuffle
+                        </button>
+                        <button
+                          onClick={startChallenge}
+                          className="flex-1 py-2.5 rounded-xl bg-white text-zinc-950 font-bold text-[11px] transition-all hover:bg-zinc-200 flex items-center justify-center gap-1"
+                        >
+                          Start Warm-up
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-2xl border border-dashed border-white/5 text-center">
+                      <Sparkles className="w-5 h-5 text-zinc-500 mx-auto mb-2" />
+                      <h5 className="text-[11px] font-bold text-white mb-1">Consistency pays off!</h5>
+                      <p className="text-[10px] text-zinc-500 font-light leading-relaxed">
+                        Explaining a random topic for 30s daily is a proven way to eliminate pacing issues and filter out filler words.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            ) : (
               <motion.div 
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
