@@ -113,8 +113,8 @@ Note: Provide 2-3 highly specific suggestions.`;
       suggestions: analysis.suggestions || []
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Analysis error:", error);
-    return NextResponse.json({ error: "Failed to analyze speech" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Failed to analyze speech" }, { status: 500 });
   }
 }

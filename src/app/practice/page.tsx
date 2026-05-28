@@ -370,7 +370,7 @@ function PracticeContent() {
         setFreeformBlob(videoBlob);
         setFreeformAudioBlob(audioBlob);
         setPhase("analyzing");
-        processRecordings(audioBlob, null);
+        processRecordings(videoBlob, audioBlob, null, null);
         return;
       }
       setFreeformBlob(videoBlob);
@@ -383,7 +383,7 @@ function PracticeContent() {
       setReadingBlob(videoBlob);
       setReadingAudioBlob(audioBlob);
       setPhase("analyzing");
-      processRecordings(freeformAudioBlob!, audioBlob);
+      processRecordings(freeformBlob!, freeformAudioBlob!, videoBlob, audioBlob);
       return;
     }
 
@@ -391,11 +391,16 @@ function PracticeContent() {
       setFreeformBlob(videoBlob);
       setFreeformAudioBlob(audioBlob);
       setPhase("analyzing");
-      processRecordings(audioBlob, null);
+      processRecordings(videoBlob, audioBlob, null, null);
     }
   };
 
-  const processRecordings = async (freeform: Blob, reading: Blob | null) => {
+  const processRecordings = async (
+    freeformVideo: Blob,
+    freeformAudio: Blob,
+    readingVideo: Blob | null,
+    readingAudio: Blob | null
+  ) => {
     setIsProcessing(true);
     setMetricsList([]);
 
@@ -403,23 +408,24 @@ function PracticeContent() {
       const newMetrics: AnalysisMetrics[] = [];
       const newUrls: string[] = [];
 
-      const freeformUrl = URL.createObjectURL(freeform);
+      // Use the video Blob for preview playback in FeedbackDashboard
+      const freeformUrl = URL.createObjectURL(freeformVideo);
       newUrls.push(freeformUrl);
 
       const formData1 = new FormData();
-      formData1.append("audio", freeform, "recording.webm");
+      formData1.append("audio", freeformAudio, "recording.webm");
       const res1 = await fetch("/api/analyze", { method: "POST", body: formData1 });
       const analysis1 = await res1.json();
       if (!res1.ok) throw new Error(analysis1.error || "Failed to analyze freeform speech");
       analysis1.title = "Freeform Speech";
       newMetrics.push(analysis1);
 
-      if (reading && task?.reading_text) {
-        const readingUrl = URL.createObjectURL(reading);
+      if (readingAudio && readingVideo && task?.reading_text) {
+        const readingUrl = URL.createObjectURL(readingVideo);
         newUrls.push(readingUrl);
 
         const formData2 = new FormData();
-        formData2.append("audio", reading, "recording.webm");
+        formData2.append("audio", readingAudio, "recording.webm");
         formData2.append("expectedText", task.reading_text);
         const res2 = await fetch("/api/analyze", { method: "POST", body: formData2 });
         const analysis2 = await res2.json();
@@ -432,9 +438,9 @@ function PracticeContent() {
       setVideoUrls(newUrls);
       setPhase("results");
       setIsSaved(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error processing:", err);
-      alert("An error occurred during analysis. Check console.");
+      alert(`An error occurred during analysis: ${err.message || err}`);
     } finally {
       setIsProcessing(false);
     }
