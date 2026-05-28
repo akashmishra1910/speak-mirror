@@ -30,6 +30,8 @@ function PracticeContent() {
   
   const [freeformBlob, setFreeformBlob] = useState<Blob | null>(null);
   const [readingBlob, setReadingBlob] = useState<Blob | null>(null);
+  const [freeformAudioBlob, setFreeformAudioBlob] = useState<Blob | null>(null);
+  const [readingAudioBlob, setReadingAudioBlob] = useState<Blob | null>(null);
   
   const [metricsList, setMetricsList] = useState<AnalysisMetrics[]>([]);
   const [videoUrls, setVideoUrls] = useState<string[]>([]);
@@ -362,30 +364,34 @@ function PracticeContent() {
     }
   };
 
-  const handleRecordingComplete = async (mediaBlob: Blob) => {
+  const handleRecordingComplete = async (videoBlob: Blob, audioBlob: Blob) => {
     if (activeTaskId && phase === "freeform_recording") {
       if (task?.isChallenge) {
-        setFreeformBlob(mediaBlob);
+        setFreeformBlob(videoBlob);
+        setFreeformAudioBlob(audioBlob);
         setPhase("analyzing");
-        processRecordings(mediaBlob, null);
+        processRecordings(audioBlob, null);
         return;
       }
-      setFreeformBlob(mediaBlob);
+      setFreeformBlob(videoBlob);
+      setFreeformAudioBlob(audioBlob);
       setPhase("reading_recording");
       return;
     }
 
     if (activeTaskId && phase === "reading_recording") {
-      setReadingBlob(mediaBlob);
+      setReadingBlob(videoBlob);
+      setReadingAudioBlob(audioBlob);
       setPhase("analyzing");
-      processRecordings(freeformBlob!, mediaBlob);
+      processRecordings(freeformAudioBlob!, audioBlob);
       return;
     }
 
     if (!activeTaskId) {
-      setFreeformBlob(mediaBlob);
+      setFreeformBlob(videoBlob);
+      setFreeformAudioBlob(audioBlob);
       setPhase("analyzing");
-      processRecordings(mediaBlob, null);
+      processRecordings(audioBlob, null);
     }
   };
 
@@ -517,6 +523,8 @@ function PracticeContent() {
     setPhase("freeform_recording");
     setFreeformBlob(null);
     setReadingBlob(null);
+    setFreeformAudioBlob(null);
+    setReadingAudioBlob(null);
     setMetricsList([]);
     setVideoUrls([]);
     setIsSaved(false);

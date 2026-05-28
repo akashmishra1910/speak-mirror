@@ -33,7 +33,9 @@ export async function POST(request: Request) {
 
     // Convert Blob to Buffer, then use toFile for SDK compatibility
     const buffer = Buffer.from(await audioFile.arrayBuffer());
-    const file = await toFile(buffer, "recording.webm", { type: "video/webm" });
+    const mimeType = audioFile.type || "audio/webm";
+    const extension = mimeType.split("/")[1] || "webm";
+    const file = await toFile(buffer, `recording.${extension}`, { type: mimeType });
 
     // 1. Get Transcription using Whisper
     const transcription = await groq.audio.transcriptions.create({

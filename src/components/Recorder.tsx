@@ -5,7 +5,7 @@ import { Mic, Square, Loader2, Video, Lightbulb, HelpCircle, Shuffle } from "luc
 import { motion, AnimatePresence } from "framer-motion";
 
 interface RecorderProps {
-  onRecordingComplete: (mediaBlob: Blob) => void;
+  onRecordingComplete: (videoBlob: Blob, audioBlob: Blob) => void;
   isProcessing: boolean;
   readingText?: string | null;
   taskTopic?: string | null;
@@ -39,6 +39,8 @@ export function Recorder({
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+  const audioRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<BlobPart[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -148,6 +150,7 @@ export function Recorder({
     if (!streamRef.current) return;
     
     try {
+      // 1. Setup Video Recorder
       const mediaRecorder = new MediaRecorder(streamRef.current, {
         mimeType: 'video/webm',
         videoBitsPerSecond: 400000, // 400 kbps to keep 90s well under 3MB
@@ -162,14 +165,56 @@ export function Recorder({
         }
       };
 
+      // 2. Setup Audio-Only Recorder for lightweight API analysis
+      let audioRecorder: MediaRecorder | null = null;
+      audioChunksRef.current = [];
+      
+      try {
+        const audioTracks = streamRef.current.getAudioTracks();
+        if (audioTracks.length > 0) {
+          const audioStream = new MediaStream(audioTracks);
+          let audioMime = 'audio/webm';
+          if (!MediaRecorder.isTypeSupported(audioMime)) {
+            if (MediaRecorder.isTypeSupported('audio/mp4')) {
+              audioMime = 'audio/mp4';
+            } else if (MediaRecorder.isTypeSupported('audio/aac')) {
+              audioMime = 'audio/aac';
+            }
+          }
+
+          audioRecorder = new MediaRecorder(audioStream, {
+            mimeType: audioMime,
+            audioBitsPerSecond: 64000
+          });
+          audioRecorderRef.current = audioRecorder;
+
+          audioRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+              audioChunksRef.current.push(e.data);
+            }
+          };
+        }
+      } catch (audioErr) {
+        console.warn("Failed to initialize separate audio recorder:", audioErr);
+      }
+
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: "video/webm" });
-        onRecordingComplete(blob);
+        const videoBlob = new Blob(chunksRef.current, { type: "video/webm" });
+        let audioBlob = videoBlob; // fallback
+        if (audioChunksRef.current.length > 0) {
+          const audioMimeType = audioRecorderRef.current?.mimeType || "audio/webm";
+          audioBlob = new Blob(audioChunksRef.current, { type: audioMimeType });
+        }
+        onRecordingComplete(videoBlob, audioBlob);
       };
 
       mediaRecorder.start();
+      if (audioRecorder) {
+        audioRecorder.start();
+      }
+      
       setIsRecording(true);
-      setTimeLeft(90);
+      setTimeLeft(timeLimit);
     } catch (err) {
       console.error("Error starting recording", err);
       alert("There was an error starting the recording. Your browser might not support the required video format.");
@@ -178,9 +223,20 @@ export function Recorder({
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (err) {
+        console.error("Error stopping video recorder:", err);
+      }
     }
+    if (audioRecorderRef.current && isRecording) {
+      try {
+        audioRecorderRef.current.stop();
+      } catch (err) {
+        console.error("Error stopping audio recorder:", err);
+      }
+    }
+    setIsRecording(false);
   };
 
   const formatTime = (seconds: number) => {
