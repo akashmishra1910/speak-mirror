@@ -504,6 +504,9 @@ function PracticeContent() {
             video_url: url1,
             confidence: metricsList[0].confidence,
             clarity: metricsList[0].clarity,
+            wpm: metricsList[0].wpm,
+            filler_words: metricsList[0].fillerWords,
+            transcript: metricsList[0].transcript,
             topic: task?.topic_of_the_day || "Free Practice",
             recording_type: task?.isChallenge ? 'warmup' : 'freeform',
             organization_id: currentOrgId
@@ -524,6 +527,9 @@ function PracticeContent() {
               video_url: url2,
               confidence: metricsList[1].confidence,
               clarity: metricsList[1].clarity,
+              wpm: metricsList[1].wpm,
+              filler_words: metricsList[1].fillerWords,
+              transcript: metricsList[1].transcript,
               topic: `Reading: ${task?.topic_of_the_day}`,
               recording_type: 'reading',
               organization_id: currentOrgId

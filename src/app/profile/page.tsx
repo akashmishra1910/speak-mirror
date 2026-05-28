@@ -1,7 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Flame, Trophy, Calendar, Target, Loader2, Play } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Flame, Trophy, Calendar, Target, Loader2, Play, X, Share2, Download } from "lucide-react";
+import { FluencyCard } from "@/components/FluencyCard";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
@@ -14,6 +15,9 @@ interface Recording {
   confidence: number;
   clarity: number;
   video_url: string;
+  wpm?: number | null;
+  filler_words?: number | null;
+  transcript?: string | null;
 }
 
 export default function ProfilePage() {
@@ -22,6 +26,8 @@ export default function ProfilePage() {
 
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [watchRecording, setWatchRecording] = useState<Recording | null>(null);
+  const [shareRecording, setShareRecording] = useState<Recording | null>(null);
 
   // Removed auto-redirect to prevent race conditions during OAuth
   // useEffect(() => {
@@ -248,21 +254,153 @@ export default function ProfilePage() {
                 </div>
                 
                 {item.video_url && (
-                  <a 
-                    href={item.video_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-white/5 border border-white/5 text-white hover:bg-white/10 hover:border-white/10 transition-all rounded-xl font-semibold text-sm sm:w-auto w-full"
-                  >
-                    <Play className="w-4 h-4" />
-                    Watch
-                  </a>
+                  <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
+                    <button 
+                      onClick={() => setWatchRecording(item)}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-600/20 transition-all rounded-xl font-bold text-xs"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      Watch
+                    </button>
+                    <button 
+                      onClick={() => setShareRecording(item)}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white/5 border border-white/5 text-white hover:bg-white/10 transition-all rounded-xl font-bold text-xs"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      Share Card
+                    </button>
+                  </div>
                 )}
               </div>
             ))
           )}
         </div>
       </motion.div>
+
+      {/* Modal Popup for Watch Recording */}
+      <AnimatePresence>
+        {watchRecording && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto"
+            onClick={() => setWatchRecording(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="relative max-w-lg w-full glass-panel p-6 rounded-[2rem] border border-white/10 bg-[#09090d]/95 shadow-[0_20px_50px_rgba(0,0,0,0.8)] text-left flex flex-col gap-5 max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setWatchRecording(null)}
+                className="absolute top-5 right-5 p-2 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all z-10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div>
+                <h3 className="text-xl font-extrabold text-white line-clamp-1 pr-12">
+                  {watchRecording.topic || "Free Practice"}
+                </h3>
+                <p className="text-xs text-zinc-400 font-light mt-1">
+                  Recorded on {new Date(watchRecording.created_at).toLocaleDateString("en-US", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+
+              {/* Video Player Container */}
+              <div className="glass-panel rounded-2xl overflow-hidden aspect-[9/16] max-h-[45vh] shadow-2xl border border-white/5 relative bg-black flex items-center justify-center">
+                <video 
+                  src={watchRecording.video_url} 
+                  className="w-full h-full object-cover"
+                  controls
+                  playsInline
+                  autoPlay
+                  style={{ transform: 'scaleX(-1)' }}
+                />
+              </div>
+
+              {/* Score Badges */}
+              <div className="flex gap-4">
+                <div className="flex-1 p-3 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                  <div className="text-2xl font-black text-white">{watchRecording.confidence}%</div>
+                  <div className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold mt-0.5">Confidence</div>
+                </div>
+                <div className="flex-1 p-3 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                  <div className="text-2xl font-black text-white">{watchRecording.clarity}%</div>
+                  <div className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold mt-0.5">Clarity</div>
+                </div>
+              </div>
+
+              {/* Transcript */}
+              {watchRecording.transcript && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold">Transcript</span>
+                  <div className="p-4 rounded-xl bg-white/[0.01] border border-white/5 text-xs text-zinc-300 leading-relaxed max-h-[120px] overflow-y-auto font-light">
+                    {watchRecording.transcript}
+                  </div>
+                </div>
+              )}
+
+              {/* Save Video Action */}
+              <a
+                href={watchRecording.video_url}
+                download={`speakmirror-recording-${watchRecording.id}.webm`}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white transition-all rounded-xl font-bold text-xs shadow-[0_0_15px_rgba(99,102,241,0.2)] mt-2"
+              >
+                <Download className="w-4 h-4" />
+                Download Video File
+              </a>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Popup for Share / Download Fluency Card */}
+      <AnimatePresence>
+        {shareRecording && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto"
+            onClick={() => setShareRecording(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="relative max-w-2xl w-full max-h-[95vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setShareRecording(null)}
+                className="absolute top-4 right-4 p-2 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all z-20"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <FluencyCard 
+                metrics={{
+                  confidence: shareRecording.confidence,
+                  clarity: shareRecording.clarity,
+                  wpm: shareRecording.wpm || 135,
+                  fillerWords: typeof shareRecording.filler_words === 'number' 
+                    ? shareRecording.filler_words 
+                    : Math.max(0, Math.round((100 - shareRecording.confidence) / 10))
+                }}
+                userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || "A Speaker"}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
