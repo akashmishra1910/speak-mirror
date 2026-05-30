@@ -662,7 +662,7 @@ function PracticeContent() {
           <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             
             {/* Left side/Centered Recorder Column */}
-            <div className="lg:col-span-2 flex flex-col items-center w-full">
+            <div className={user ? "lg:col-span-2 flex flex-col items-center w-full" : "lg:col-span-3 flex flex-col items-center w-full"}>
               {isLoadingTask ? (
                 <div className="flex flex-col items-center justify-center p-24 w-full glass-panel rounded-3xl border border-white/5">
                   <Loader2 className="w-8 h-8 animate-spin text-white mb-4" />
@@ -689,7 +689,7 @@ function PracticeContent() {
                   />
                   
                   {/* Personal Streak displayed cleanly below recorder */}
-                  {isPersonal && (
+                  {isPersonal && user && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -702,7 +702,7 @@ function PracticeContent() {
                   )}
 
                   {/* Daily Push Reminders Toggle Card */}
-                  {isPersonal && notificationPermission !== "unsupported" && (
+                  {isPersonal && user && notificationPermission !== "unsupported" && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -752,7 +752,8 @@ function PracticeContent() {
             </div>
 
             {/* Right side Column (Team Assignments OR Personal Challenges) */}
-            {isPersonal ? (
+            {user && (
+              isPersonal ? (
               <motion.div 
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -935,7 +936,7 @@ function PracticeContent() {
                   </div>
                 )}
               </motion.div>
-            )}
+            ))}
           </div>
         )}
       </div>
