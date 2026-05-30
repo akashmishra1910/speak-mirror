@@ -318,11 +318,26 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
     show: { opacity: 1, y: 0 },
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (videoUrl) {
+      let extension = "webm";
+      if (videoUrl.startsWith("blob:")) {
+        try {
+          const response = await fetch(videoUrl);
+          const blob = await response.blob();
+          if (blob.type.includes("mp4")) {
+            extension = "mp4";
+          }
+        } catch (err) {
+          console.warn("Failed to detect blob mime type:", err);
+        }
+      } else if (videoUrl.includes(".mp4") || videoUrl.includes("mp4")) {
+        extension = "mp4";
+      }
+
       const a = document.createElement('a');
       a.href = videoUrl;
-      a.download = `speakmirror-practice-${new Date().toISOString().split('T')[0]}.webm`;
+      a.download = `speakmirror-practice-${new Date().toISOString().split('T')[0]}.${extension}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

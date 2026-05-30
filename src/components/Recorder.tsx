@@ -239,9 +239,27 @@ export function Recorder({
     }
     
     try {
-      // 1. Setup Video Recorder (lowered bitrate to keep fallbacks under 3MB)
+      // 1. Setup Video Recorder with dynamic MIME type selection (prioritizing MP4)
+      const mimeTypes = [
+        "video/mp4;codecs=h264,aac",
+        "video/mp4;codecs=h264",
+        "video/mp4",
+        "video/webm;codecs=h264,opus",
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp8,opus",
+        "video/webm"
+      ];
+      
+      let selectedMimeType = "video/webm";
+      for (const mime of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(mime)) {
+          selectedMimeType = mime;
+          break;
+        }
+      }
+
       const mediaRecorder = new MediaRecorder(streamRef.current, {
-        mimeType: 'video/webm',
+        mimeType: selectedMimeType,
         videoBitsPerSecond: 250000, // 250 kbps (keeps a 90s recording ~2.8MB in total)
         audioBitsPerSecond: 48000   // 48 kbps
       });
