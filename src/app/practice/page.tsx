@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Recorder } from "@/components/Recorder";
 import { FeedbackDashboard, AnalysisMetrics } from "@/components/FeedbackDashboard";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ArrowLeft, Loader2, Flame, Clock, AlertCircle, BookOpen, ChevronRight, Calendar, Bell } from "lucide-react";
+import { Sparkles, ArrowLeft, Loader2, Flame, Clock, AlertCircle, BookOpen, ChevronRight, Calendar, Bell, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
@@ -51,6 +51,7 @@ function PracticeContent() {
 
   // Daily Challenge State
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
+  const [showChallengeModal, setShowChallengeModal] = useState(false);
   
   // Notification Permission State
   const [notificationPermission, setNotificationPermission] = useState<string>("default");
@@ -345,6 +346,7 @@ function PracticeContent() {
     setMetricsList([]);
     setVideoUrls([]);
     setIsSaved(false);
+    setShowChallengeModal(false);
   };
 
   const handleRequestNotificationPermission = async () => {
@@ -578,6 +580,57 @@ function PracticeContent() {
         </Link>
       )}
 
+      {/* Top Left Controls Row */}
+      {user && isPersonal && (phase === "freeform_recording" || phase === "reading_recording") && (
+        <div className="w-full flex justify-start items-center gap-2.5 mb-6 flex-wrap z-20">
+          {/* Streak Pill */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 font-extrabold text-xs shadow-[0_0_15px_rgba(249,115,22,0.05)]">
+            <Flame className="w-3.5 h-3.5 fill-orange-400 text-orange-400" />
+            <span>{isLoadingStreak ? "..." : `${streak} ${streak === 1 ? 'day' : 'days'}`}</span>
+          </div>
+
+          {/* Daily Challenge Pill Button */}
+          <button
+            onClick={() => setShowChallengeModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-xs font-semibold text-white transition-all shadow-[0_0_10px_rgba(255,255,255,0.02)]"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-orange-400 animate-pulse" />
+            <span>Daily Challenge</span>
+            {completedWarmupToday ? (
+              <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                Done
+              </span>
+            ) : activeTaskId?.startsWith("challenge-") ? (
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+            ) : null}
+          </button>
+
+          {/* PWA Reminders Pill Button */}
+          {notificationPermission !== "unsupported" && (
+            <button
+              onClick={notificationPermission !== "granted" ? handleRequestNotificationPermission : undefined}
+              disabled={notificationPermission === "granted" || notificationPermission === "denied"}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all text-xs font-semibold shadow-[0_0_10px_rgba(0,0,0,0.1)] ${
+                notificationPermission === "granted"
+                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                  : notificationPermission === "denied"
+                    ? "bg-rose-500/10 border-rose-500/20 text-rose-400 opacity-60 cursor-not-allowed"
+                    : "bg-indigo-500/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20"
+              }`}
+            >
+              <Bell className={`w-3.5 h-3.5 ${notificationPermission === "granted" ? "fill-emerald-400/20" : ""}`} />
+              <span>
+                {notificationPermission === "granted"
+                  ? "Reminders Active"
+                  : notificationPermission === "denied"
+                    ? "Reminders Blocked"
+                    : "Enable Reminders"}
+              </span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Dynamic Header */}
       <AnimatePresence mode="wait">
         {!isProcessing && phase !== "results" && phase !== "analyzing" && (
@@ -662,7 +715,7 @@ function PracticeContent() {
           <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             
             {/* Left side/Centered Recorder Column */}
-            <div className={user ? "lg:col-span-2 flex flex-col items-center w-full" : "lg:col-span-3 flex flex-col items-center w-full"}>
+            <div className={user && !isPersonal ? "lg:col-span-2 flex flex-col items-center w-full" : "lg:col-span-3 flex flex-col items-center w-full"}>
               {isLoadingTask ? (
                 <div className="flex flex-col items-center justify-center p-24 w-full glass-panel rounded-3xl border border-white/5">
                   <Loader2 className="w-8 h-8 animate-spin text-white mb-4" />
@@ -687,60 +740,6 @@ function PracticeContent() {
                     wordDefinition={task?.definition}
                     tips={task?.tips}
                   />
-                  
-                  {/* Personal Streak displayed cleanly below recorder */}
-                  {isPersonal && user && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="mt-4 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 font-extrabold text-xs shadow-[0_0_15px_rgba(249,115,22,0.05)] w-fit mx-auto"
-                    >
-                      <span>🔥</span>
-                      <span>{isLoadingStreak ? "..." : streak}</span>
-                    </motion.div>
-                  )}
-
-                  {/* Daily Push Reminders Toggle Card */}
-                  {isPersonal && user && notificationPermission !== "unsupported" && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
-                      className="mt-4 w-full glass-panel px-5 py-4 rounded-2xl flex items-center justify-between border border-white/5 bg-white/[0.01]"
-                    >
-                      <div className="flex items-center gap-4 text-left">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shadow-[0_0_10px_rgba(99,102,241,0.1)]">
-                          <Bell className="w-5 h-5 text-indigo-400" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-white uppercase tracking-wide">PWA Reminders</div>
-                          <div className="text-xs text-zinc-400 font-light mt-0.5 leading-tight">
-                            {notificationPermission === "granted" 
-                              ? "Daily nudge at 8:00 PM is active."
-                              : notificationPermission === "denied"
-                                ? "Notifications blocked in browser."
-                                : "Get nudged to keep your streak active."}
-                          </div>
-                        </div>
-                      </div>
-                      <div>
-                        {notificationPermission !== "granted" ? (
-                          <button
-                            onClick={handleRequestNotificationPermission}
-                            disabled={notificationPermission === "denied"}
-                            className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-[10px] text-white font-semibold transition-all shadow-[0_0_15px_rgba(99,102,241,0.2)]"
-                          >
-                            {notificationPermission === "denied" ? "Blocked" : "Enable"}
-                          </button>
-                        ) : (
-                          <span className="text-[10px] font-bold text-emerald-400 uppercase bg-emerald-400/5 px-2 py-1 rounded border border-emerald-400/10">
-                            Active
-                          </span>
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
                 </motion.div>
               ) : (
                 <div className="flex flex-col items-center justify-center p-24 w-full glass-panel rounded-3xl border border-white/5">
@@ -751,100 +750,8 @@ function PracticeContent() {
               )}
             </div>
 
-            {/* Right side Column (Team Assignments OR Personal Challenges) */}
-            {user && (
-              isPersonal ? (
-              <motion.div 
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="lg:col-span-1 glass-panel p-6 rounded-3xl border border-white/10 bg-[#09090d]/90 backdrop-blur-3xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] w-full text-left"
-              >
-                <div className="flex items-center justify-between mb-5">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-orange-400 animate-pulse" />
-                    Daily Challenge
-                  </h3>
-                  {completedWarmupToday && (
-                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      Done Today
-                    </span>
-                  )}
-                </div>
-
-                {completedWarmupToday ? (
-                  <div className="p-5 text-center border border-emerald-500/20 bg-emerald-500/5 rounded-2xl mb-4">
-                    <Sparkles className="w-8 h-8 text-emerald-400 mx-auto mb-3 animate-bounce" />
-                    <h4 className="text-sm font-bold text-white mb-1.5">Streak Safe! 🔥</h4>
-                    <p className="text-[11px] text-zinc-400 font-light leading-relaxed">
-                      You've completed today's warm-up challenge. Keep up the consistency to improve your speaking fluency!
-                    </p>
-                  </div>
-                ) : activeTaskId?.startsWith("challenge-") ? (
-                  <div className="p-4 border border-indigo-500/20 bg-indigo-500/5 rounded-2xl mb-4">
-                    <div className="flex justify-between items-start gap-2 mb-2">
-                      <span className="text-[10px] font-semibold text-indigo-400 bg-indigo-400/5 px-2 py-0.5 rounded-md border border-indigo-400/10 uppercase">
-                        Active Challenge
-                      </span>
-                    </div>
-                    <h4 className="text-xs font-bold leading-snug text-white mb-2">
-                      {selectedChallenge?.prompt}
-                    </h4>
-                    <p className="text-[10px] text-zinc-400 font-light mb-4">
-                      Word of the day: <strong className="text-white font-bold">{selectedChallenge?.word_of_the_day}</strong> - {selectedChallenge?.definition}
-                    </p>
-                    <button
-                      onClick={clearAssignment}
-                      className="w-full py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all font-bold text-[11px] text-white flex items-center justify-center gap-1.5"
-                    >
-                      Exit Challenge
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 hover:border-white/10 transition-all">
-                      <div className="flex justify-between items-start gap-2 mb-2">
-                        <span className="text-[10px] font-semibold text-zinc-400 bg-white/5 px-2 py-0.5 rounded-md border border-white/10 uppercase">
-                          Today's Prompt
-                        </span>
-                        <span className="text-[10px] font-bold text-zinc-500">
-                          {selectedChallenge?.suggestedDuration}s limit
-                        </span>
-                      </div>
-                      <h4 className="text-xs font-extrabold text-white leading-relaxed mb-2.5">
-                        {selectedChallenge?.prompt}
-                      </h4>
-                      <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 text-[11px] mb-4 text-left leading-relaxed">
-                        <span className="font-bold text-indigo-400">Word of the Day:</span> <strong className="text-white">{selectedChallenge?.word_of_the_day}</strong>
-                        <p className="text-zinc-400 font-light mt-0.5 text-[10px]">{selectedChallenge?.definition}</p>
-                      </div>
-                      
-                      <div className="flex gap-2.5">
-                        <button
-                          onClick={handleShuffleChallenge}
-                          className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-semibold text-[11px] text-white flex items-center justify-center gap-1.5"
-                        >
-                          Shuffle
-                        </button>
-                        <button
-                          onClick={startChallenge}
-                          className="flex-1 py-2.5 rounded-xl bg-white text-zinc-950 font-bold text-[11px] transition-all hover:bg-zinc-200 flex items-center justify-center gap-1"
-                        >
-                          Start Warm-up
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-2xl border border-dashed border-white/5 text-center">
-                      <Sparkles className="w-5 h-5 text-zinc-500 mx-auto mb-2" />
-                      <h5 className="text-[11px] font-bold text-white mb-1">Consistency pays off!</h5>
-                      <p className="text-[10px] text-zinc-500 font-light leading-relaxed">
-                        Explaining a random topic for 30s daily is a proven way to eliminate pacing issues and filter out filler words.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            ) : (
+            {/* Right side Column (Team Assignments only) */}
+            {user && !isPersonal && (
               <motion.div 
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -936,10 +843,152 @@ function PracticeContent() {
                   </div>
                 )}
               </motion.div>
-            ))}
+            )}
           </div>
         )}
       </div>
+
+      {/* Daily Challenge Modal */}
+      <AnimatePresence>
+        {showChallengeModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowChallengeModal(false)}
+              className="fixed inset-0 bg-[#09090d]/80 backdrop-blur-sm"
+            />
+            
+            {/* Modal Card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="relative w-full max-w-md glass-panel p-6 rounded-3xl border border-white/10 bg-[#09090d]/95 backdrop-blur-md shadow-[0_20px_50px_rgba(0,0,0,0.5)] text-left overflow-hidden z-55"
+            >
+              {/* Top Close Button */}
+              <button
+                onClick={() => setShowChallengeModal(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 text-zinc-400 hover:text-white transition-all z-10"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Header */}
+              <div className="flex items-center gap-2 mb-5">
+                <Sparkles className="w-5 h-5 text-orange-400 animate-pulse" />
+                <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-300">
+                  Daily Warm-up Challenge
+                </h3>
+              </div>
+
+              {completedWarmupToday ? (
+                <div className="space-y-4">
+                  <div className="p-6 text-center border border-emerald-500/20 bg-emerald-500/5 rounded-2xl">
+                    <Sparkles className="w-10 h-10 text-emerald-400 mx-auto mb-3 animate-bounce" />
+                    <h4 className="text-base font-extrabold text-white mb-1.5">Streak Safe! 🔥</h4>
+                    <p className="text-xs text-zinc-400 font-light leading-relaxed">
+                      You've completed today's warm-up challenge. Keep up the consistency to improve your speaking fluency!
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowChallengeModal(false)}
+                    className="w-full py-3 rounded-xl bg-white text-zinc-950 font-bold text-xs transition-all hover:bg-zinc-200"
+                  >
+                    Awesome, thanks!
+                  </button>
+                </div>
+              ) : activeTaskId?.startsWith("challenge-") ? (
+                <div className="space-y-4">
+                  <div className="p-4 border border-indigo-500/20 bg-indigo-500/5 rounded-2xl">
+                    <div className="flex justify-between items-start gap-2 mb-2">
+                      <span className="text-[10px] font-semibold text-indigo-400 bg-indigo-400/5 px-2 py-0.5 rounded-md border border-indigo-400/10 uppercase">
+                        Active Challenge
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-bold leading-snug text-white mb-2">
+                      {selectedChallenge?.prompt}
+                    </h4>
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-[11px] mb-4 text-left leading-relaxed">
+                      <span className="font-bold text-indigo-400">Word of the Day:</span>{" "}
+                      <strong className="text-white">{selectedChallenge?.word_of_the_day}</strong>
+                      <p className="text-zinc-400 font-light mt-0.5 text-[10px]">
+                        {selectedChallenge?.definition}
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          clearAssignment();
+                          setShowChallengeModal(false);
+                        }}
+                        className="flex-1 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-xs font-semibold text-rose-400 transition-all"
+                      >
+                        Exit Challenge
+                      </button>
+                      <button
+                        onClick={() => setShowChallengeModal(false)}
+                        className="flex-1 py-2.5 rounded-xl bg-white text-zinc-950 font-bold text-xs transition-all hover:bg-zinc-200"
+                      >
+                        Close View
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 hover:border-white/10 transition-all">
+                    <div className="flex justify-between items-start gap-2 mb-2.5">
+                      <span className="text-[10px] font-semibold text-zinc-400 bg-white/5 px-2 py-0.5 rounded-md border border-white/10 uppercase">
+                        Today's Prompt
+                      </span>
+                      <span className="text-[10px] font-bold text-zinc-500">
+                        {selectedChallenge?.suggestedDuration}s limit
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-extrabold text-white leading-relaxed mb-3">
+                      {selectedChallenge?.prompt}
+                    </h4>
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-[11px] mb-4 text-left leading-relaxed">
+                      <span className="font-bold text-indigo-400">Word of the Day:</span>{" "}
+                      <strong className="text-white">{selectedChallenge?.word_of_the_day}</strong>
+                      <p className="text-zinc-400 font-light mt-0.5 text-[10px]">
+                        {selectedChallenge?.definition}
+                      </p>
+                    </div>
+                    
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleShuffleChallenge}
+                        className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-semibold text-xs text-white flex items-center justify-center gap-1.5"
+                      >
+                        Shuffle
+                      </button>
+                      <button
+                        onClick={startChallenge}
+                        className="flex-1 py-2.5 rounded-xl bg-white text-zinc-950 font-bold text-xs transition-all hover:bg-zinc-200 flex items-center justify-center gap-1"
+                      >
+                        Start Warm-up
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl border border-dashed border-white/5 text-center">
+                    <Sparkles className="w-5 h-5 text-zinc-500 mx-auto mb-2 animate-pulse" />
+                    <h5 className="text-[11px] font-bold text-white mb-1">Consistency pays off!</h5>
+                    <p className="text-[10px] text-zinc-500 font-light leading-relaxed">
+                      Explaining a random topic for 30s daily is a proven way to eliminate pacing issues and filter out filler words.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
