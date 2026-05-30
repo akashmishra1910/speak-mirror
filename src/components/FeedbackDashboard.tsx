@@ -408,14 +408,14 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
         )}
         
         {/* Actions */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-2 font-mono">
+        <div className="grid grid-cols-2 gap-3 mt-4 font-mono">
           {onSave && (
             <button 
               onClick={onSave}
               disabled={isSaving || isSaved || !videoUrl}
-              className={`flex items-center justify-center gap-2 px-3 py-2.5 transition-all rounded-xl font-bold text-xs col-span-2 lg:col-span-1 border ${
+              className={`flex items-center justify-center gap-2 px-3 py-2.5 transition-all rounded-xl font-bold text-xs border ${
                 isSaved 
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.05)]' 
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_4px_12px_rgba(16,185,129,0.05)]' 
                   : 'bg-white text-zinc-950 hover:bg-zinc-200 border-white/10 disabled:opacity-50'
               }`}
             >
@@ -433,7 +433,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
             <button 
               onClick={onRetake}
               disabled={isSaving || isSaved}
-              className="flex items-center justify-center gap-2 px-3 py-2.5 bg-rose-500/5 text-rose-400 border border-rose-500/10 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all rounded-xl font-bold text-xs col-span-2 lg:col-span-1 disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-3 py-2.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 hover:border-rose-500/30 transition-all rounded-xl font-bold text-xs disabled:opacity-50 shadow-[0_4px_12px_rgba(244,63,94,0.05)]"
             >
               RETAKE_TEST
             </button>
@@ -441,7 +441,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
           <button 
             onClick={handleDownload}
             disabled={!videoUrl}
-            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-[#09090d] border border-zinc-800 hover:bg-zinc-900 transition-all rounded-xl font-bold text-white disabled:opacity-50 text-xs cursor-pointer"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white/[0.03] border border-white/10 hover:bg-white/[0.08] hover:border-white/20 transition-all rounded-xl font-bold text-white disabled:opacity-50 text-xs cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.3)] backdrop-blur-md"
           >
             <Download className="w-3.5 h-3.5" />
             EXPORT_MP4
@@ -449,7 +449,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
           <button 
             onClick={handleExportPDF}
             disabled={isExportingPDF}
-            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-[#09090d] border border-zinc-800 hover:bg-zinc-900 transition-all rounded-xl font-bold text-white disabled:opacity-50 text-xs cursor-pointer"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white/[0.03] border border-white/10 hover:bg-white/[0.08] hover:border-white/20 transition-all rounded-xl font-bold text-white disabled:opacity-50 text-xs cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.3)] backdrop-blur-md"
           >
             {isExportingPDF ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -460,7 +460,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
           </button>
           <button 
             onClick={handleShare}
-            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-[#09090d] border border-zinc-800 hover:bg-zinc-900 transition-all rounded-xl font-bold text-white text-xs cursor-pointer"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white/[0.03] border border-white/10 hover:bg-white/[0.08] hover:border-white/20 transition-all rounded-xl font-bold text-white text-xs cursor-pointer col-span-2 shadow-[0_4px_12px_rgba(0,0,0,0.3)] backdrop-blur-md"
           >
             <Share2 className="w-3.5 h-3.5" />
             {isCopied ? "COPIED" : "SHARE_INDEX"}
