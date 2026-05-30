@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Mic, Square, Loader2, Video, Lightbulb, HelpCircle, Shuffle } from "lucide-react";
+import { Mic, Square, Loader2, Video, Lightbulb, HelpCircle, Shuffle, Bell } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { BEAUTIFY_FILTERS } from "@/lib/filters";
 
 interface RecorderProps {
   onRecordingComplete: (videoBlob: Blob, audioBlob: Blob) => void;
@@ -36,6 +37,57 @@ export function Recorder({
   const [bullets, setBullets] = useState<{label: string, text: string}[]>([]);
   const [isLoadingTopic, setIsLoadingTopic] = useState(true);
   const [isAssistEnabled, setIsAssistEnabled] = useState(false);
+
+  // Beautify filter preference (default: studio glow)
+  const [activeFilter, setActiveFilter] = useState("studio");
+  
+  // Custom Bell Alert Timing (default: 75 seconds, i.e. 15 seconds remaining)
+  const [bellTiming, setBellTiming] = useState(75);
+  const [showConcludePrompt, setShowConcludePrompt] = useState(false);
+  const hasTriggeredBellRef = useRef(false);
+
+  // Load preferences from localStorage on mount
+  useEffect(() => {
+    const savedFilter = localStorage.getItem("speak_mirror_beautify_filter");
+    if (savedFilter) {
+      setActiveFilter(savedFilter);
+    }
+    if (userId) {
+      const savedTiming = localStorage.getItem("speak_mirror_bell_timing");
+      if (savedTiming) {
+        setBellTiming(parseInt(savedTiming));
+      }
+    } else {
+      setBellTiming(75); // Strictly fixed for unauthenticated users
+    }
+  }, [userId]);
+
+  // Synthesize a pleasant chime/bell sound dynamically using Web Audio API
+  const playBellSound = () => {
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime); // High A chime
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.6);
+      
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2); // Decay
+      
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 1.2);
+    } catch (err) {
+      console.warn("Failed to play bell sound:", err);
+    }
+  };
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -101,12 +153,26 @@ export function Recorder({
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isRecording && timeLeft > 0) {
-      timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
+      timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          const nextTime = prev - 1;
+          const elapsed = timeLimit - nextTime;
+          
+          if (elapsed === bellTiming && !hasTriggeredBellRef.current) {
+            hasTriggeredBellRef.current = true;
+            playBellSound();
+            setShowConcludePrompt(true);
+            setTimeout(() => setShowConcludePrompt(false), 4000);
+          }
+          
+          return nextTime;
+        });
+      }, 1000);
     } else if (timeLeft === 0 && isRecording) {
       stopRecording();
     }
     return () => clearInterval(timer);
-  }, [isRecording, timeLeft]);
+  }, [isRecording, timeLeft, timeLimit, bellTiming]);
 
   const fetchDynamicTopic = async (bulletsOnly = false) => {
     if (!bulletsOnly) {
@@ -148,6 +214,8 @@ export function Recorder({
 
   const startRecording = () => {
     if (!streamRef.current) return;
+    hasTriggeredBellRef.current = false;
+    setShowConcludePrompt(false);
     
     try {
       // 1. Setup Video Recorder (lowered bitrate to keep fallbacks under 3MB)
@@ -274,7 +342,7 @@ export function Recorder({
       {/* Main Video Card */}
       <div className="glass-panel rounded-[2rem] flex flex-col items-center justify-center w-full max-w-sm relative overflow-hidden aspect-[9/16] max-h-[calc(100vh-120px)] shadow-2xl border border-white/5 group bg-black shrink-0 float-slow interactive-card">
         
-        {/* Live Video Feed with Mirror Effect & Confident Filter */}
+        {/* Live Video Feed with Mirror Effect & Beautify Filter */}
         <video 
           ref={videoRef}
           autoPlay 
@@ -283,12 +351,32 @@ export function Recorder({
           className="absolute inset-0 w-full h-full object-cover z-0"
           style={{ 
             transform: 'scaleX(-1)', // Mirror effect
-            filter: 'brightness(1.05) contrast(1.05) saturate(1.1)' // Confident filter
+            filter: BEAUTIFY_FILTERS[activeFilter] || BEAUTIFY_FILTERS.none
           }}
         />
         
         {/* Subtle Overlay gradient for readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80 z-10 pointer-events-none" />
+
+        {/* Visual Conclude Prompt Overlay */}
+        <AnimatePresence>
+          {showConcludePrompt && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: -20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: -20 }}
+              className="absolute inset-x-4 top-1/3 z-30 mx-auto max-w-[280px] bg-red-950/80 border border-red-500/20 backdrop-blur-md px-4 py-3 rounded-2xl text-center shadow-[0_0_30px_rgba(239,68,68,0.15)] flex flex-col items-center gap-1"
+            >
+              <div className="flex items-center gap-2 text-red-400 font-extrabold text-xs uppercase tracking-wider">
+                <Bell className="w-3.5 h-3.5 animate-bounce" />
+                Conclude Speech
+              </div>
+              <p className="text-[11px] text-white/90 font-light leading-relaxed">
+                {timeLimit - bellTiming} seconds remaining! Wrap up your final thoughts.
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Top Section: Timer & Indicators */}
         <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-start pointer-events-none">
@@ -410,6 +498,64 @@ export function Recorder({
 
       {/* Side Panel: Topic display */}
       <div className="w-full md:w-64 shrink-0 flex flex-col gap-4 mt-2 md:mt-0 float-medium interactive-card">
+        {/* Beautify Filters (Available to all users) */}
+        <div className="glass-panel p-5 md:p-6 rounded-3xl bg-white/[0.01] border-white/5 text-left">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+            Beautify Filters
+          </span>
+          <div className="mt-3 flex flex-col gap-2">
+            <select
+              value={activeFilter}
+              onChange={(e) => {
+                const val = e.target.value;
+                setActiveFilter(val);
+                localStorage.setItem("speak_mirror_beautify_filter", val);
+              }}
+              disabled={isRecording}
+              className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 text-xs text-white font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+            >
+              <option value="none" className="bg-[#09090d]">Original</option>
+              <option value="studio" className="bg-[#09090d]">Studio Glow ✨</option>
+              <option value="warm" className="bg-[#09090d]">Warm Golden ☀️</option>
+              <option value="cool" className="bg-[#09090d]">Nordic Cool ❄️</option>
+              <option value="smooth" className="bg-[#09090d]">Soft Focus 🌸</option>
+            </select>
+            <span className="text-[9px] text-zinc-500 font-light leading-snug">
+              Enhance video lighting and clarity. Applies instantly to your practice and shareable playback.
+            </span>
+          </div>
+        </div>
+
+        {/* Alert Settings (Only visible when logged in) */}
+        {userId && (
+          <div className="glass-panel p-5 md:p-6 rounded-3xl bg-white/[0.01] border-white/5 text-left">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+              Alert Settings
+            </span>
+            <div className="mt-3 flex flex-col gap-2">
+              <div className="flex justify-between text-xs text-zinc-300 font-medium">
+                <span>Bell Alarm:</span>
+                <span className="text-indigo-400 font-bold">{bellTiming}s</span>
+              </div>
+              <input 
+                type="range" 
+                min="10" 
+                max={timeLimit - 5} 
+                value={bellTiming}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  setBellTiming(val);
+                  localStorage.setItem("speak_mirror_bell_timing", val.toString());
+                }}
+                disabled={isRecording}
+                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500 mt-1"
+              />
+              <span className="text-[9px] text-zinc-500 font-light leading-snug">
+                Plays a chime and prompts you to conclude your speech at {bellTiming} seconds ({timeLimit - bellTiming}s remaining).
+              </span>
+            </div>
+          </div>
+        )}
         <div className="glass-panel p-5 md:p-6 rounded-3xl">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">

@@ -2,7 +2,8 @@
 
 import { motion } from "framer-motion";
 import { CheckCircle2, AlertCircle, Activity, Info, Download, Share2, Sparkles, Loader2, Play, Pause } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { BEAUTIFY_FILTERS } from "@/lib/filters";
 
 export interface AnalysisMetrics {
   confidence: number;
@@ -28,6 +29,14 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
   const [isCopied, setIsCopied] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [activeFilter, setActiveFilter] = useState("studio");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("speak_mirror_beautify_filter");
+    if (saved) {
+      setActiveFilter(saved);
+    }
+  }, []);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -110,26 +119,50 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
       {/* Left Column: Video Playback */}
       <motion.div variants={itemVariants} className="w-full lg:w-1/3 flex flex-col gap-4 float-slow interactive-card">
         {videoUrl ? (
-          <div className="glass-panel rounded-[2rem] overflow-hidden aspect-[9/16] max-h-[calc(100vh-120px)] shadow-2xl border border-white/5 relative bg-black group">
-            <video 
-              ref={videoRef}
-              src={videoUrl} 
-              className="absolute inset-0 w-full h-full object-cover"
-              playsInline
-              style={{ transform: 'scaleX(-1)' }}
-              onEnded={() => setIsPlaying(false)}
-              onClick={togglePlay}
-            />
-            {/* Custom Play/Pause Overlay */}
-            <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${isPlaying ? 'opacity-0 group-hover:opacity-100' : 'opacity-100 bg-black/20'}`}>
-              <button 
-                onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-                className="w-16 h-16 md:w-20 md:h-20 bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md rounded-full flex items-center justify-center pointer-events-auto transition-all text-white shadow-xl"
-              >
-                {isPlaying ? <Pause className="w-8 h-8 md:w-10 md:h-10 fill-current" /> : <Play className="w-8 h-8 md:w-10 md:h-10 fill-current ml-2" />}
-              </button>
+          <>
+            <div className="glass-panel rounded-[2rem] overflow-hidden aspect-[9/16] max-h-[calc(100vh-120px)] shadow-2xl border border-white/5 relative bg-black group">
+              <video 
+                ref={videoRef}
+                src={videoUrl} 
+                className="absolute inset-0 w-full h-full object-cover"
+                playsInline
+                style={{ 
+                  transform: 'scaleX(-1)',
+                  filter: BEAUTIFY_FILTERS[activeFilter] || BEAUTIFY_FILTERS.none
+                }}
+                onEnded={() => setIsPlaying(false)}
+                onClick={togglePlay}
+              />
+              {/* Custom Play/Pause Overlay */}
+              <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${isPlaying ? 'opacity-0 group-hover:opacity-100' : 'opacity-100 bg-black/20'}`}>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+                  className="w-16 h-16 md:w-20 md:h-20 bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md rounded-full flex items-center justify-center pointer-events-auto transition-all text-white shadow-xl"
+                >
+                  {isPlaying ? <Pause className="w-8 h-8 md:w-10 md:h-10 fill-current" /> : <Play className="w-8 h-8 md:w-10 md:h-10 fill-current ml-2" />}
+                </button>
+              </div>
             </div>
-          </div>
+            {/* Filter Selector in Feedback Dashboard */}
+            <div className="glass-panel px-4 py-3 rounded-2xl border border-white/5 bg-white/[0.01] flex items-center justify-between text-left animate-fade-in">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Beautify Filter:</span>
+              <select
+                value={activeFilter}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setActiveFilter(val);
+                  localStorage.setItem("speak_mirror_beautify_filter", val);
+                }}
+                className="p-1.5 px-2.5 rounded-lg bg-white/5 border border-white/10 text-[10px] text-white font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                <option value="none" className="bg-[#09090d]">Original</option>
+                <option value="studio" className="bg-[#09090d]">Studio Glow ✨</option>
+                <option value="warm" className="bg-[#09090d]">Warm Golden ☀️</option>
+                <option value="cool" className="bg-[#09090d]">Nordic Cool ❄️</option>
+                <option value="smooth" className="bg-[#09090d]">Soft Focus 🌸</option>
+              </select>
+            </div>
+          </>
         ) : (
           <div className="glass-panel rounded-[2rem] aspect-[9/16] max-h-[60vh] border border-white/5 flex items-center justify-center bg-white/[0.01]">
             <p className="text-foreground/40 text-sm">No video recorded</p>

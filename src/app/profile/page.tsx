@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Flame, Trophy, Calendar, Target, Loader2, Play, X, Share2, Download } from "lucide-react";
 import { FluencyCard } from "@/components/FluencyCard";
 import { useEffect, useState } from "react";
+import { BEAUTIFY_FILTERS } from "@/lib/filters";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import { useRouter } from "next/navigation";
@@ -28,6 +29,14 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [watchRecording, setWatchRecording] = useState<Recording | null>(null);
   const [shareRecording, setShareRecording] = useState<Recording | null>(null);
+  const [activeFilter, setActiveFilter] = useState("studio");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("speak_mirror_beautify_filter");
+    if (saved) {
+      setActiveFilter(saved);
+    }
+  }, []);
 
   // Removed auto-redirect to prevent race conditions during OAuth
   // useEffect(() => {
@@ -320,8 +329,31 @@ export default function ProfilePage() {
                   controls
                   playsInline
                   autoPlay
-                  style={{ transform: 'scaleX(-1)' }}
+                  style={{ 
+                    transform: 'scaleX(-1)',
+                    filter: BEAUTIFY_FILTERS[activeFilter] || BEAUTIFY_FILTERS.none
+                  }}
                 />
+              </div>
+
+              {/* Filter Selector in Playback Modal */}
+              <div className="glass-panel px-4 py-2.5 rounded-xl border border-white/5 bg-white/[0.01] flex items-center justify-between text-left">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Beautify Filter:</span>
+                <select
+                  value={activeFilter}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setActiveFilter(val);
+                    localStorage.setItem("speak_mirror_beautify_filter", val);
+                  }}
+                  className="p-1 px-2 rounded-lg bg-white/5 border border-white/10 text-[10px] text-white font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="none" className="bg-[#09090d]">Original</option>
+                  <option value="studio" className="bg-[#09090d]">Studio Glow ✨</option>
+                  <option value="warm" className="bg-[#09090d]">Warm Golden ☀️</option>
+                  <option value="cool" className="bg-[#09090d]">Nordic Cool ❄️</option>
+                  <option value="smooth" className="bg-[#09090d]">Soft Focus 🌸</option>
+                </select>
               </div>
 
               {/* Score Badges */}
