@@ -8,6 +8,8 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const audioFile = formData.get("audio") as Blob;
     const expectedText = formData.get("expectedText") as string | null;
+    const eyeContact = formData.get("eyeContact") as string | null;
+    const expression = formData.get("expression") as string | null;
 
     if (!audioFile) {
       return NextResponse.json({ error: "No audio file provided" }, { status: 400 });
@@ -65,10 +67,17 @@ export async function POST(request: Request) {
     const wordCount = transcriptText.split(/\s+/).filter(w => w.length > 0).length;
     const wpm = Math.round((wordCount / duration) * 60);
 
-    // 2. Analyze transcript using Llama3
-    let analysisPrompt = `You are an expert speech analyst. Analyze the following transcript and extract metrics.
+    // Construct visual presence telemetry context
+    let visualContext = "";
+    if (eyeContact || expression) {
+      visualContext = `\nWe also tracked the speaker's physical behavior using browser-side camera telemetry:
+${eyeContact ? `- Eye Contact Quality Score: ${eyeContact}% (A score below 80% indicates looking away from the camera/screen frequently)\n` : ""}${expression ? `- Facial Expression / Engagement Score: ${expression}% (A score below 50% indicates a neutral or flat face; higher scores show good expressiveness, smiling, and eyebrow movements)\n` : ""}Please analyze these metrics and incorporate them into the suggestions. Provide at least one recommendation specifically addressing their eye contact (of type "gaze") or facial expressions (of type "expression") based on these numbers, advising them how to connect better with their audience.`;
+    }
 
-Transcript: "${transcriptText}"
+    // 2. Analyze transcript using Llama3
+    let analysisPrompt = `You are an expert speech and communication analyst. Analyze the following transcript and camera telemetry metrics.
+
+Transcript: "${transcriptText}"${visualContext}
 
 Return ONLY a JSON object with the following schema:
 {
@@ -76,18 +85,18 @@ Return ONLY a JSON object with the following schema:
   "clarity": <integer 0-100 based on structure and coherence>,
   "fillerWords": <integer count of filler words like um, uh, like, you know>,
   "suggestions": [
-    { "type": "filler" | "pace" | "confidence" | "clarity" | "pronunciation", "text": "Actionable feedback sentence" }
+    { "type": "filler" | "pace" | "confidence" | "clarity" | "pronunciation" | "expression" | "gaze", "text": "Actionable feedback sentence" }
   ]
 }
 Note: Provide 2-3 highly specific suggestions.`;
 
     if (expectedText) {
-      analysisPrompt = `You are an expert speech and pronunciation analyst. The speaker was tasked to read a specific text. Compare what they actually said (Transcript) against what they were supposed to say (Expected Text).
+      analysisPrompt = `You are an expert speech, pronunciation, and communication analyst. The speaker was tasked to read a specific text. Compare what they actually said (Transcript) against what they were supposed to say (Expected Text), and take camera telemetry into account.
 
 Expected Text: "${expectedText}"
-Actual Transcript: "${transcriptText}"
+Actual Transcript: "${transcriptText}"${visualContext}
 
-Grade their pronunciation and articulation. A low clarity score indicates they mispronounced words or stumbled. A high clarity score means they read it perfectly.
+Grade their pronunciation, articulation, and visual presence. A low clarity score indicates they mispronounced words or stumbled. A high clarity score means they read it perfectly.
 
 Return ONLY a JSON object with the following schema:
 {
@@ -95,8 +104,7 @@ Return ONLY a JSON object with the following schema:
   "clarity": <integer 0-100 representing their pronunciation/articulation accuracy compared to expected text>,
   "fillerWords": <integer count of filler words or stutters>,
   "suggestions": [
-    { "type": "pronunciation", "text": "Specific feedback on words they missed or mispronounced, or praise for clear articulation." },
-    { "type": "pace", "text": "Feedback on their reading pace." }
+    { "type": "pronunciation" | "pace" | "expression" | "gaze", "text": "Actionable feedback sentence" }
   ]
 }
 Note: Provide 2-3 highly specific suggestions.`;

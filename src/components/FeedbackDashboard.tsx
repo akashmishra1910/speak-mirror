@@ -14,6 +14,8 @@ export interface AnalysisMetrics {
   transcript: string;
   suggestions?: { type: string; text: string }[];
   title?: string;
+  eyeContact?: number;
+  expressionScore?: number;
 }
 
 interface DashboardProps {
@@ -63,6 +65,8 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
       case 'pace': return <Info className="w-5 h-5 text-zinc-400 shrink-0 mt-0.5" />;
       case 'confidence': return <Sparkles className="w-5 h-5 text-white shrink-0 mt-0.5 animate-pulse" />;
       case 'clarity': return <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />;
+      case 'expression': return <Sparkles className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5 animate-pulse" />;
+      case 'gaze': return <Activity className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />;
       default: return <Activity className="w-5 h-5 text-zinc-400 shrink-0 mt-0.5" />;
     }
   };
@@ -220,7 +224,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
 
       {/* Right Column: Metrics */}
       <div className="w-full lg:w-2/3 flex flex-col gap-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {/* Confidence */}
           <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-slow interactive-card relative overflow-hidden font-mono border-zinc-800/80 bg-[#09090d]/60 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
             <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_confidence</span>
@@ -268,6 +272,34 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
               DIAGNOSTIC: {metrics.wpm >= 110 && metrics.wpm <= 170 ? 'BALANCED' : metrics.wpm > 170 ? 'COMPRESSED' : 'LACONIC'}
             </span>
           </motion.div>
+
+          {/* Eye Contact (Conditional) */}
+          {metrics.eyeContact !== undefined && metrics.eyeContact !== null && (
+            <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-slow interactive-card relative overflow-hidden font-mono border-zinc-800/80 bg-[#09090d]/60 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+              <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_gaze</span>
+              <div className="text-2xl font-black text-white mt-1">{metrics.eyeContact}%</div>
+              <div className="w-full bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-zinc-800">
+                <div className={`h-full rounded-full ${metrics.eyeContact >= 80 ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.eyeContact >= 60 ? 'bg-amber-400' : 'bg-rose-400'}`} style={{ width: `${metrics.eyeContact}%` }} />
+              </div>
+              <span className="text-[8px] text-zinc-500 mt-2 font-bold">
+                DIAGNOSTIC: {metrics.eyeContact >= 80 ? 'OPTIMAL' : metrics.eyeContact >= 60 ? 'DEVIATING' : 'LOW_CONTACT'}
+              </span>
+            </motion.div>
+          )}
+
+          {/* Expression / Engagement (Conditional) */}
+          {metrics.expressionScore !== undefined && metrics.expressionScore !== null && (
+            <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-medium interactive-card relative overflow-hidden font-mono border-zinc-800/80 bg-[#09090d]/60 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+              <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_expression</span>
+              <div className="text-2xl font-black text-white mt-1">{metrics.expressionScore}%</div>
+              <div className="w-full bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-zinc-800">
+                <div className={`h-full rounded-full ${metrics.expressionScore >= 75 ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.expressionScore >= 40 ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-amber-400'}`} style={{ width: `${metrics.expressionScore}%` }} />
+              </div>
+              <span className="text-[8px] text-zinc-500 mt-2 font-bold">
+                DIAGNOSTIC: {metrics.expressionScore >= 75 ? 'EXPRESSIVE' : metrics.expressionScore >= 40 ? 'BALANCED' : 'NEUTRAL'}
+              </span>
+            </motion.div>
+          )}
         </div>
 
         {/* AI Insights Panel */}

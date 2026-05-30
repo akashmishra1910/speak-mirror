@@ -4,9 +4,10 @@ import { useState, useRef, useEffect } from "react";
 import { Mic, Square, Loader2, Video, Lightbulb, HelpCircle, Shuffle, Bell } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BEAUTIFY_FILTERS } from "@/lib/filters";
+import { useFaceAnalysis } from "@/hooks/useFaceAnalysis";
 
 interface RecorderProps {
-  onRecordingComplete: (videoBlob: Blob, audioBlob: Blob) => void;
+  onRecordingComplete: (videoBlob: Blob, audioBlob: Blob, eyeContactAvg?: number, expressionScoreAvg?: number) => void;
   isProcessing: boolean;
   readingText?: string | null;
   taskTopic?: string | null;
@@ -97,6 +98,17 @@ export function Recorder({
   const audioChunksRef = useRef<BlobPart[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  const {
+    isLoading: isFaceLoading,
+    isModelReady: isFaceReady,
+    liveEyeContact,
+    liveExpression,
+    startAnalysis,
+    stopAnalysis,
+  } = useFaceAnalysis(videoRef);
+
+  const faceAnalysisResultsRef = useRef<{ eyeContactAvg: number; expressionScoreAvg: number } | null>(null);
 
   // Initialize camera preview on mount (runs once)
   useEffect(() => {
@@ -220,6 +232,10 @@ export function Recorder({
     hasTriggeredBellRef.current = false;
     setShowConcludePrompt(false);
     
+    // Clear and start face analysis session
+    faceAnalysisResultsRef.current = null;
+    startAnalysis();
+    
     try {
       // 1. Setup Video Recorder (lowered bitrate to keep fallbacks under 3MB)
       const mediaRecorder = new MediaRecorder(streamRef.current, {
@@ -276,7 +292,14 @@ export function Recorder({
       const checkComplete = () => {
         // If we have the video blob, and either we have the audio blob OR the audio recorder failed to start
         if (videoBlob && (audioBlob || !audioRecorder)) {
-          onRecordingComplete(videoBlob, audioBlob || videoBlob);
+          const eyeContactAvg = faceAnalysisResultsRef.current?.eyeContactAvg;
+          const expressionScoreAvg = faceAnalysisResultsRef.current?.expressionScoreAvg;
+          onRecordingComplete(
+            videoBlob, 
+            audioBlob || videoBlob, 
+            eyeContactAvg, 
+            expressionScoreAvg
+          );
         }
       };
 
@@ -307,6 +330,9 @@ export function Recorder({
   };
 
   const stopRecording = () => {
+    if (isRecording) {
+      faceAnalysisResultsRef.current = stopAnalysis();
+    }
     if (mediaRecorderRef.current && isRecording) {
       try {
         mediaRecorderRef.current.stop();
@@ -360,6 +386,78 @@ export function Recorder({
         
         {/* Subtle Overlay gradient for readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80 z-10 pointer-events-none" />
+
+        {/* AI Face Analysis HUD Overlay */}
+        <div className="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-4 font-mono select-none">
+          {/* Top HUD Row */}
+          <div className="flex justify-between items-center w-full">
+            {/* Model / Recording Status Badge */}
+            <div className="px-3 py-1.5 rounded-xl bg-black/45 border border-white/10 backdrop-blur-md flex items-center gap-2 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+              {isFaceLoading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+                  <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest animate-pulse">Loading AI Model...</span>
+                </>
+              ) : isFaceReady ? (
+                isRecording ? (
+                  <>
+                    <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />
+                    <span className="text-[10px] font-extrabold text-red-400 uppercase tracking-widest">RECORDING...</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-2 h-2 bg-cyan-400 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+                    <span className="text-[10px] font-bold text-cyan-300 uppercase tracking-widest">AI READY</span>
+                  </>
+                )
+              ) : (
+                <>
+                  <div className="w-2 h-2 bg-zinc-600 rounded-full" />
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">AI INACTIVE</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom HUD Telemetry Card */}
+          {isFaceReady && (
+            <div className="w-full bg-zinc-950/60 backdrop-blur-lg border border-white/10 rounded-2xl p-4 flex flex-col gap-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all duration-300 mb-16">
+              {/* Telemetry Header */}
+              <div className="flex justify-between items-center text-[9px] text-zinc-400 border-b border-white/5 pb-1.5 font-bold uppercase tracking-widest">
+                <span>// face_telemetry_feed</span>
+                <span className="text-cyan-400 animate-pulse">LIVE</span>
+              </div>
+              
+              {/* Metric 1: Eye Contact */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between items-center text-xs text-white">
+                  <span className="text-[10px] font-semibold text-zinc-300 tracking-wider">GAZE // EYE_CONTACT</span>
+                  <span className="text-cyan-400 font-extrabold text-right drop-shadow-[0_0_6px_rgba(34,211,238,0.4)]">{liveEyeContact}%</span>
+                </div>
+                <div className="w-full bg-zinc-900/80 h-1.5 rounded-full overflow-hidden border border-white/5">
+                  <div 
+                    className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.6)] transition-all duration-150 ease-out" 
+                    style={{ width: `${liveEyeContact}%` }} 
+                  />
+                </div>
+              </div>
+
+              {/* Metric 2: Expression / Facial Engagement */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between items-center text-xs text-white">
+                  <span className="text-[10px] font-semibold text-zinc-300 tracking-wider">EXPR // EXPRESSION</span>
+                  <span className="text-emerald-400 font-extrabold text-right drop-shadow-[0_0_6px_rgba(52,211,153,0.4)]">{liveExpression}%</span>
+                </div>
+                <div className="w-full bg-zinc-900/80 h-1.5 rounded-full overflow-hidden border border-white/5">
+                  <div 
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full shadow-[0_0_10px_rgba(52,211,153,0.6)] transition-all duration-150 ease-out" 
+                    style={{ width: `${liveExpression}%` }} 
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Visual Conclude Prompt Overlay */}
         <AnimatePresence>

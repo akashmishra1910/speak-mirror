@@ -35,6 +35,12 @@ function PracticeContent() {
   
   const [metricsList, setMetricsList] = useState<AnalysisMetrics[]>([]);
   const [videoUrls, setVideoUrls] = useState<string[]>([]);
+
+  // Face Analysis Metrics States
+  const [freeformEyeContact, setFreeformEyeContact] = useState<number | undefined>(undefined);
+  const [freeformExpression, setFreeformExpression] = useState<number | undefined>(undefined);
+  const [readingEyeContact, setReadingEyeContact] = useState<number | undefined>(undefined);
+  const [readingExpression, setReadingExpression] = useState<number | undefined>(undefined);
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -366,13 +372,21 @@ function PracticeContent() {
     }
   };
 
-  const handleRecordingComplete = async (videoBlob: Blob, audioBlob: Blob) => {
+  const handleRecordingComplete = async (
+    videoBlob: Blob, 
+    audioBlob: Blob, 
+    eyeContactAvg?: number, 
+    expressionScoreAvg?: number
+  ) => {
     if (activeTaskId && phase === "freeform_recording") {
+      setFreeformEyeContact(eyeContactAvg);
+      setFreeformExpression(expressionScoreAvg);
+      
       if (task?.isChallenge) {
         setFreeformBlob(videoBlob);
         setFreeformAudioBlob(audioBlob);
         setPhase("analyzing");
-        processRecordings(videoBlob, audioBlob, null, null);
+        processRecordings(videoBlob, audioBlob, null, null, eyeContactAvg, expressionScoreAvg);
         return;
       }
       setFreeformBlob(videoBlob);
@@ -384,16 +398,29 @@ function PracticeContent() {
     if (activeTaskId && phase === "reading_recording") {
       setReadingBlob(videoBlob);
       setReadingAudioBlob(audioBlob);
+      setReadingEyeContact(eyeContactAvg);
+      setReadingExpression(expressionScoreAvg);
       setPhase("analyzing");
-      processRecordings(freeformBlob!, freeformAudioBlob!, videoBlob, audioBlob);
+      processRecordings(
+        freeformBlob!, 
+        freeformAudioBlob!, 
+        videoBlob, 
+        audioBlob, 
+        freeformEyeContact, 
+        freeformExpression, 
+        eyeContactAvg, 
+        expressionScoreAvg
+      );
       return;
     }
 
     if (!activeTaskId) {
       setFreeformBlob(videoBlob);
       setFreeformAudioBlob(audioBlob);
+      setFreeformEyeContact(eyeContactAvg);
+      setFreeformExpression(expressionScoreAvg);
       setPhase("analyzing");
-      processRecordings(videoBlob, audioBlob, null, null);
+      processRecordings(videoBlob, audioBlob, null, null, eyeContactAvg, expressionScoreAvg);
     }
   };
 
@@ -401,7 +428,11 @@ function PracticeContent() {
     freeformVideo: Blob,
     freeformAudio: Blob,
     readingVideo: Blob | null,
-    readingAudio: Blob | null
+    readingAudio: Blob | null,
+    ffEyeContact?: number,
+    ffExpression?: number,
+    rdEyeContact?: number,
+    rdExpression?: number
   ) => {
     setIsProcessing(true);
     setMetricsList([]);
@@ -416,6 +447,9 @@ function PracticeContent() {
 
       const formData1 = new FormData();
       formData1.append("audio", freeformAudio, "recording.webm");
+      if (ffEyeContact !== undefined) formData1.append("eyeContact", ffEyeContact.toString());
+      if (ffExpression !== undefined) formData1.append("expression", ffExpression.toString());
+
       const res1 = await fetch("/api/analyze", { method: "POST", body: formData1 });
       
       let analysis1;
@@ -431,6 +465,8 @@ function PracticeContent() {
 
       if (!res1.ok) throw new Error(analysis1.error || "Failed to analyze freeform speech");
       analysis1.title = "Freeform Speech";
+      analysis1.eyeContact = ffEyeContact;
+      analysis1.expressionScore = ffExpression;
       newMetrics.push(analysis1);
 
       if (readingAudio && readingVideo && task?.reading_text) {
@@ -440,6 +476,9 @@ function PracticeContent() {
         const formData2 = new FormData();
         formData2.append("audio", readingAudio, "recording.webm");
         formData2.append("expectedText", task.reading_text);
+        if (rdEyeContact !== undefined) formData2.append("eyeContact", rdEyeContact.toString());
+        if (rdExpression !== undefined) formData2.append("expression", rdExpression.toString());
+
         const res2 = await fetch("/api/analyze", { method: "POST", body: formData2 });
         
         let analysis2;
@@ -455,6 +494,8 @@ function PracticeContent() {
 
         if (!res2.ok) throw new Error(analysis2.error || "Failed to analyze reading speech");
         analysis2.title = "Reading Aloud";
+        analysis2.eyeContact = rdEyeContact;
+        analysis2.expressionScore = rdExpression;
         newMetrics.push(analysis2);
       }
 
@@ -511,7 +552,9 @@ function PracticeContent() {
             transcript: metricsList[0].transcript,
             topic: task?.topic_of_the_day || "Free Practice",
             recording_type: task?.isChallenge ? 'warmup' : 'freeform',
-            organization_id: currentOrgId
+            organization_id: currentOrgId,
+            eye_contact: metricsList[0].eyeContact !== undefined ? metricsList[0].eyeContact : null,
+            expression_score: metricsList[0].expressionScore !== undefined ? metricsList[0].expressionScore : null
           });
         }
 
@@ -534,7 +577,9 @@ function PracticeContent() {
               transcript: metricsList[1].transcript,
               topic: `Reading: ${task?.topic_of_the_day}`,
               recording_type: 'reading',
-              organization_id: currentOrgId
+              organization_id: currentOrgId,
+              eye_contact: metricsList[1].eyeContact !== undefined ? metricsList[1].eyeContact : null,
+              expression_score: metricsList[1].expressionScore !== undefined ? metricsList[1].expressionScore : null
             });
           }
         }
@@ -561,6 +606,10 @@ function PracticeContent() {
     setReadingBlob(null);
     setFreeformAudioBlob(null);
     setReadingAudioBlob(null);
+    setFreeformEyeContact(undefined);
+    setFreeformExpression(undefined);
+    setReadingEyeContact(undefined);
+    setReadingExpression(undefined);
     setMetricsList([]);
     setVideoUrls([]);
     setIsSaved(false);
