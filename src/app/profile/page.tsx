@@ -31,12 +31,37 @@ export default function ProfilePage() {
   const [shareRecording, setShareRecording] = useState<Recording | null>(null);
   const [activeFilter, setActiveFilter] = useState("studio");
 
+  const [difficultyLevel, setDifficultyLevel] = useState<string>("Beginner");
+  const [isUpdatingLevel, setIsUpdatingLevel] = useState(false);
+
   useEffect(() => {
     const saved = localStorage.getItem("speak_mirror_beautify_filter");
     if (saved) {
       setActiveFilter(saved);
     }
   }, []);
+
+  useEffect(() => {
+    if (user?.user_metadata?.difficulty_level) {
+      setDifficultyLevel(user.user_metadata.difficulty_level);
+    }
+  }, [user]);
+
+  const handleUpdateDifficulty = async (level: string) => {
+    setDifficultyLevel(level);
+    setIsUpdatingLevel(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { difficulty_level: level }
+      });
+      if (error) throw error;
+    } catch (err) {
+      console.error("Failed to update difficulty level:", err);
+      alert("Error updating difficulty level. Please try again.");
+    } finally {
+      setIsUpdatingLevel(false);
+    }
+  };
 
   // Removed auto-redirect to prevent race conditions during OAuth
   // useEffect(() => {
@@ -231,60 +256,136 @@ export default function ProfilePage() {
         </motion.div>
       </div>
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="glass-panel p-8 rounded-3xl border border-white/5 float-medium interactive-card"
-      >
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
-            <Calendar className="w-6 h-6 text-zinc-300" />
-            Recent Recordings
-          </h2>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start mb-12">
+        {/* Left Side: Recent Recordings */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="lg:col-span-2 glass-panel p-8 rounded-3xl border border-white/5 float-medium interactive-card"
+        >
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
+              <Calendar className="w-6 h-6 text-zinc-300" />
+              Recent Recordings
+            </h2>
+          </div>
 
-        <div className="space-y-4">
-          {recordings.length === 0 ? (
-            <div className="text-center py-8 text-foreground/40 font-light">
-              No recordings found. Go practice and be the first!
-            </div>
-          ) : (
-            recordings.map((item) => (
-              <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 hover:border-white/10 transition-all gap-4">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center font-bold border ${item.confidence >= 80 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : item.confidence >= 70 ? "bg-white/5 text-zinc-300 border-white/10" : "bg-amber-500/10 text-amber-400 border-amber-500/20"}`}>
-                    {item.confidence}%
-                  </div>
-                  <div>
-                    <div className="font-bold text-white line-clamp-1">{item.topic || "Free Practice"}</div>
-                    <div className="text-xs text-foreground/40 font-light">{formatDate(item.created_at)} • {item.clarity}% Clarity</div>
-                  </div>
-                </div>
-                
-                {item.video_url && (
-                  <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
-                    <button 
-                      onClick={() => setWatchRecording(item)}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-600/20 transition-all rounded-xl font-bold text-xs"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      Watch
-                    </button>
-                    <button 
-                      onClick={() => setShareRecording(item)}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white/5 border border-white/5 text-white hover:bg-white/10 transition-all rounded-xl font-bold text-xs"
-                    >
-                      <Share2 className="w-3.5 h-3.5" />
-                      Share Card
-                    </button>
-                  </div>
-                )}
+          <div className="space-y-4">
+            {recordings.length === 0 ? (
+              <div className="text-center py-8 text-foreground/40 font-light">
+                No recordings found. Go practice and be the first!
               </div>
-            ))
-          )}
-        </div>
-      </motion.div>
+            ) : (
+              recordings.map((item) => (
+                <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 hover:border-white/10 transition-all gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center font-bold border ${item.confidence >= 80 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : item.confidence >= 70 ? "bg-white/5 text-zinc-300 border-white/10" : "bg-amber-500/10 text-amber-400 border-amber-500/20"}`}>
+                      {item.confidence}%
+                    </div>
+                    <div>
+                      <div className="font-bold text-white line-clamp-1">{item.topic || "Free Practice"}</div>
+                      <div className="text-xs text-foreground/40 font-light">{formatDate(item.created_at)} • {item.clarity}% Clarity</div>
+                    </div>
+                  </div>
+                  
+                  {item.video_url && (
+                    <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
+                      <button 
+                        onClick={() => setWatchRecording(item)}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-600/20 transition-all rounded-xl font-bold text-xs"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        Watch
+                      </button>
+                      <button 
+                        onClick={() => setShareRecording(item)}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white/5 border border-white/5 text-white hover:bg-white/10 transition-all rounded-xl font-bold text-xs"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                        Share Card
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </motion.div>
+
+        {/* Right Side: Preferences & Settings */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="lg:col-span-1 glass-panel p-8 rounded-3xl border border-white/5 bg-[#09090d]/80 backdrop-blur-3xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] w-full text-left"
+        >
+          <h2 className="text-xl font-bold mb-6 text-white flex items-center gap-2">
+            <Target className="w-5 h-5 text-indigo-400 animate-pulse" />
+            Practice Settings
+          </h2>
+
+          {/* Difficulty Level Setting */}
+          <div className="mb-6">
+            <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 block mb-3">
+              Practice Difficulty
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {["Beginner", "Intermediate", "Advanced"].map((level) => {
+                const isActive = difficultyLevel === level;
+                return (
+                  <button
+                    key={level}
+                    onClick={() => handleUpdateDifficulty(level)}
+                    disabled={isUpdatingLevel}
+                    className={`py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center ${
+                      isActive
+                        ? "bg-indigo-600 border-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.2)]"
+                        : "bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {isUpdatingLevel && isActive ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      level
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-zinc-500 font-light mt-2 leading-relaxed">
+              {difficultyLevel === "Beginner" && "Generates simple, relatable everyday topics to build confidence and fluency."}
+              {difficultyLevel === "Intermediate" && "Generates professional or abstract topics to practice structuring arguments."}
+              {difficultyLevel === "Advanced" && "Generates complex, philosophical, or technical topics to test deep spontaneous delivery."}
+            </p>
+          </div>
+
+          {/* Default Beautify Filter Setting */}
+          <div className="mb-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 block mb-3">
+              Default Beautify Filter
+            </label>
+            <select
+              value={activeFilter}
+              onChange={(e) => {
+                const val = e.target.value;
+                setActiveFilter(val);
+                localStorage.setItem("speak_mirror_beautify_filter", val);
+              }}
+              className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+            >
+              <option value="none" className="bg-[#09090d]">Original (No filter)</option>
+              <option value="studio" className="bg-[#09090d]">Studio Glow ✨</option>
+              <option value="warm" className="bg-[#09090d]">Warm Golden ☀️</option>
+              <option value="cool" className="bg-[#09090d]">Nordic Cool ❄️</option>
+              <option value="smooth" className="bg-[#09090d]">Soft Focus 🌸</option>
+            </select>
+            <p className="text-[10px] text-zinc-500 font-light mt-2 leading-relaxed">
+              Your chosen video filter will be applied automatically when starting new practice sessions.
+            </p>
+          </div>
+        </motion.div>
+      </div>
 
       {/* Modal Popup for Watch Recording */}
       <AnimatePresence>

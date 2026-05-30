@@ -734,6 +734,7 @@ function PracticeContent() {
                     readingText={phase === "reading_recording" ? task?.reading_text : undefined}
                     taskTopic={task?.topic_of_the_day}
                     userId={user?.id}
+                    userLevel={user?.user_metadata?.difficulty_level}
                     mode={phase === "reading_recording" ? "reading" : (task?.isChallenge ? "warmup" : "freeform")}
                     timeLimit={task?.timeLimit || 90}
                     wordOfTheDay={task?.word_of_the_day}

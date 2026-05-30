@@ -11,6 +11,7 @@ interface RecorderProps {
   readingText?: string | null;
   taskTopic?: string | null;
   userId?: string | null;
+  userLevel?: string | null;
   mode?: "freeform" | "reading" | "warmup";
   timeLimit?: number;
   wordOfTheDay?: string | null;
@@ -24,6 +25,7 @@ export function Recorder({
   readingText, 
   taskTopic, 
   userId, 
+  userLevel,
   mode = "freeform",
   timeLimit = 90,
   wordOfTheDay,
@@ -181,7 +183,8 @@ export function Recorder({
     }
     setBullets([]);
     try {
-      const endpoint = userId ? `/api/generate-topic?userId=${userId}` : "/api/generate-topic";
+      const levelQuery = userLevel ? `&level=${encodeURIComponent(userLevel)}` : "";
+      const endpoint = userId ? `/api/generate-topic?userId=${userId}${levelQuery}` : `/api/generate-topic?${levelQuery.substring(1)}`;
       const res = await fetch(endpoint);
       const data = await res.json();
       if (data.topic && data.bullets) {

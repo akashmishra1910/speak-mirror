@@ -22,40 +22,88 @@ export async function GET(request: Request) {
 
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');
-
-    let recordingCount = 0;
-    if (userId && process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      const supabaseAdmin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
-      );
-      const { count } = await supabaseAdmin
-        .from('recordings')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId);
-      
-      recordingCount = count || 0;
-    }
+    const levelParam = url.searchParams.get('level');
 
     let difficultyLevel = "Beginner";
-    let difficultyDescription = "Simple, relatable, everyday topics (e.g., 'What is your favorite hobby?', 'Describe a memorable trip').";
-    
-    if (recordingCount >= 15) {
-      difficultyLevel = "Advanced";
-      difficultyDescription = "Complex, philosophical, or highly technical thought-provoking topics (e.g., 'The ethical implications of AI', 'Strategies for managing global supply chain disruptions').";
-    } else if (recordingCount >= 5) {
-      difficultyLevel = "Intermediate";
-      difficultyDescription = "Professional or slightly abstract topics (e.g., 'How do you handle workplace conflict?', 'The most important trait of a leader').";
+    let pastTopics: string[] = [];
+
+    // Set up Supabase Admin client if configuration is present
+    const hasSupabaseEnv = !!(process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_PUBLIC_SUPABASE_URL);
+    const supabaseAdmin = hasSupabaseEnv
+      ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+      : null;
+
+    if (userId && supabaseAdmin) {
+      try {
+        // Fetch past recording topics for this user to avoid duplication
+        const { data: recordingsData } = await supabaseAdmin
+          .from('recordings')
+          .select('topic')
+          .eq('user_id', userId)
+          .not('topic', 'is', null)
+          .neq('topic', 'Free Practice')
+          .neq('topic', 'Free Speech Sandbox')
+          .order('created_at', { ascending: false })
+          .limit(10);
+        
+        if (recordingsData) {
+          pastTopics = recordingsData
+            .map(r => r.topic)
+            .filter(t => t && t.trim() !== "" && !t.startsWith("Reading:"));
+        }
+      } catch (err) {
+        console.warn("Failed to fetch past topics:", err);
+      }
     }
+
+    if (levelParam) {
+      const lower = levelParam.toLowerCase();
+      if (lower === "intermediate") difficultyLevel = "Intermediate";
+      else if (lower === "advanced") difficultyLevel = "Advanced";
+      else difficultyLevel = "Beginner";
+    } else {
+      let recordingCount = 0;
+      if (userId && supabaseAdmin) {
+        try {
+          const { count } = await supabaseAdmin
+            .from('recordings')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId);
+          recordingCount = count || 0;
+        } catch (err) {
+          console.warn("Failed to count recordings:", err);
+        }
+      }
+      if (recordingCount >= 15) {
+        difficultyLevel = "Advanced";
+      } else if (recordingCount >= 5) {
+        difficultyLevel = "Intermediate";
+      } else {
+        difficultyLevel = "Beginner";
+      }
+    }
+
+    let difficultyDescription = "Simple, relatable, everyday topics (e.g., 'What is your favorite hobby?', 'Describe a memorable trip').";
+    if (difficultyLevel === "Intermediate") {
+      difficultyDescription = "Professional or slightly abstract topics (e.g., 'How do you handle workplace conflict?', 'The most important trait of a leader').";
+    } else if (difficultyLevel === "Advanced") {
+      difficultyDescription = "Complex, philosophical, or highly technical thought-provoking topics (e.g., 'The ethical implications of AI', 'Strategies for managing global supply chain disruptions').";
+    }
+
+    const excludeInstructions = pastTopics.length > 0
+      ? `CRITICAL REQUIREMENT: Do NOT generate any topic that is identical or semantically similar to any of these previously practiced topics by the user:\n${pastTopics.map(t => `- ${t}`).join("\n")}`
+      : "";
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         {
           role: "system",
-          content: `You are an expert communication coach. Generate a thought-provoking topic for a 90-second speech.
+          content: `You are an expert communication coach. Generate a unique, thought-provoking topic for a 90-second speech.
           
           DIFFICULTY LEVEL: ${difficultyLevel}
           GUIDELINES: ${difficultyDescription}
+          
+          ${excludeInstructions}
           
           Also generate exactly 5 incomplete starter sentences based on the 4W and 1H framework (Who, What, Where, When, How) tailored specifically to that topic.
           
