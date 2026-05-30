@@ -7,7 +7,7 @@ export interface FaceAnalysisResult {
   expressionScoreAvg: number;
 }
 
-export function useFaceAnalysis(videoRef: React.RefObject<HTMLVideoElement | null>) {
+export function useFaceAnalysis(videoRef: React.RefObject<HTMLVideoElement | null>, enabled: boolean = true) {
   const [isLoading, setIsLoading] = useState(false);
   const [isModelReady, setIsModelReady] = useState(false);
   const [liveEyeContact, setLiveEyeContact] = useState<number>(100);
@@ -27,6 +27,8 @@ export function useFaceAnalysis(videoRef: React.RefObject<HTMLVideoElement | nul
 
   // Initialize and load the MediaPipe model
   useEffect(() => {
+    if (!enabled) return;
+
     const loadModel = async () => {
       if (typeof window === "undefined") return;
       setIsLoading(true);
@@ -75,11 +77,11 @@ export function useFaceAnalysis(videoRef: React.RefObject<HTMLVideoElement | nul
         }
       }
     };
-  }, []);
+  }, [enabled]);
 
   // Frame processing loop
   useEffect(() => {
-    if (!isModelReady || !videoRef.current) return;
+    if (!enabled || !isModelReady || !videoRef.current) return;
 
     const video = videoRef.current;
     let isLoopActive = false;
@@ -194,10 +196,11 @@ export function useFaceAnalysis(videoRef: React.RefObject<HTMLVideoElement | nul
       video.removeEventListener("ended", stopLoop);
       stopLoop();
     };
-  }, [isModelReady, videoRef]);
+  }, [enabled, isModelReady, videoRef]);
 
   // Start tracking scores for averages
   const startAnalysis = () => {
+    if (!enabled) return;
     eyeContactScoresRef.current = [];
     expressionScoresRef.current = [];
     isTrackingRef.current = true;
@@ -205,6 +208,10 @@ export function useFaceAnalysis(videoRef: React.RefObject<HTMLVideoElement | nul
 
   // Stop tracking scores and calculate session averages
   const stopAnalysis = (): FaceAnalysisResult => {
+    if (!enabled) {
+      return { eyeContactAvg: 100, expressionScoreAvg: 50 };
+    }
+    
     isTrackingRef.current = false;
     
     const eyeContactAvg = eyeContactScoresRef.current.length > 0
