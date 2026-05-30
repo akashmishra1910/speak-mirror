@@ -162,16 +162,14 @@ export function WorkspaceSwitcher() {
       {/* Switcher Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.06] hover:border-white/10 text-white font-medium text-xs md:text-sm transition-all duration-200 shadow-[0_0_15px_rgba(255,255,255,0.01)] cursor-pointer"
+        className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-[#09090d] border border-zinc-800/80 hover:bg-[#12121a] hover:border-zinc-700/80 text-zinc-300 hover:text-white font-mono text-xs transition-all duration-200 shadow-[0_0_15px_rgba(0,0,0,0.3)] cursor-pointer"
       >
-        {activeWorkspace.id === "personal" ? (
-          <Folder className="w-3.5 h-3.5 text-zinc-400" />
-        ) : (
-          <Users className="w-3.5 h-3.5 text-indigo-400" />
-        )}
-        <span className="max-w-[120px] truncate">{activeWorkspace.name}</span>
+        <span className="text-[9px] font-bold text-indigo-400 bg-indigo-950/40 px-1.5 py-0.5 rounded border border-indigo-800/40 uppercase tracking-widest shrink-0">
+          {activeWorkspace.id === "personal" ? "SYS" : "TEAM"}
+        </span>
+        <span className="max-w-[120px] truncate uppercase font-bold tracking-wider">{activeWorkspace.name}</span>
         <ChevronDown 
-          className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-300 ${
+          className={`w-3 h-3 text-zinc-500 transition-transform duration-300 ${
             isOpen ? "rotate-180 text-white" : ""
           }`} 
         />
@@ -185,11 +183,12 @@ export function WorkspaceSwitcher() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.96 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute left-0 mt-2 w-64 rounded-2xl bg-[#09090e]/95 backdrop-blur-3xl border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.6)] z-50 overflow-hidden"
+            className="absolute left-0 mt-2 w-64 rounded-2xl bg-[#09090d]/95 backdrop-blur-3xl border border-zinc-800/80 shadow-[0_10px_40px_rgba(0,0,0,0.6)] z-50 overflow-hidden"
           >
             {/* Header */}
-            <div className="px-4 py-2.5 border-b border-white/5 text-[10px] font-semibold text-zinc-500 uppercase tracking-widest bg-white/[0.01]">
-              Workspaces
+            <div className="px-4 py-2.5 border-b border-zinc-800/80 text-[9px] font-bold font-mono text-zinc-500 uppercase tracking-widest bg-[#0b0b10] flex items-center justify-between">
+              <span>[ AVAILABLE_SPACES ]</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             </div>
 
             {/* Workspaces List */}
@@ -210,7 +209,7 @@ export function WorkspaceSwitcher() {
                         try {
                           const { data: roomData } = await supabase
                             .from("rooms")
-                            .select("id")
+                             .select("id")
                             .eq("organization_id", ws.id)
                             .maybeSingle();
 
@@ -227,18 +226,20 @@ export function WorkspaceSwitcher() {
                     }}
                     className={`w-full flex flex-col p-2.5 rounded-xl border transition-all duration-150 cursor-pointer ${
                       isActive 
-                        ? "bg-white/[0.06] border-white/10 text-white font-semibold" 
-                        : "border-transparent text-zinc-400 hover:text-white hover:bg-white/[0.03]"
+                        ? "bg-[#12121c] border-indigo-500/30 text-white" 
+                        : "border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-[#0b0b10]/60"
                     }`}
                   >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        {ws.id === "personal" ? (
-                          <Folder className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-zinc-500"}`} />
-                        ) : (
-                          <Users className={`w-4 h-4 shrink-0 ${isActive ? "text-indigo-400" : "text-indigo-400/60"}`} />
-                        )}
-                        <span className="truncate">{ws.name}</span>
+                    <div className="flex items-center justify-between w-full font-mono text-xs">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`text-[8px] font-bold px-1 py-0.5 rounded border shrink-0 uppercase tracking-wider ${
+                          ws.id === "personal"
+                            ? "bg-zinc-950 text-zinc-400 border-zinc-800"
+                            : "bg-indigo-950/30 text-indigo-400 border-indigo-900/40"
+                        }`}>
+                          {ws.id === "personal" ? "SYS" : "TEAM"}
+                        </span>
+                        <span className="truncate uppercase tracking-wide">{ws.name}</span>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {ws.id !== "personal" && (ws.created_by === user.id || ws.role === "OWNER") && (
@@ -247,20 +248,20 @@ export function WorkspaceSwitcher() {
                               e.stopPropagation();
                               handleDeleteTeam(ws);
                             }}
-                            className="p-1 rounded-md text-red-500 hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer flex items-center justify-center"
+                            className="p-1 rounded text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer flex items-center justify-center border border-transparent hover:border-rose-500/10"
                             title="Delete Team Workspace"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3 h-3" />
                           </button>
                         )}
-                        {isActive && <Check className="w-4 h-4 text-white shrink-0" />}
+                        {isActive && <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />}
                       </div>
                     </div>
 
                     {ws.id !== "personal" && ws.invite_token && (
-                      <div className="mt-2 flex items-center justify-between gap-1.5 bg-black/40 px-2 py-1.5 rounded-lg border border-white/5 font-mono text-[9px] text-white overflow-hidden">
-                        <span className="truncate select-all opacity-85" title={ws.invite_token}>
-                          {ws.invite_token}
+                      <div className="mt-2 flex items-center justify-between gap-1.5 bg-[#050508] px-2 py-1 rounded-lg border border-zinc-800 font-mono text-[9px] text-zinc-400 overflow-hidden">
+                        <span className="truncate select-all opacity-70 font-semibold" title={ws.invite_token}>
+                          KEY: {ws.invite_token}
                         </span>
                         <button 
                           onClick={(e) => {
@@ -268,9 +269,9 @@ export function WorkspaceSwitcher() {
                             navigator.clipboard.writeText(ws.invite_token || "");
                             alert(`Copied Invite Key for ${ws.name}!`);
                           }}
-                          className="px-1.5 py-0.5 rounded bg-white text-zinc-950 font-bold hover:bg-zinc-200 transition-all cursor-pointer shrink-0 text-[8px]"
+                          className="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold transition-all cursor-pointer shrink-0 text-[8px] border border-zinc-700"
                         >
-                          Copy
+                          COPY
                         </button>
                       </div>
                     )}
@@ -280,23 +281,23 @@ export function WorkspaceSwitcher() {
             </div>
 
             {/* Footer options - Create new team / Join team */}
-            <div className="p-1.5 border-t border-white/5 bg-white/[0.01] flex flex-col gap-1">
+            <div className="p-1.5 border-t border-zinc-800 bg-[#09090d] flex flex-col gap-1 font-mono">
               <button
                 onClick={() => {
                   setCreatedOrg(null);
                   setIsModalOpen(true);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-medium text-zinc-500 hover:text-white hover:bg-white/[0.03] transition-all duration-150 cursor-pointer"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-[11px] font-semibold text-zinc-500 hover:text-zinc-300 hover:bg-[#12121a] border border-transparent hover:border-zinc-800 transition-all duration-150 cursor-pointer"
               >
-                <Plus className="w-4 h-4 text-zinc-500" />
-                <span>Create New Team</span>
+                <Plus className="w-3.5 h-3.5 text-zinc-500" />
+                <span>+ NEW_TEAM</span>
               </button>
               <button
                 onClick={() => setIsJoinModalOpen(true)}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-medium text-zinc-500 hover:text-white hover:bg-white/[0.03] transition-all duration-150 cursor-pointer"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-[11px] font-semibold text-zinc-500 hover:text-zinc-300 hover:bg-[#12121a] border border-transparent hover:border-zinc-800 transition-all duration-150 cursor-pointer"
               >
-                <Key className="w-4 h-4 text-zinc-500" />
-                <span>Join a Team</span>
+                <Key className="w-3.5 h-3.5 text-zinc-500" />
+                <span>&gt; JOIN_TEAM</span>
               </button>
             </div>
           </motion.div>
@@ -324,8 +325,11 @@ export function WorkspaceSwitcher() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: "spring", damping: 25, stiffness: 350 }}
-              className="relative w-full max-w-md rounded-[1.5rem] sm:rounded-3xl bg-[#09090d]/90 backdrop-blur-3xl border border-white/10 p-5 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-10"
+              className="relative w-full max-w-md rounded-2xl bg-[#09090d] border border-zinc-800 p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-10 overflow-hidden text-left"
             >
+              {/* Technical glowing header strip */}
+              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500 to-transparent" />
+              
               {/* Close Button */}
               <button
                 onClick={() => {
@@ -335,93 +339,93 @@ export function WorkspaceSwitcher() {
                     setIsModalOpen(false);
                   }
                 }}
-                className="absolute top-5 right-5 w-8 h-8 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                className="absolute top-5 right-5 w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
 
               {createdOrg ? (
                 /* Success View showing Invite Link */
-                <div className="space-y-6 text-center">
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-                    <CheckCircle className="w-6 h-6 text-emerald-400" />
+                <div className="space-y-6 text-center font-mono">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto shadow-[0_0_15px_rgba(16,185,129,0.05)]">
+                    <CheckCircle className="w-5 h-5 text-emerald-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white mb-2">Team Created!</h3>
-                    <p className="text-zinc-400 text-xs md:text-sm font-light">
-                      Your team workspace <strong>{createdOrg.name}</strong> is ready. Share this invite key with your colleagues so they can join:
+                    <h3 className="text-sm font-bold text-white mb-2 uppercase tracking-wider">[ TEAM_CREATED ]</h3>
+                    <p className="text-zinc-400 text-xs font-light leading-relaxed">
+                      Your team workspace <strong className="text-white">{createdOrg.name}</strong> has been provisioned. Share this invite key with members to grant access:
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between gap-3 bg-black/60 border border-white/10 rounded-xl p-3.5 font-mono text-xs text-white overflow-hidden">
+                  <div className="flex items-center justify-between gap-3 bg-[#050508] border border-zinc-800 rounded-lg p-3 font-mono text-xs text-indigo-400 overflow-hidden">
                     <span className="truncate select-all">{createdOrg.invite_token}</span>
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(createdOrg.invite_token);
                         alert("Copied Team Invite Key to Clipboard!");
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-zinc-950 font-bold hover:bg-zinc-200 transition-all text-xs cursor-pointer shrink-0"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-zinc-800 border border-zinc-700 text-white font-bold hover:bg-zinc-700 transition-all text-[10px] cursor-pointer shrink-0"
                     >
-                      <Copy className="w-3.5 h-3.5" />
-                      Copy
+                      <Copy className="w-3 h-3" />
+                      COPY
                     </button>
                   </div>
 
                   <button
                     onClick={handleCreatedModalClose}
-                    className="w-full py-3 rounded-xl bg-white text-zinc-950 font-bold text-sm hover:bg-zinc-200 transition-all cursor-pointer"
+                    className="w-full py-2.5 rounded-xl bg-white text-zinc-950 font-bold text-xs hover:bg-zinc-200 transition-all cursor-pointer border border-transparent"
                   >
-                    Go to workspace
+                    ENTER WORKSPACE
                   </button>
                 </div>
               ) : (
                 /* Form View */
-                <>
-                  <h3 className="text-xl font-bold text-white mb-2">Create New Team</h3>
-                  <p className="text-zinc-400 text-xs md:text-sm font-light mb-6">
-                    Organize projects, practice assignments, and collaborate dynamically with your teammates.
+                <div className="font-mono">
+                  <h3 className="text-base font-bold text-white mb-2 uppercase tracking-wider">[ PROVISION_TEAM ]</h3>
+                  <p className="text-zinc-400 text-xs font-light mb-6 leading-relaxed">
+                    Create a shared workspace to assign speaking tasks, track room recordings, and collaborate with team members.
                   </p>
 
                   <form onSubmit={handleCreateTeam} className="space-y-6">
                     <div>
-                      <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">
-                        Team Name
+                      <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                        // workspace_name
                       </label>
                       <input
                         type="text"
                         required
                         value={newTeamName}
                         onChange={(e) => setNewTeamName(e.target.value)}
-                        placeholder="e.g. Team Alpha, Speech Masters"
-                        className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm"
+                        placeholder="e.g. TEAM_ALPHA, SPEECH_MASTERS"
+                        className="w-full bg-[#050508] border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder-zinc-700 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all text-xs"
                       />
                     </div>
 
-                    <div className="flex items-center justify-end gap-3 pt-2">
+                    <div className="flex items-center justify-end gap-3 pt-2 text-[10px] font-bold">
                       <button
                         type="button"
                         onClick={() => setIsModalOpen(false)}
-                        className="px-5 py-2.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white bg-white/5 border border-white/5 hover:bg-white/10 transition-all cursor-pointer"
+                        className="px-4 py-2 rounded-xl text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 transition-all cursor-pointer"
                       >
-                        Cancel
+                        CANCEL
                       </button>
                       <button
                         type="submit"
                         disabled={isCreating || !newTeamName.trim()}
-                        className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white text-zinc-950 font-bold text-xs hover:bg-zinc-200 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isCreating ? (
                           <>
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>Creating...</span>
+                            <span>CREATING...</span>
                           </>
                         ) : (
-                          <span>Create Team</span>
+                          <span>CREATE</span>
                         )}
                       </button>
                     </div>
                   </form>
-                </>
+                </div>
               )}
             </motion.div>
           </div>
@@ -447,25 +451,28 @@ export function WorkspaceSwitcher() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: "spring", damping: 25, stiffness: 350 }}
-              className="relative w-full max-w-md rounded-[1.5rem] sm:rounded-3xl bg-[#09090d]/90 backdrop-blur-3xl border border-white/10 p-5 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-10"
+              className="relative w-full max-w-md rounded-2xl bg-[#09090d] border border-zinc-800 p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-10 overflow-hidden text-left font-mono"
             >
+              {/* Technical glowing header strip */}
+              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500 to-transparent" />
+              
               {/* Close Button */}
               <button
                 onClick={() => setIsJoinModalOpen(false)}
-                className="absolute top-5 right-5 w-8 h-8 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                className="absolute top-5 right-5 w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
 
-              <h3 className="text-xl font-bold text-white mb-2">Join a Team</h3>
-              <p className="text-zinc-400 text-xs md:text-sm font-light mb-6">
-                Enter the unique Team Invitation Key shared by your team owner or mentor to join their collaborative space.
+              <h3 className="text-base font-bold text-white mb-2 uppercase tracking-wider">[ JOIN_WORKSPACE ]</h3>
+              <p className="text-zinc-400 text-xs font-light mb-6 leading-relaxed">
+                Provide a valid Team Invitation Key shared by the workspace owner to join and sync with their assignments.
               </p>
 
               <form onSubmit={handleJoinTeam} className="space-y-6">
                 <div>
-                  <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">
-                    Team Invite Key
+                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                    // security_token
                   </label>
                   <input
                     type="text"
@@ -473,30 +480,30 @@ export function WorkspaceSwitcher() {
                     value={joinToken}
                     onChange={(e) => setJoinToken(e.target.value)}
                     placeholder="e.g. 123e4567-e89b-12d3-a456-426614174000"
-                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-mono"
+                    className="w-full bg-[#050508] border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder-zinc-700 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all text-xs font-mono"
                   />
                 </div>
 
-                <div className="flex items-center justify-end gap-3 pt-2">
+                <div className="flex items-center justify-end gap-3 pt-2 text-[10px] font-bold">
                   <button
                     type="button"
                     onClick={() => setIsJoinModalOpen(false)}
-                    className="px-5 py-2.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white bg-white/5 border border-white/5 hover:bg-white/10 transition-all cursor-pointer"
+                    className="px-4 py-2 rounded-xl text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 transition-all cursor-pointer"
                   >
-                    Cancel
+                    CANCEL
                   </button>
                   <button
                     type="submit"
                     disabled={isJoining || !joinToken.trim()}
-                    className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white text-zinc-950 font-bold text-xs hover:bg-zinc-200 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isJoining ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Joining...</span>
+                        <span>JOINING...</span>
                       </>
                     ) : (
-                      <span>Join Team</span>
+                      <span>JOIN</span>
                     )}
                   </button>
                 </div>

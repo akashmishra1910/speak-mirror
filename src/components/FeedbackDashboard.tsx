@@ -120,7 +120,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
       <motion.div variants={itemVariants} className="w-full lg:w-1/3 flex flex-col gap-4 float-slow interactive-card">
         {videoUrl ? (
           <>
-            <div className="glass-panel rounded-[2rem] overflow-hidden aspect-[9/16] max-h-[calc(100vh-120px)] shadow-2xl border border-white/5 relative bg-black group">
+            <div className="glass-panel rounded-3xl overflow-hidden aspect-[9/16] max-h-[calc(100vh-120px)] shadow-2xl border border-zinc-800/80 relative bg-black group">
               <video 
                 ref={videoRef}
                 src={videoUrl} 
@@ -144,8 +144,8 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
               </div>
             </div>
             {/* Filter Selector in Feedback Dashboard */}
-            <div className="glass-panel px-4 py-3 rounded-2xl border border-white/5 bg-white/[0.01] flex items-center justify-between text-left animate-fade-in">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Beautify Filter:</span>
+            <div className="glass-panel px-4 py-3 rounded-2xl border border-zinc-800/80 bg-[#09090d]/60 flex items-center justify-between text-left font-mono">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-500">// active_filter</span>
               <select
                 value={activeFilter}
                 onChange={(e) => {
@@ -153,7 +153,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
                   setActiveFilter(val);
                   localStorage.setItem("speak_mirror_beautify_filter", val);
                 }}
-                className="p-1.5 px-2.5 rounded-lg bg-white/5 border border-white/10 text-[10px] text-white font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="p-1.5 px-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-[10px] text-zinc-300 font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
               >
                 <option value="none" className="bg-[#09090d]">Original</option>
                 <option value="studio" className="bg-[#09090d]">Studio Glow ✨</option>
@@ -164,46 +164,56 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
             </div>
           </>
         ) : (
-          <div className="glass-panel rounded-[2rem] aspect-[9/16] max-h-[60vh] border border-white/5 flex items-center justify-center bg-white/[0.01]">
-            <p className="text-foreground/40 text-sm">No video recorded</p>
+          <div className="glass-panel rounded-3xl aspect-[9/16] max-h-[60vh] border border-zinc-800/80 flex items-center justify-center bg-white/[0.01]">
+            <p className="text-foreground/40 text-sm font-mono">[ NO_VIDEO_RECORDED ]</p>
           </div>
         )}
         
         {/* Actions */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-2">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-2 font-mono">
           {onSave && (
             <button 
               onClick={onSave}
               disabled={isSaving || isSaved || !videoUrl}
-              className={`flex items-center justify-center gap-2 px-3 py-3 transition-all rounded-xl font-semibold text-sm md:text-base col-span-2 lg:col-span-1 ${isSaved ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-white text-zinc-950 hover:bg-zinc-200 border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.08)] disabled:opacity-50'}`}
+              className={`flex items-center justify-center gap-2 px-3 py-2.5 transition-all rounded-xl font-bold text-xs col-span-2 lg:col-span-1 border ${
+                isSaved 
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.05)]' 
+                  : 'bg-white text-zinc-950 hover:bg-zinc-200 border-white/10 disabled:opacity-50'
+              }`}
             >
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : isSaved ? <CheckCircle2 className="w-4 h-4" /> : <Activity className="w-4 h-4" />}
-              {isSaving ? "Saving..." : isSaved ? "Saved" : "Save"}
+              {isSaving ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : isSaved ? (
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              ) : (
+                <Activity className="w-3.5 h-3.5" />
+              )}
+              {isSaving ? "SAVING..." : isSaved ? "SAVED" : "SAVE_RECORD"}
             </button>
           )}
           {onRetake && (
             <button 
               onClick={onRetake}
               disabled={isSaving || isSaved}
-              className="flex items-center justify-center gap-2 px-3 py-3 bg-red-950/20 text-red-400 border border-red-500/10 hover:bg-red-500/20 hover:border-red-500/25 transition-all rounded-xl font-medium text-sm md:text-base col-span-2 lg:col-span-1 disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-3 py-2.5 bg-rose-500/5 text-rose-400 border border-rose-500/10 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all rounded-xl font-bold text-xs col-span-2 lg:col-span-1 disabled:opacity-50"
             >
-              Retake
+              RETAKE_TEST
             </button>
           )}
           <button 
             onClick={handleDownload}
             disabled={!videoUrl}
-            className="flex items-center justify-center gap-2 px-3 py-3 bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all rounded-xl font-medium text-white disabled:opacity-50 text-sm md:text-base"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-[#09090d] border border-zinc-800 hover:bg-zinc-900 transition-all rounded-xl font-bold text-white disabled:opacity-50 text-xs cursor-pointer"
           >
-            <Download className="w-4 h-4" />
-            Download
+            <Download className="w-3.5 h-3.5" />
+            EXPORT_MP4
           </button>
           <button 
             onClick={handleShare}
-            className="flex items-center justify-center gap-2 px-3 py-3 bg-white/5 border border-white/5 text-white hover:bg-white/10 hover:border-white/10 transition-all rounded-xl font-medium text-sm md:text-base"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-[#09090d] border border-zinc-800 hover:bg-zinc-900 transition-all rounded-xl font-bold text-white text-xs cursor-pointer"
           >
-            <Share2 className="w-4 h-4" />
-            {isCopied ? "Copied!" : "Share"}
+            <Share2 className="w-3.5 h-3.5" />
+            {isCopied ? "COPIED" : "SHARE_INDEX"}
           </button>
         </div>
       </motion.div>
@@ -211,64 +221,95 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
       {/* Right Column: Metrics */}
       <div className="w-full lg:w-2/3 flex flex-col gap-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <motion.div variants={itemVariants} className="glass-panel p-4 md:p-6 rounded-2xl flex flex-col items-center justify-center text-center float-slow interactive-card">
-            <span className="text-foreground/40 text-xs md:text-sm font-medium mb-2 uppercase tracking-wider">Confidence</span>
-            <div className={`w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center border-4 text-xl md:text-3xl font-bold ${getScoreColor(metrics.confidence)}`}>
-              {metrics.confidence}%
+          {/* Confidence */}
+          <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-slow interactive-card relative overflow-hidden font-mono border-zinc-800/80 bg-[#09090d]/60 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+            <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_confidence</span>
+            <div className="text-2xl font-black text-white mt-1">{metrics.confidence}%</div>
+            <div className="w-full bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-zinc-800">
+              <div className={`h-full rounded-full ${metrics.confidence >= 80 ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.confidence >= 60 ? 'bg-amber-400' : 'bg-rose-400'}`} style={{ width: `${metrics.confidence}%` }} />
             </div>
+            <span className="text-[8px] text-zinc-500 mt-2 font-bold">
+              DIAGNOSTIC: {metrics.confidence >= 80 ? 'SECURE' : metrics.confidence >= 60 ? 'STABLE' : 'LOW_INDEX'}
+            </span>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="glass-panel p-4 md:p-6 rounded-2xl flex flex-col items-center justify-center text-center float-medium interactive-card">
-            <span className="text-foreground/40 text-xs md:text-sm font-medium mb-2 uppercase tracking-wider">Clarity</span>
-            <div className={`w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center border-4 text-xl md:text-3xl font-bold ${getScoreColor(metrics.clarity)}`}>
-              {metrics.clarity}%
+          {/* Clarity */}
+          <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-medium interactive-card relative overflow-hidden font-mono border-zinc-800/80 bg-[#09090d]/60 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+            <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_clarity</span>
+            <div className="text-2xl font-black text-white mt-1">{metrics.clarity}%</div>
+            <div className="w-full bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-zinc-800">
+              <div className={`h-full rounded-full ${metrics.clarity >= 80 ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.clarity >= 60 ? 'bg-amber-400' : 'bg-rose-400'}`} style={{ width: `${metrics.clarity}%` }} />
             </div>
+            <span className="text-[8px] text-zinc-500 mt-2 font-bold">
+              EVALUATION: {metrics.clarity >= 80 ? 'OPTIMAL' : metrics.clarity >= 60 ? 'STABLE' : 'DEVIATED'}
+            </span>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="glass-panel p-4 md:p-6 rounded-2xl flex flex-col items-center justify-center text-center float-fast interactive-card">
-            <span className="text-foreground/40 text-xs md:text-sm font-medium mb-2 uppercase tracking-wider">Filler Words</span>
-            <div className={`w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center border-4 text-xl md:text-3xl font-bold ${metrics.fillerWords > 5 ? "text-amber-400 bg-amber-500/5 border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.05)]" : "text-emerald-400 bg-emerald-500/5 border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.05)]"}`}>
-              {metrics.fillerWords}
+          {/* Filler Words */}
+          <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-fast interactive-card relative overflow-hidden font-mono border-zinc-800/80 bg-[#09090d]/60 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+            <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// counter_fillers</span>
+            <div className="text-2xl font-black text-white mt-1">{metrics.fillerWords}</div>
+            <div className="w-full bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-zinc-800">
+              <div className={`h-full rounded-full ${metrics.fillerWords <= 2 ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.fillerWords <= 5 ? 'bg-amber-400' : 'bg-rose-400'}`} style={{ width: `${Math.max(0, 100 - (metrics.fillerWords * 10))}%` }} />
             </div>
+            <span className="text-[8px] text-zinc-500 mt-2 font-bold">
+              DIAGNOSTIC: {metrics.fillerWords <= 2 ? 'CLEAN' : metrics.fillerWords <= 5 ? 'MODERATE' : 'HIGH_FREQUENCY'}
+            </span>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="glass-panel p-4 md:p-6 rounded-2xl flex flex-col items-center justify-center text-center float-slow interactive-card">
-            <span className="text-foreground/40 text-xs md:text-sm font-medium mb-2 uppercase tracking-wider">Pace (WPM)</span>
-            <div className="w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center border-4 border-white/10 text-zinc-300 bg-white/5 text-xl md:text-3xl font-bold shadow-[0_0_20px_rgba(255,255,255,0.02)]">
-              {metrics.wpm}
+          {/* Pace */}
+          <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-slow interactive-card relative overflow-hidden font-mono border-zinc-800/80 bg-[#09090d]/60 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+            <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// rate_wpm</span>
+            <div className="text-2xl font-black text-white mt-1">{metrics.wpm} <span className="text-[10px] text-zinc-500">WPM</span></div>
+            <div className="w-full bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-zinc-800">
+              <div className="h-full rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" style={{ width: `${Math.min(100, (metrics.wpm / 200) * 100)}%` }} />
             </div>
+            <span className="text-[8px] text-zinc-500 mt-2 font-bold">
+              DIAGNOSTIC: {metrics.wpm >= 110 && metrics.wpm <= 170 ? 'BALANCED' : metrics.wpm > 170 ? 'COMPRESSED' : 'LACONIC'}
+            </span>
           </motion.div>
         </div>
 
-        <motion.div variants={itemVariants} className="glass-panel p-6 md:p-8 rounded-3xl flex-1 float-slow interactive-card">
-          <h3 className="text-lg md:text-xl font-bold mb-4 flex items-center gap-2 text-white">
-            <Activity className="w-5 h-5 text-zinc-400" />
-            AI Insights
+        {/* AI Insights Panel */}
+        <motion.div variants={itemVariants} className="glass-panel p-6 md:p-8 rounded-3xl flex-1 float-slow interactive-card border-zinc-800/80 bg-[#09090d]/60 font-mono shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
+          <h3 className="text-sm font-bold mb-5 flex items-center gap-2 text-white uppercase tracking-wider">
+            <Activity className="w-4 h-4 text-indigo-400" />
+            [ DIAGNOSTIC_ANALYSIS ]
           </h3>
           <ul className="space-y-4">
             {metrics.suggestions && metrics.suggestions.length > 0 ? (
               metrics.suggestions.map((suggestion, i) => (
-                <li key={i} className="flex items-start gap-3 text-foreground/80 text-sm md:text-base leading-relaxed font-light">
-                  {getIconForType(suggestion.type)}
+                <li key={i} className="flex items-start gap-3.5 text-zinc-300 text-xs md:text-sm leading-relaxed font-light">
+                  <span className="mt-0.5 shrink-0 select-none font-bold text-indigo-500">{`0${i+1} //`}</span>
                   <span>{suggestion.text}</span>
                 </li>
               ))
             ) : (
-              // Fallback if AI didn't provide suggestions
-              <li className="flex items-start gap-3 text-foreground/60">
-                <Info className="w-5 h-5 text-zinc-400 shrink-0 mt-0.5" />
-                <span className="font-light">Keep practicing! Consistent daily recording will drastically improve your communication over time.</span>
+              <li className="flex items-start gap-3.5 text-zinc-500 text-xs md:text-sm leading-relaxed">
+                <span className="mt-0.5 shrink-0 select-none font-bold text-indigo-500">-- //</span>
+                <span>Consistent daily practice is required to gather trend data. Continue recording to unlock advanced coaching telemetry.</span>
               </li>
             )}
           </ul>
         </motion.div>
         
+        {/* Transcript Section */}
         {metrics.transcript && (
-          <motion.div variants={itemVariants} className="glass-panel p-6 md:p-8 rounded-3xl float-medium interactive-card">
-            <h3 className="text-lg md:text-xl font-bold mb-4 text-white">Transcript</h3>
-            <p className="text-foreground/60 leading-relaxed italic border-l border-white/20 pl-4 py-2 text-sm md:text-base bg-white/[0.01] rounded-r-xl">
-              "{metrics.transcript}"
-            </p>
+          <motion.div variants={itemVariants} className="glass-panel p-6 md:p-8 rounded-3xl float-medium interactive-card border-zinc-800/80 bg-[#09090d]/60 font-mono shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
+            <h3 className="text-sm font-bold mb-4 text-white uppercase tracking-wider flex items-center justify-between">
+              <span>[ TRANSCRIPT_DUMP ]</span>
+              <span className="text-[9px] text-zinc-600 font-normal">CHAR_COUNT: {metrics.transcript.length}</span>
+            </h3>
+            <div className="relative bg-[#050508] border border-zinc-900 rounded-2xl p-4 md:p-5 overflow-hidden">
+              <div className="absolute left-4 top-4 md:top-5 text-[10px] text-zinc-700 select-none flex flex-col gap-1 text-right font-semibold">
+                <span>01</span>
+                {metrics.transcript.length > 80 && <span>02</span>}
+                {metrics.transcript.length > 160 && <span>03</span>}
+              </div>
+              <p className="text-zinc-300 leading-relaxed font-light text-xs md:text-sm pl-8">
+                {metrics.transcript}
+              </p>
+            </div>
           </motion.div>
         )}
       </div>
