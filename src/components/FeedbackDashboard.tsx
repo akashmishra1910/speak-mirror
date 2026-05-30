@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CheckCircle2, AlertCircle, Activity, Info, Download, Share2, Sparkles, Loader2, Play, Pause } from "lucide-react";
+import { CheckCircle2, AlertCircle, Activity, Info, Download, Share2, Sparkles, Loader2, Play, Pause, FileText } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { BEAUTIFY_FILTERS } from "@/lib/filters";
 
@@ -32,6 +32,240 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [activeFilter, setActiveFilter] = useState("studio");
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+
+  const handleExportPDF = async () => {
+    if (!metrics) return;
+    
+    setIsExportingPDF(true);
+    try {
+      // 1. Dynamic load of jsPDF from CDN
+      let jsPDFClass = (window as any).jspdf?.jsPDF;
+      if (!jsPDFClass) {
+        const scriptId = "jspdf-cdn-script";
+        let script = document.getElementById(scriptId) as HTMLScriptElement;
+        if (!script) {
+          script = document.createElement("script");
+          script.id = scriptId;
+          script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+          script.async = true;
+          document.body.appendChild(script);
+          await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = reject;
+          });
+        } else {
+          await new Promise((resolve) => {
+            const check = setInterval(() => {
+              if ((window as any).jspdf?.jsPDF) {
+                clearInterval(check);
+                resolve(true);
+              }
+            }, 100);
+          });
+        }
+        jsPDFClass = (window as any).jspdf.jsPDF;
+      }
+
+      if (!jsPDFClass) {
+        alert("Failed to load PDF export library. Please check your network connection.");
+        return;
+      }
+
+      // 2. Initialize jsPDF (A4 size: 210mm x 297mm)
+      const doc = new jsPDFClass({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+      });
+
+      const margin = 20;
+      let y = 20;
+
+      // Dark Header Banner
+      doc.setFillColor(9, 9, 13);
+      doc.rect(0, 0, 210, 40, "F");
+
+      // App Title
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(255, 255, 255);
+      doc.text("SPEAKMIRROR", margin, 26);
+      
+      // Subtitle
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(156, 163, 175);
+      doc.text("// SPONTANEOUS SPEECH DIAGNOSTICS REPORT", margin, 33);
+
+      // Date of Report
+      doc.setFont("courier", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(99, 102, 241);
+      const dateStr = new Date().toLocaleDateString("en-US", {
+        year: 'numeric', month: 'long', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+      doc.text(`DATE: ${dateStr.toUpperCase()}`, 210 - margin, 26, { align: "right" });
+
+      y = 55;
+
+      // Section 1: Evaluation Details
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(31, 41, 55);
+      doc.text("SPEECH EVALUATION DETAILS", margin, y);
+      y += 8;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(107, 114, 128);
+      doc.text("TOPIC / TASK:", margin, y);
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(17, 24, 39);
+      const topicText = metrics.title ? `${metrics.title}` : "Free Practice Session";
+      const splitTopicText = doc.splitTextToSize(topicText, 140);
+      doc.text(splitTopicText, margin + 28, y);
+      y += splitTopicText.length * 5 + 6;
+
+      // Draw line separator
+      doc.setDrawColor(229, 231, 235);
+      doc.line(margin, y, 210 - margin, y);
+      y += 10;
+
+      // Section 2: Telemetry Metrics Grid
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(31, 41, 55);
+      doc.text("DIAGNOSTIC TELEMETRY INDEX", margin, y);
+      y += 8;
+
+      const gridItems = [
+        { label: "CONFIDENCE", val: `${metrics.confidence}%` },
+        { label: "CLARITY", val: `${metrics.clarity}%` },
+        { label: "PACING", val: `${metrics.wpm} WPM` },
+        { label: "FILLER WORDS", val: `${metrics.fillerWords}` }
+      ];
+
+      if (metrics.eyeContact !== undefined && metrics.eyeContact !== null) {
+        gridItems.push({ label: "EYE CONTACT", val: `${metrics.eyeContact}%` });
+      }
+      if (metrics.expressionScore !== undefined && metrics.expressionScore !== null) {
+        gridItems.push({ label: "EXPRESSION SCORE", val: `${metrics.expressionScore}%` });
+      }
+
+      let itemIndex = 0;
+      gridItems.forEach((item) => {
+        const col = itemIndex % 2;
+        const row = Math.floor(itemIndex / 2);
+        
+        const cardX = margin + col * 88;
+        const cardY = y + row * 18;
+        
+        // Draw card background
+        doc.setFillColor(243, 244, 246);
+        doc.rect(cardX, cardY, 82, 14, "F");
+        
+        // Text labels
+        doc.setFont("courier", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(107, 114, 128);
+        doc.text(`// ${item.label.toLowerCase().replace(" ", "_")}`, cardX + 4, cardY + 5.5);
+        
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(17, 24, 39);
+        doc.text(item.val, cardX + 4, cardY + 11.5);
+        
+        itemIndex++;
+      });
+
+      y += Math.ceil(gridItems.length / 2) * 18 + 8;
+
+      // Draw line separator
+      doc.setDrawColor(229, 231, 235);
+      doc.line(margin, y, 210 - margin, y);
+      y += 10;
+
+      // Section 3: AI Coaching Insights Suggestions
+      if (metrics.suggestions && metrics.suggestions.length > 0) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.setTextColor(31, 41, 55);
+        doc.text("AI DIAGNOSTIC ANALYSIS & INSIGHTS", margin, y);
+        y += 8;
+
+        doc.setFontSize(9);
+        
+        metrics.suggestions.forEach((sug, i) => {
+          // Line wrap helper
+          const splitSug = doc.splitTextToSize(sug.text, 155);
+          
+          // Check page break
+          if (y + splitSug.length * 5 > 275) {
+            doc.addPage();
+            y = 20;
+          }
+
+          doc.setFont("courier", "bold");
+          doc.setTextColor(99, 102, 241);
+          doc.text(`0${i+1} //`, margin, y);
+
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(55, 65, 81);
+          doc.text(splitSug, margin + 15, y);
+          y += splitSug.length * 5 + 3;
+        });
+
+        y += 6;
+        
+        // Draw separator
+        doc.setDrawColor(229, 231, 235);
+        doc.line(margin, y, 210 - margin, y);
+        y += 10;
+      }
+
+      // Section 4: Transcript Output
+      if (metrics.transcript) {
+        // Check page break
+        if (y > 250) {
+          doc.addPage();
+          y = 20;
+        }
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.setTextColor(31, 41, 55);
+        doc.text("SPEECH TRANSCRIPT DUMP", margin, y);
+        y += 8;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9.5);
+        doc.setTextColor(55, 65, 81);
+        
+        const splitTranscript = doc.splitTextToSize(metrics.transcript, 170);
+        
+        splitTranscript.forEach((line: string) => {
+          if (y > 275) {
+            doc.addPage();
+            y = 20;
+          }
+          doc.text(line, margin, y);
+          y += 5.5;
+        });
+      }
+
+      // Export file download
+      doc.save(`speakmirror-evaluation-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      alert("Failed to export PDF: " + (err as Error).message);
+    } finally {
+      setIsExportingPDF(false);
+    }
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem("speak_mirror_beautify_filter");
@@ -174,7 +408,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
         )}
         
         {/* Actions */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-2 font-mono">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-2 font-mono">
           {onSave && (
             <button 
               onClick={onSave}
@@ -211,6 +445,18 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
           >
             <Download className="w-3.5 h-3.5" />
             EXPORT_MP4
+          </button>
+          <button 
+            onClick={handleExportPDF}
+            disabled={isExportingPDF}
+            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-[#09090d] border border-zinc-800 hover:bg-zinc-900 transition-all rounded-xl font-bold text-white disabled:opacity-50 text-xs cursor-pointer"
+          >
+            {isExportingPDF ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <FileText className="w-3.5 h-3.5" />
+            )}
+            {isExportingPDF ? "EXPORTING..." : "EXPORT_PDF"}
           </button>
           <button 
             onClick={handleShare}
