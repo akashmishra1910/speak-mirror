@@ -17,13 +17,68 @@ import {
   Search, 
   TrendingUp, 
   RefreshCw, 
-  Info,
-  Calendar,
   Layers,
-  ChevronRight,
   HardDrive
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
+interface AdminUser {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  created_at: string;
+  recordings_count: number;
+}
+
+interface DailyStatItem {
+  stat_date: string;
+  recordings_count: number;
+  analyze_calls_count: number;
+  video_calls_count: number;
+  active_users_count: number;
+  current_total_storage_bytes: number;
+}
+
+interface AdminStats {
+  totalRecordings: number;
+  totalAnalyzeCalls: number;
+  sessionCompletionRate: number;
+  dau: number;
+  mau: number;
+  dauMauRatio: number;
+  activeStreakUsersCount: number;
+  storageBytes: number;
+  dailyStats: DailyStatItem[];
+  databaseViewStatus: string;
+}
+
+interface FeedbackItem {
+  id: string;
+  user_id: string;
+  created_at: string;
+  confidence: number;
+  clarity: number;
+  filler_words: number;
+  transcript: string;
+  topic: string;
+  wpm: number;
+  eye_contact: number | null;
+  expression_score: number | null;
+  user_email: string;
+  user_name: string;
+}
+
+interface PracticeTaskItem {
+  id: string;
+  topic_of_the_day: string;
+  word_of_the_day: string | null;
+  definition: string | null;
+  reading_text: string | null;
+  bullets: Array<{ label: string; text: string }> | null;
+  difficulty_level: string;
+  created_at: string;
+}
 
 export default function AdminDashboard() {
   const { user, isLoading: authLoading } = useAuth();
@@ -33,10 +88,10 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<"overview" | "users" | "topics" | "feedback">("overview");
 
   // State for metrics and lists
-  const [stats, setStats] = useState<any>(null);
-  const [usersData, setUsersData] = useState<any>(null);
-  const [feedbacks, setFeedbacks] = useState<any[]>([]);
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [usersData, setUsersData] = useState<{ users: AdminUser[]; abuseList: AdminUser[] } | null>(null);
+  const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([]);
+  const [tasks, setTasks] = useState<PracticeTaskItem[]>([]);
   
   // Loading states
   const [loadingStats, setLoadingStats] = useState(true);
@@ -50,17 +105,17 @@ export default function AdminDashboard() {
   // Storage cleanup utility inputs
   const [cleanupDays, setCleanupDays] = useState(30);
   const [isCleaning, setIsCleaning] = useState(false);
-  const [cleanupResult, setCleanupResult] = useState<any>(null);
+  const [cleanupResult, setCleanupResult] = useState<{ recordingsCleaned: number; filesDeleted: number; dbUpdateSuccess: boolean } | null>(null);
 
   // AI Pre-generator inputs
   const [aiGenCount, setAiGenCount] = useState(10);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [genResult, setGenResult] = useState<any>(null);
+  const [genResult, setGenResult] = useState<{ success: boolean; count?: number; error?: string } | null>(null);
 
   // Bulk Topic Importer inputs
   const [bulkJsonText, setBulkJsonText] = useState("");
   const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<any>(null);
+  const [importResult, setImportResult] = useState<{ success: boolean; count?: number; error?: string } | null>(null);
 
   // Single Topic Creator inputs
   const [newTopic, setNewTopic] = useState({
@@ -87,8 +142,9 @@ export default function AdminDashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setStats(data);
-    } catch (err: any) {
-      console.error("Failed to fetch stats:", err);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("Failed to fetch stats:", error);
     } finally {
       setLoadingStats(false);
     }
@@ -102,8 +158,9 @@ export default function AdminDashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setUsersData(data);
-    } catch (err: any) {
-      console.error("Failed to fetch users:", err);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("Failed to fetch users:", error);
     } finally {
       setLoadingUsers(false);
     }
@@ -117,8 +174,9 @@ export default function AdminDashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setFeedbacks(data.feedbacks || []);
-    } catch (err: any) {
-      console.error("Failed to fetch feedbacks:", err);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("Failed to fetch feedbacks:", error);
     } finally {
       setLoadingFeedbacks(false);
     }
@@ -132,8 +190,9 @@ export default function AdminDashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setTasks(data.tasks || []);
-    } catch (err: any) {
-      console.error("Failed to fetch tasks:", err);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("Failed to fetch tasks:", error);
     } finally {
       setLoadingTasks(false);
     }
@@ -142,6 +201,7 @@ export default function AdminDashboard() {
   // Run initial fetch on mount
   useEffect(() => {
     if (user && user.user_metadata?.role === "admin") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchStats();
     }
   }, [user]);
@@ -151,6 +211,7 @@ export default function AdminDashboard() {
     if (!user || user.user_metadata?.role !== "admin") return;
 
     if (activeTab === "users") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchUsers();
     } else if (activeTab === "topics") {
       fetchTasks();
@@ -174,8 +235,9 @@ export default function AdminDashboard() {
       setGenResult({ success: true, count: data.count });
       fetchTasks();
       fetchStats();
-    } catch (err: any) {
-      setGenResult({ success: false, error: err.message });
+    } catch (err: unknown) {
+      const error = err as Error;
+      setGenResult({ success: false, error: error.message });
     } finally {
       setIsGenerating(false);
     }
@@ -197,8 +259,9 @@ export default function AdminDashboard() {
       setImportResult({ success: true, count: data.count });
       setBulkJsonText("");
       fetchTasks();
-    } catch (err: any) {
-      setImportResult({ success: false, error: "Invalid JSON format or API error: " + err.message });
+    } catch (err: unknown) {
+      const error = err as Error;
+      setImportResult({ success: false, error: "Invalid JSON format or API error: " + error.message });
     } finally {
       setIsImporting(false);
     }
@@ -225,8 +288,9 @@ export default function AdminDashboard() {
       });
       fetchTasks();
       alert("Topic created successfully!");
-    } catch (err: any) {
-      alert("Error: " + err.message);
+    } catch (err: unknown) {
+      const error = err as Error;
+      alert("Error: " + error.message);
     } finally {
       setIsCreatingTopic(false);
     }
@@ -249,8 +313,9 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error(data.error);
       setCleanupResult(data);
       fetchStats();
-    } catch (err: any) {
-      setCleanupResult({ error: err.message });
+    } catch (err: unknown) {
+      const error = err as Error;
+      setCleanupResult({ error: error.message });
     } finally {
       setIsCleaning(false);
     }
@@ -276,7 +341,7 @@ export default function AdminDashboard() {
   }
 
   // Filter users based on search query
-  const filteredUsers = usersData?.users?.filter((u: any) => 
+  const filteredUsers = (usersData?.users as AdminUser[] | undefined)?.filter((u: AdminUser) => 
     u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.name.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
@@ -537,7 +602,7 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-surface-border/50 text-xs">
-                          {usersData?.abuseList?.map((u: any) => (
+                          {usersData?.abuseList?.map((u: AdminUser) => (
                             <tr key={u.id} className="hover:bg-surface/10 transition-colors">
                               <td className="p-4 font-semibold text-white">{u.name}</td>
                               <td className="p-4 font-mono text-foreground/70">{u.email}</td>
@@ -592,7 +657,7 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-surface-border/50 text-xs">
-                          {filteredUsers.map((u: any) => (
+                          {filteredUsers.map((u: AdminUser) => (
                             <tr key={u.id} className="hover:bg-surface/10 transition-colors">
                               <td className="p-4">
                                 <div className="flex items-center gap-2">
@@ -804,7 +869,7 @@ export default function AdminDashboard() {
                             )}
                             {t.reading_text && (
                               <p className="text-[11px] text-foreground/50 border-l border-surface-border pl-2 italic leading-relaxed">
-                                "{t.reading_text}"
+                                {"\"" + t.reading_text + "\""}
                               </p>
                             )}
                           </div>
@@ -903,7 +968,7 @@ export default function AdminDashboard() {
                       <div className="bg-black/30 p-3 rounded-xl border border-surface-border/50">
                         <span className="text-[10px] uppercase font-bold tracking-widest text-foreground/50 block mb-1.5">User Speech Transcript</span>
                         <p className="text-xs text-foreground/80 leading-relaxed italic">
-                          "{f.transcript}"
+                          {"\"" + f.transcript + "\""}
                         </p>
                       </div>
                     </div>

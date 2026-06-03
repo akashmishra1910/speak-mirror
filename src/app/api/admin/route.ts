@@ -41,15 +41,8 @@ export async function GET(request: Request) {
       // 1. Storage Health
       const { data: storageData } = await supabaseAdmin.storage.from("videos").list();
       
-      // Query total size from storage.objects
-      const { data: storageObjects, error: storageErr } = await supabaseAdmin
-        .rpc("get_storage_size"); // We can also query using standard SQL or view, but let's query db or fallback
-      
       let totalStorageBytes = 0;
       try {
-        const { data: queryStorage } = await supabaseAdmin
-          .from("recordings")
-          .select("id"); // count recordings to estimate
         // Fallback size estimation: recordings * 1.5MB average if objects metadata isn't directly queryable
         totalStorageBytes = (storageData?.reduce((acc, curr) => acc + (curr.metadata?.size || 0), 0)) || 0;
       } catch (err) {
@@ -63,7 +56,7 @@ export async function GET(request: Request) {
         .limit(30);
 
       // If view is not yet created, fallback to normal queries to avoid erroring out
-      let viewOk = !statsError && dailyStats && dailyStats.length > 0;
+      const viewOk = !statsError && dailyStats && dailyStats.length > 0;
       let finalDailyStats = dailyStats || [];
 
       if (!viewOk) {
@@ -217,9 +210,10 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 
-  } catch (err: any) {
-    console.error("Admin API Error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error("Admin API Error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
@@ -419,8 +413,9 @@ Return ONLY a JSON object with this schema:
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 
-  } catch (err: any) {
-    console.error("Admin POST Error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error("Admin POST Error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
