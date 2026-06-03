@@ -56,6 +56,32 @@ export async function GET(request: Request) {
       }
     }
 
+    // Try to load from pre-generated pool first for cost control
+    if (supabaseAdmin) {
+      try {
+        const { data: poolTasks } = await supabaseAdmin
+          .from("practice_tasks")
+          .select("*");
+          
+        if (poolTasks && poolTasks.length > 0) {
+          // Filter out past topics
+          const availableTasks = poolTasks.filter(t => !pastTopics.includes(t.topic_of_the_day));
+          const selectedTask = availableTasks.length > 0
+            ? availableTasks[Math.floor(Math.random() * availableTasks.length)]
+            : poolTasks[Math.floor(Math.random() * poolTasks.length)];
+            
+          if (selectedTask) {
+            return NextResponse.json({
+              topic: selectedTask.topic_of_the_day,
+              bullets: selectedTask.bullets || []
+            });
+          }
+        }
+      } catch (poolErr) {
+        console.warn("Failed to fetch from practice_tasks pool, falling back to live AI:", poolErr);
+      }
+    }
+
     if (levelParam) {
       const lower = levelParam.toLowerCase();
       if (lower === "intermediate") difficultyLevel = "Intermediate";

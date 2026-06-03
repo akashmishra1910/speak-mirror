@@ -5,6 +5,27 @@ import { createClient } from "@supabase/supabase-js";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // 1. Retrieve the access token from cookies
+  const token = request.cookies.get("sb-access-token")?.value;
+
+  if (pathname.startsWith("/admin")) {
+    if (!token) {
+      const loginUrl = new URL("/auth", request.url);
+      return NextResponse.redirect(loginUrl);
+    }
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+    );
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user || user.user_metadata?.role !== "admin") {
+      console.warn(`Access denied to admin: User is not admin.`);
+      const loginUrl = new URL("/auth", request.url);
+      return NextResponse.redirect(loginUrl);
+    }
+    return NextResponse.next();
+  }
+
   // Next.js config matcher handles routing triggers.
   // But we still extract segment parameters safely.
   const segments = pathname.split("/");
@@ -14,9 +35,6 @@ export async function middleware(request: NextRequest) {
   if (!roomId) {
     return NextResponse.next();
   }
-
-  // 1. Retrieve the access token from cookies
-  const token = request.cookies.get("sb-access-token")?.value;
 
   if (!token) {
     // If not authenticated, redirect to the auth page
@@ -75,8 +93,8 @@ export async function middleware(request: NextRequest) {
   }
 }
 
-// Config matcher ensures this middleware only runs for mentor-dashboard views,
+// Config matcher ensures this middleware runs for both admin and mentor-dashboard views,
 // completely avoiding any performance impact on any other page or asset requests.
 export const config = {
-  matcher: "/rooms/:id/mentor-dashboard",
+  matcher: ["/rooms/:id/mentor-dashboard", "/admin/:path*"],
 };

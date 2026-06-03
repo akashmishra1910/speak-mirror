@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, Activity, LogIn, Users, Menu, X } from "lucide-react";
+import { Mic, Activity, LogIn, Users, Menu, X, Shield } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "./AuthProvider";
@@ -77,6 +77,20 @@ export function Navbar() {
               >
                 <Activity className="w-4 h-4" />
                 Profile
+              </Link>
+            )}
+
+            {user && user.user_metadata?.role === "admin" && (
+              <Link 
+                href="/admin" 
+                className={`text-sm font-medium px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${
+                  pathname.startsWith("/admin") 
+                    ? "bg-white/5 border border-white/10 text-white" 
+                    : "text-foreground/60 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <Shield className="w-4 h-4" />
+                Admin
               </Link>
             )}
 
@@ -182,6 +196,21 @@ export function Navbar() {
               >
                 <Activity className="w-4 h-4 text-zinc-400" />
                 Profile
+              </Link>
+            )}
+
+            {user && user.user_metadata?.role === "admin" && (
+              <Link 
+                href="/admin" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`text-sm font-semibold p-3.5 rounded-xl transition-all flex items-center gap-2.5 ${
+                  pathname.startsWith("/admin") 
+                    ? "bg-white/5 border border-white/10 text-white" 
+                    : "text-foreground/60 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <Shield className="w-4 h-4 text-indigo-400" />
+                Admin
               </Link>
             )}
 

@@ -1,9 +1,31 @@
 import { NextResponse } from "next/server";
 import Groq, { toFile } from "groq-sdk";
+import { createClient } from "@supabase/supabase-js";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'dummy' });
 
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+);
+
 export async function POST(request: Request) {
+  let userId: string | null = null;
+  try {
+    const cookieHeader = request.headers.get("cookie") || "";
+    const token = cookieHeader
+      .split("; ")
+      .find(c => c.trim().startsWith("sb-access-token="))
+      ?.split("=")[1];
+      
+    if (token) {
+      const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+      if (user) userId = user.id;
+    }
+  } catch (e) {
+    console.warn("Auth extraction warning:", e);
+  }
+
   try {
     const formData = await request.formData();
     const audioFile = formData.get("audio") as Blob;
@@ -12,6 +34,15 @@ export async function POST(request: Request) {
     const expression = formData.get("expression") as string | null;
 
     if (!audioFile) {
+      try {
+        await supabaseAdmin.from('api_usage_logs').insert({
+          route: '/api/analyze',
+          user_id: userId,
+          status: 'error'
+        });
+      } catch (logErr) {
+        console.error("Failed to log API error:", logErr);
+      }
       return NextResponse.json({ error: "No audio file provided" }, { status: 400 });
     }
 
@@ -125,6 +156,16 @@ Note: Provide 2-3 highly specific suggestions.`;
 
     const analysis = JSON.parse(content);
 
+    try {
+      await supabaseAdmin.from('api_usage_logs').insert({
+        route: '/api/analyze',
+        user_id: userId,
+        status: 'success'
+      });
+    } catch (logErr) {
+      console.error("Failed to log API success:", logErr);
+    }
+
     return NextResponse.json({
       confidence: analysis.confidence,
       clarity: analysis.clarity,
@@ -137,6 +178,15 @@ Note: Provide 2-3 highly specific suggestions.`;
 
   } catch (error: any) {
     console.error("Analysis error:", error);
+    try {
+      await supabaseAdmin.from('api_usage_logs').insert({
+        route: '/api/analyze',
+        user_id: userId,
+        status: 'error'
+      });
+    } catch (logErr) {
+      console.error("Failed to log API error:", logErr);
+    }
     return NextResponse.json({ error: error.message || "Failed to analyze speech" }, { status: 500 });
   }
 }
