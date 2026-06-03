@@ -56,6 +56,7 @@ end;
 $$ language plpgsql security definer;
 
 -- 4. Create admin_stats view for growth and cost metrics
+drop view if exists public.admin_stats;
 create or replace view public.admin_stats as
 with daily_recordings as (
   select 
