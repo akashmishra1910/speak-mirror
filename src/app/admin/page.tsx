@@ -212,6 +212,8 @@ export default function AdminDashboard() {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
   const [loadingTasks, setLoadingTasks] = useState(false);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [ticketsDbStatus, setTicketsDbStatus] = useState<string>("active");
 
   // UI Interactive States
   const [searchTerm, setSearchTerm] = useState("");
@@ -308,17 +310,36 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchTickets = async () => {
+    setLoadingTickets(true);
+    try {
+      const res = await fetch("/api/admin?action=tickets");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setTickets(data.tickets || []);
+      setTicketsDbStatus(data.databaseStatus || "active");
+    } catch (err: unknown) {
+      console.warn("Failed to fetch tickets. Falling back to mock tickets.", err);
+      setTickets(initialTickets);
+      setTicketsDbStatus("missing_migration");
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
   const fetchAllData = () => {
     fetchStats();
     if (activeTab === "users") fetchUsers();
     else if (activeTab === "topics") fetchTasks();
     else if (activeTab === "feedback") fetchFeedbacks();
+    else if (activeTab === "support") fetchTickets();
   };
 
-  // Run initial stats fetch
+  // Run initial stats & tickets fetch
   useEffect(() => {
     if (user && user.user_metadata?.role === "admin") {
       fetchStats();
+      fetchTickets();
     }
   }, [user]);
 
@@ -332,6 +353,8 @@ export default function AdminDashboard() {
       fetchTasks();
     } else if (activeTab === "feedback") {
       fetchFeedbacks();
+    } else if (activeTab === "support") {
+      fetchTickets();
     }
   }, [activeTab, user]);
 
@@ -433,10 +456,23 @@ export default function AdminDashboard() {
     }
   };
 
-  const resolveTicket = (id: string, nextStatus: "open" | "investigating" | "resolved") => {
+  const resolveTicket = async (id: string, nextStatus: "open" | "investigating" | "resolved") => {
+    // Optimistic UI update
     setTickets(prev =>
       prev.map(t => (t.id === id ? { ...t, status: nextStatus } : t))
     );
+
+    try {
+      const res = await fetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update-ticket", ticketId: id, status: nextStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+    } catch (err: unknown) {
+      console.warn("Failed to persist ticket status update. Kept local changes.", err);
+    }
   };
 
   // Helper formatting for bytes
@@ -1160,71 +1196,103 @@ export default function AdminDashboard() {
                 </span>
               </div>
 
-              <div className="space-y-4">
-                {tickets.map((t) => (
-                  <div key={t.id} className="glass-panel p-5 rounded-2xl border border-surface-border bg-surface/10 space-y-4">
-                    
-                    {/* Header */}
-                    <div className="flex flex-wrap justify-between items-start gap-2 border-b border-surface-border/50 pb-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded text-xs font-mono">
-                            {t.id}
-                          </span>
-                          <span className="text-sm font-semibold text-white">{t.category}</span>
-                        </div>
-                        <div className="text-xs text-foreground/50 mt-1 flex items-center gap-1.5">
-                          <span>User ID:</span>
-                          <span className="font-mono text-[11px] text-foreground/60">{t.user}</span>
-                          <span>|</span>
-                          <span className="text-foreground/60">{t.email}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] text-foreground/40 font-mono">
-                          {new Date(t.created_at).toLocaleString()}
-                        </span>
-                        <span className={`text-xs uppercase font-bold tracking-wider px-2 py-0.5 rounded-lg ${
-                          t.status === "open"
-                            ? "bg-rose-500/10 border border-rose-500/20 text-rose-400"
-                            : t.status === "investigating"
-                            ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
-                            : "bg-zinc-900 border border-zinc-800 text-zinc-500"
-                        }`}>
-                          {t.status}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Message Details */}
-                    <div className="p-3.5 bg-black/40 rounded-xl border border-surface-border/50">
-                      <span className="text-[10px] uppercase font-bold tracking-widest text-foreground/50 block mb-1">Issue Description</span>
-                      <p className="text-xs text-foreground/80 leading-relaxed font-sans">{t.message}</p>
-                    </div>
-
-                    {/* Actions */}
-                    {t.status !== "resolved" && (
-                      <div className="flex items-center justify-end gap-2.5">
-                        {t.status === "open" && (
-                          <button
-                            onClick={() => resolveTicket(t.id, "investigating")}
-                            className="text-xs bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 px-3 py-1.5 rounded-xl font-semibold transition-all"
-                          >
-                            Mark Investigating
-                          </button>
-                        )}
-                        <button
-                          onClick={() => resolveTicket(t.id, "resolved")}
-                          className="text-xs bg-white text-black hover:bg-zinc-200 px-3 py-1.5 rounded-xl font-bold transition-all shadow-lg"
-                        >
-                          Mark Resolved
-                        </button>
-                      </div>
-                    )}
+              {/* Warning Banner if table is missing */}
+              {ticketsDbStatus === "missing_migration" && (
+                <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-50/5 text-rose-400 text-xs flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-bold text-sm">Supabase Table `support_tickets` Offline</h4>
+                    <p className="mt-1 leading-relaxed text-foreground/80 text-xs">
+                      The table `support_tickets` was not detected. Local customer inquiries fall back to mock data.
+                      Execute the database migration file to activate ticket persistence:
+                    </p>
+                    <code className="block mt-2 bg-black/60 p-2.5 rounded-lg border border-surface-border text-foreground/80 font-mono text-[11px] break-all select-all">
+                      supabase/migrations/20260603000001_support_tickets.sql
+                    </code>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+
+              {loadingTickets ? (
+                <div className="glass-panel p-12 text-center text-foreground/40 text-xs border border-surface-border">
+                  <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-zinc-500" />
+                  Loading customer inquiries...
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {tickets.length > 0 ? tickets.map((t) => (
+                    <div key={t.id} className="glass-panel p-5 rounded-2xl border border-surface-border bg-surface/10 space-y-4">
+                      
+                      {/* Header */}
+                      <div className="flex flex-wrap justify-between items-start gap-2 border-b border-surface-border/50 pb-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded text-xs font-mono">
+                              {t.id.slice(0, 8)}
+                            </span>
+                            <span className="text-sm font-semibold text-white">{t.category}</span>
+                          </div>
+                          <div className="text-xs text-foreground/50 mt-1 flex items-center gap-1.5">
+                            {t.user && (
+                              <>
+                                <span>User ID:</span>
+                                <span className="font-mono text-[11px] text-foreground/60">{t.user.slice(0, 8)}</span>
+                                <span>|</span>
+                              </>
+                            )}
+                            <span className="text-foreground/60">{t.email}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] text-foreground/40 font-mono">
+                            {new Date(t.created_at).toLocaleString()}
+                          </span>
+                          <span className={`text-xs uppercase font-bold tracking-wider px-2 py-0.5 rounded-lg ${
+                            t.status === "open"
+                              ? "bg-rose-500/10 border border-rose-500/20 text-rose-400"
+                              : t.status === "investigating"
+                              ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
+                              : "bg-zinc-900 border border-zinc-800 text-zinc-500"
+                          }`}>
+                            {t.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Message Details */}
+                      <div className="p-3.5 bg-black/40 rounded-xl border border-surface-border/50">
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-foreground/50 block mb-1">Issue Description</span>
+                        <p className="text-xs text-foreground/80 leading-relaxed font-sans">{t.message}</p>
+                      </div>
+
+                      {/* Actions */}
+                      {t.status !== "resolved" && (
+                        <div className="flex items-center justify-end gap-2.5">
+                          {t.status === "open" && (
+                            <button
+                              onClick={() => resolveTicket(t.id, "investigating")}
+                              className="text-xs bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 px-3 py-1.5 rounded-xl font-semibold transition-all"
+                            >
+                              Mark Investigating
+                            </button>
+                          )}
+                          <button
+                            onClick={() => resolveTicket(t.id, "resolved")}
+                            className="text-xs bg-white text-black hover:bg-zinc-200 px-3 py-1.5 rounded-xl font-bold transition-all shadow-lg"
+                          >
+                            Mark Resolved
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )) : (
+                    <div className="glass-panel p-12 text-center text-foreground/40 text-xs border border-surface-border">
+                      No customer support tickets found.
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
 

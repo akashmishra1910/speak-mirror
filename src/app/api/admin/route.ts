@@ -208,6 +208,27 @@ export async function GET(request: Request) {
       return NextResponse.json({ tasks: tasks || [] });
     }
 
+    // Fetch customer support tickets
+    if (action === "tickets") {
+      const { data: tickets, error: ticketsError } = await supabaseAdmin
+        .from("support_tickets")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (ticketsError) {
+        console.warn("support_tickets table missing or query failed. Returning empty list.", ticketsError.message);
+        return NextResponse.json({
+          tickets: [],
+          databaseStatus: "missing_migration"
+        });
+      }
+
+      return NextResponse.json({
+        tickets: tickets || [],
+        databaseStatus: "active"
+      });
+    }
+
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 
   } catch (err: unknown) {
@@ -409,6 +430,19 @@ Return ONLY a JSON object with this schema:
 
       if (error) throw error;
       return NextResponse.json({ success: true, task: data[0] });
+    }
+
+    // Update support ticket status
+    if (action === "update-ticket") {
+      const { ticketId, status } = body;
+      const { data, error } = await supabaseAdmin
+        .from("support_tickets")
+        .update({ status })
+        .eq("id", ticketId)
+        .select();
+
+      if (error) throw error;
+      return NextResponse.json({ success: true, ticket: data?.[0] });
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
