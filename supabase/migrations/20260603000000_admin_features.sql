@@ -91,8 +91,7 @@ select
   coalesce(dr.recordings_count, 0) as recordings_count,
   coalesce(da.analyze_calls_count, 0) as analyze_calls_count,
   coalesce(dv.video_calls_count, 0) as video_calls_count,
-  coalesce(dau.active_users_count, 0) as active_users_count,
-  (select coalesce(sum((metadata->>'size')::bigint), 0) from storage.objects where bucket_id = 'videos') as current_total_storage_bytes
+  coalesce(dau.active_users_count, 0) as active_users_count
 from (
   select distinct stat_date from (
     select created_at::date as stat_date from public.recordings

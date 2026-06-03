@@ -37,7 +37,7 @@ interface DailyStatItem {
   analyze_calls_count: number;
   video_calls_count: number;
   active_users_count: number;
-  current_total_storage_bytes: number;
+  current_total_storage_bytes?: number;
 }
 
 interface AdminStats {
