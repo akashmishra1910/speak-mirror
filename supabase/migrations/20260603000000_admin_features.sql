@@ -14,6 +14,7 @@ create table if not exists public.api_usage_logs (
 alter table public.api_usage_logs enable row level security;
 
 -- Create policy to allow insert from authenticated or anonymous users (or let service role handle it)
+drop policy if exists "Allow insert for all users" on public.api_usage_logs;
 create policy "Allow insert for all users" on public.api_usage_logs 
   for insert with check (true);
 
@@ -36,9 +37,11 @@ create table if not exists public.practice_tasks (
 alter table public.practice_tasks enable row level security;
 
 -- Policies for practice_tasks
+drop policy if exists "Anyone can view practice tasks" on public.practice_tasks;
 create policy "Anyone can view practice tasks" on public.practice_tasks
   for select using (true);
 
+drop policy if exists "Admins can manage practice tasks" on public.practice_tasks;
 create policy "Admins can manage practice tasks" on public.practice_tasks
   for all using (true); -- We will enforce admin checks in middleware and API routes
 
