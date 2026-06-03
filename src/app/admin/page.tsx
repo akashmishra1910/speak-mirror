@@ -105,7 +105,12 @@ export default function AdminDashboard() {
   // Storage cleanup utility inputs
   const [cleanupDays, setCleanupDays] = useState(30);
   const [isCleaning, setIsCleaning] = useState(false);
-  const [cleanupResult, setCleanupResult] = useState<{ recordingsCleaned: number; filesDeleted: number; dbUpdateSuccess: boolean } | null>(null);
+  const [cleanupResult, setCleanupResult] = useState<{
+    recordingsCleaned?: number;
+    filesDeleted?: number;
+    dbUpdateSuccess?: boolean;
+    error?: string;
+  } | null>(null);
 
   // AI Pre-generator inputs
   const [aiGenCount, setAiGenCount] = useState(10);
@@ -453,7 +458,7 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                       <h3 className="text-3xl font-extrabold tracking-tight">
-                        {formatBytes(stats?.storageBytes)}
+                        {formatBytes(stats?.storageBytes ?? 0)}
                       </h3>
                       <p className="text-xs text-foreground/60 leading-none mt-2">
                         Total raw space occupied in Supabase `videos` bucket.
