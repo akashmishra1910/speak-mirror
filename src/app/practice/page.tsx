@@ -624,7 +624,7 @@ function PracticeContent() {
       {activeRoomId && (
         <Link 
           href={`/rooms/${activeRoomId}`} 
-          className="absolute top-12 left-4 sm:left-8 flex items-center gap-2 text-sm font-medium text-white/60 hover:text-white transition-all z-10"
+          className="absolute top-12 left-4 sm:left-8 flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-themeText dark:text-white/60 dark:hover:text-white transition-all z-10 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Room
@@ -643,12 +643,12 @@ function PracticeContent() {
           {/* Daily Challenge Pill Button */}
           <button
             onClick={() => setShowChallengeModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-xs font-semibold text-white transition-all shadow-[0_0_10px_rgba(255,255,255,0.02)]"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 dark:hover:border-white/20 dark:text-white transition-all shadow-sm dark:shadow-[0_0_10px_rgba(255,255,255,0.02)] cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5 text-orange-400 animate-pulse" />
             <span>Daily Challenge</span>
             {completedWarmupToday ? (
-              <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 border border-emerald-500/30">
                 Done
               </span>
             ) : activeTaskId?.startsWith("challenge-") ? (
@@ -692,17 +692,17 @@ function PracticeContent() {
             exit={{ opacity: 0, height: 0, marginBottom: 0 }}
             className="text-center mb-12 overflow-hidden float-slow w-full"
           >
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 text-zinc-300 text-xs md:text-sm font-medium border border-white/5 mb-4 shadow-[0_0_15px_rgba(255,255,255,0.02)]">
-              <Sparkles className="w-4 h-4 text-zinc-400 animate-pulse" />
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/45 text-black text-xs md:text-sm font-semibold border border-slate-200/50 mb-4 shadow-sm dark:bg-white/5 dark:text-zinc-300 dark:border-white/5 dark:shadow-[0_0_15px_rgba(255,255,255,0.02)]">
+              <Sparkles className="w-4 h-4 text-[#5B7C99] dark:text-zinc-400 animate-pulse" />
               {isPersonal ? "Daily Practice Arena" : `Team practice: ${activeWorkspace.name}`}
             </span>
-            <h1 className="text-3xl md:text-5xl font-extrabold mb-4 text-white tracking-tight">
+            <h1 className="text-3xl md:text-5xl font-extrabold mb-4 text-black dark:text-white tracking-tight">
               {activeTaskId 
                 ? (phase === "freeform_recording" ? "Part 1: Speak Freely" : "Part 2: Read Aloud")
                 : "Free Speech Sandbox"
               }
             </h1>
-            <p className="text-foreground/60 max-w-xl mx-auto font-light leading-relaxed text-sm md:text-base">
+            <p className="text-slate-650 dark:text-foreground/60 max-w-xl mx-auto font-light leading-relaxed text-sm md:text-base">
               {activeTaskId 
                 ? (phase === "freeform_recording" 
                     ? "Speak naturally about the assignment topic for 90 seconds. We will analyze your pacing, clarity, and metrics."
@@ -756,7 +756,7 @@ function PracticeContent() {
               
               <Link 
                 href={activeRoomId ? `/rooms/${activeRoomId}` : "/profile"}
-                className="px-8 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all font-semibold shadow-[0_0_15px_rgba(255,255,255,0.02)]"
+                className="px-8 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 dark:text-white transition-all font-semibold shadow-sm dark:shadow-[0_0_15px_rgba(255,255,255,0.02)] cursor-pointer"
               >
                 {activeRoomId ? "Return to Room" : "View Profile"}
               </Link>
@@ -768,9 +768,9 @@ function PracticeContent() {
             {/* Left side/Centered Recorder Column */}
             <div className={user && !isPersonal ? "lg:col-span-2 flex flex-col items-center w-full" : "lg:col-span-3 flex flex-col items-center w-full"}>
               {isLoadingTask ? (
-                <div className="flex flex-col items-center justify-center p-24 w-full glass-panel rounded-3xl border border-white/5">
-                  <Loader2 className="w-8 h-8 animate-spin text-white mb-4" />
-                  <span className="text-xs font-semibold text-foreground/50 uppercase tracking-widest">Loading Task Details...</span>
+                <div className="flex flex-col items-center justify-center p-24 w-full glass-panel rounded-3xl dark:border-white/5">
+                  <Loader2 className="w-8 h-8 animate-spin text-themeText dark:text-white mb-4" />
+                  <span className="text-xs font-semibold text-slate-500 dark:text-foreground/50 uppercase tracking-widest">Loading Task Details...</span>
                 </div>
               ) : phase === "freeform_recording" || phase === "reading_recording" ? (
                 <motion.div 
@@ -794,9 +794,9 @@ function PracticeContent() {
                   />
                 </motion.div>
               ) : (
-                <div className="flex flex-col items-center justify-center p-24 w-full glass-panel rounded-3xl border border-white/5">
-                  <Loader2 className="w-12 h-12 animate-spin text-white mb-6" />
-                  <span className="text-lg font-bold text-white">Analyzing your speeches...</span>
+                <div className="flex flex-col items-center justify-center p-24 w-full glass-panel rounded-3xl dark:border-white/5">
+                  <Loader2 className="w-12 h-12 animate-spin text-themeText dark:text-white mb-6" />
+                  <span className="text-lg font-bold text-themeText dark:text-white">Analyzing your speeches...</span>
                   <span className="text-sm text-foreground/40 mt-2 font-light">This usually takes about 10 seconds.</span>
                 </div>
               )}
@@ -807,15 +807,15 @@ function PracticeContent() {
               <motion.div 
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="lg:col-span-1 glass-panel p-6 rounded-3xl border border-white/10 bg-[#09090d]/90 backdrop-blur-3xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] w-full"
+                className="lg:col-span-1 glass-panel p-6 rounded-3xl dark:border-white/10 dark:bg-[#09090d]/90 dark:shadow-[0_10px_30px_rgba(0,0,0,0.5)] shadow-[0_10px_30px_rgba(0,0,0,0.04)] w-full"
               >
                 <div className="flex items-center justify-between mb-5">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-indigo-400" />
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     Pending Assignments
                   </h3>
                   {pendingAssignments.length > 0 && (
-                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-500/10 text-indigo-650 dark:text-indigo-400 border border-indigo-500/20">
                       {pendingAssignments.length} Left
                     </span>
                   )}
@@ -823,20 +823,20 @@ function PracticeContent() {
 
                 {isLoadingAssignments ? (
                   <div className="flex flex-col items-center justify-center py-12">
-                    <Loader2 className="w-6 h-6 animate-spin text-indigo-400 mb-2" />
-                    <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">Fetching assignments...</span>
+                    <Loader2 className="w-6 h-6 animate-spin text-indigo-600 dark:text-indigo-400 mb-2" />
+                    <span className="text-[10px] font-medium text-slate-500 dark:text-zinc-500 uppercase tracking-widest">Fetching assignments...</span>
                   </div>
                 ) : pendingAssignments.length === 0 ? (
-                  <div className="text-center py-10 px-4 border border-dashed border-white/5 rounded-2xl">
-                    <Sparkles className="w-8 h-8 text-zinc-600 mx-auto mb-3 animate-pulse" />
-                    <h4 className="text-xs font-bold text-white mb-1">All Caught Up!</h4>
-                    <p className="text-[10px] text-zinc-500 font-light leading-relaxed">
+                  <div className="text-center py-10 px-4 border border-dashed border-slate-200 dark:border-white/5 rounded-2xl">
+                    <Sparkles className="w-8 h-8 text-slate-500 dark:text-zinc-600 mx-auto mb-3 animate-pulse" />
+                    <h4 className="text-xs font-bold text-themeText dark:text-white mb-1">All Caught Up!</h4>
+                    <p className="text-[10px] text-slate-500 dark:text-zinc-500 font-light leading-relaxed">
                       No pending mentor assignments in this team. You can continue practicing in sandbox mode.
                     </p>
                     {activeTaskId && (
                       <button
                         onClick={clearAssignment}
-                        className="mt-4 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-[10px] text-white font-medium transition-all"
+                        className="mt-4 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10 dark:text-white text-[10px] font-medium transition-all cursor-pointer"
                       >
                         Enter Sandbox Mode
                       </button>
@@ -848,7 +848,7 @@ function PracticeContent() {
                     {activeTaskId && (
                       <button
                         onClick={clearAssignment}
-                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-semibold text-zinc-400 hover:text-white bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all text-left cursor-pointer"
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-semibold text-slate-555 hover:text-themeText bg-slate-100/50 hover:bg-slate-100 border border-slate-200 dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10 dark:hover:border-white/10 dark:text-zinc-400 dark:hover:text-white transition-all text-left cursor-pointer"
                       >
                         <span>Switch to Sandbox Mode</span>
                         <ChevronRight className="w-3.5 h-3.5" />
@@ -866,26 +866,26 @@ function PracticeContent() {
                             className={`p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer ${
                               isActive
                                 ? "bg-indigo-500/5 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.08)]"
-                                : "bg-white/[0.01] border-white/5 hover:bg-white/[0.04] hover:border-white/10"
+                                : "bg-slate-100/30 border-slate-200/50 hover:bg-slate-100/80 hover:border-slate-300 dark:bg-white/[0.01] dark:border-white/5 dark:hover:bg-white/[0.04] dark:hover:border-white/10"
                             }`}
                           >
                             <div className="flex items-start justify-between gap-2 mb-2">
-                              <span className="text-[10px] font-semibold text-indigo-400 bg-indigo-400/5 px-2 py-0.5 rounded-md border border-indigo-400/10">
+                              <span className="text-[10px] font-semibold text-indigo-650 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-400/10">
                                 {assignment.roomName}
                               </span>
                               <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider ${
-                                assignment.isUrgent ? "text-rose-400 animate-pulse" : "text-zinc-500"
+                                assignment.isUrgent ? "text-rose-550 animate-pulse" : "text-slate-500 dark:text-zinc-500"
                               }`}>
                                 <Clock className="w-3 h-3" />
                                 {assignment.deadlineText}
                               </span>
                             </div>
-                            <h4 className={`text-xs font-bold leading-snug mb-1 truncate ${isActive ? "text-white" : "text-zinc-300"}`}>
+                            <h4 className={`text-xs font-bold leading-snug mb-1 truncate ${isActive ? "text-white dark:text-white" : "text-slate-800 dark:text-zinc-300"}`}>
                               {assignment.topic_of_the_day}
                             </h4>
                             {assignment.word_of_the_day && (
-                              <p className="text-[10px] text-zinc-500 font-light truncate">
-                                Word of the day: <strong className="text-zinc-400">{assignment.word_of_the_day}</strong>
+                              <p className="text-[10px] text-slate-500 dark:text-zinc-500 font-light truncate">
+                                Word of the day: <strong className="text-slate-700 dark:text-zinc-455">{assignment.word_of_the_day}</strong>
                               </p>
                             )}
                           </div>
@@ -919,12 +919,12 @@ function PracticeContent() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: "spring", duration: 0.4 }}
-              className="relative w-full max-w-md glass-panel p-6 rounded-3xl border border-white/10 bg-[#09090d]/95 backdrop-blur-md shadow-[0_20px_50px_rgba(0,0,0,0.5)] text-left overflow-hidden z-55"
+              className="relative w-full max-w-md glass-panel p-6 rounded-3xl dark:border-white/10 dark:bg-[#09090d]/95 dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] shadow-[0_20px_50px_rgba(0,0,0,0.06)] text-left overflow-hidden z-55"
             >
               {/* Top Close Button */}
               <button
                 onClick={() => setShowChallengeModal(false)}
-                className="absolute top-4 right-4 p-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 text-zinc-400 hover:text-white transition-all z-10"
+                className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200/50 text-slate-500 hover:text-slate-800 dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10 dark:text-zinc-400 dark:hover:text-white transition-all z-10 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -932,7 +932,7 @@ function PracticeContent() {
               {/* Header */}
               <div className="flex items-center gap-2 mb-5">
                 <Sparkles className="w-5 h-5 text-orange-400 animate-pulse" />
-                <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-300">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-themeText dark:text-zinc-300">
                   Daily Warm-up Challenge
                 </h3>
               </div>
@@ -941,14 +941,14 @@ function PracticeContent() {
                 <div className="space-y-4">
                   <div className="p-6 text-center border border-emerald-500/20 bg-emerald-500/5 rounded-2xl">
                     <Sparkles className="w-10 h-10 text-emerald-400 mx-auto mb-3 animate-bounce" />
-                    <h4 className="text-base font-extrabold text-white mb-1.5">Streak Safe! 🔥</h4>
-                    <p className="text-xs text-zinc-400 font-light leading-relaxed">
+                    <h4 className="text-base font-extrabold text-themeText dark:text-white mb-1.5">Streak Safe! 🔥</h4>
+                    <p className="text-xs text-slate-650 dark:text-zinc-400 font-light leading-relaxed">
                       You've completed today's warm-up challenge. Keep up the consistency to improve your speaking fluency!
                     </p>
                   </div>
                   <button
                     onClick={() => setShowChallengeModal(false)}
-                    className="w-full py-3 rounded-xl bg-white text-zinc-950 font-bold text-xs transition-all hover:bg-zinc-200"
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white font-bold text-xs transition-all shadow-[0_4px_12px_rgba(2,132,199,0.15)] cursor-pointer"
                   >
                     Awesome, thanks!
                   </button>
@@ -961,13 +961,13 @@ function PracticeContent() {
                         Active Challenge
                       </span>
                     </div>
-                    <h4 className="text-sm font-bold leading-snug text-white mb-2">
+                    <h4 className="text-sm font-bold leading-snug text-themeText dark:text-white mb-2">
                       {selectedChallenge?.prompt}
                     </h4>
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-[11px] mb-4 text-left leading-relaxed">
-                      <span className="font-bold text-indigo-400">Word of the Day:</span>{" "}
-                      <strong className="text-white">{selectedChallenge?.word_of_the_day}</strong>
-                      <p className="text-zinc-400 font-light mt-0.5 text-[10px]">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-[11px] mb-4 text-left leading-relaxed text-slate-700 dark:text-zinc-300">
+                      <span className="font-bold text-indigo-650 dark:text-indigo-400">Word of the Day:</span>{" "}
+                      <strong className="text-slate-800 dark:text-white">{selectedChallenge?.word_of_the_day}</strong>
+                      <p className="text-slate-500 dark:text-zinc-400 font-light mt-0.5 text-[10px]">
                         {selectedChallenge?.definition}
                       </p>
                     </div>
@@ -977,13 +977,13 @@ function PracticeContent() {
                           clearAssignment();
                           setShowChallengeModal(false);
                         }}
-                        className="flex-1 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-xs font-semibold text-rose-400 transition-all"
+                        className="flex-1 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-xs font-semibold text-rose-500 dark:text-rose-455 transition-all cursor-pointer"
                       >
                         Exit Challenge
                       </button>
                       <button
                         onClick={() => setShowChallengeModal(false)}
-                        className="flex-1 py-2.5 rounded-xl bg-white text-zinc-950 font-bold text-xs transition-all hover:bg-zinc-200"
+                        className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 transition-all font-bold text-xs cursor-pointer"
                       >
                         Close View
                       </button>
@@ -992,22 +992,22 @@ function PracticeContent() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 hover:border-white/10 transition-all">
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.01] border border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 transition-all">
                     <div className="flex justify-between items-start gap-2 mb-2.5">
-                      <span className="text-[10px] font-semibold text-zinc-400 bg-white/5 px-2 py-0.5 rounded-md border border-white/10 uppercase">
+                      <span className="text-[10px] font-semibold text-slate-650 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 uppercase dark:text-zinc-400 dark:bg-white/5 dark:border-white/10">
                         Today's Prompt
                       </span>
-                      <span className="text-[10px] font-bold text-zinc-500">
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-zinc-500">
                         {selectedChallenge?.suggestedDuration}s limit
                       </span>
                     </div>
-                    <h4 className="text-sm font-extrabold text-white leading-relaxed mb-3">
+                    <h4 className="text-sm font-extrabold text-themeText dark:text-white leading-relaxed mb-3">
                       {selectedChallenge?.prompt}
                     </h4>
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-[11px] mb-4 text-left leading-relaxed">
-                      <span className="font-bold text-indigo-400">Word of the Day:</span>{" "}
-                      <strong className="text-white">{selectedChallenge?.word_of_the_day}</strong>
-                      <p className="text-zinc-400 font-light mt-0.5 text-[10px]">
+                    <div className="p-3 rounded-xl bg-slate-100/50 border border-slate-200 text-[11px] mb-4 text-left leading-relaxed text-slate-750 dark:bg-white/5 dark:border-white/5 dark:text-zinc-300 dark:border-transparent">
+                      <span className="font-bold text-indigo-650 dark:text-indigo-400">Word of the Day:</span>{" "}
+                      <strong className="text-slate-800 dark:text-white">{selectedChallenge?.word_of_the_day}</strong>
+                      <p className="text-slate-500 dark:text-zinc-400 font-light mt-0.5 text-[10px]">
                         {selectedChallenge?.definition}
                       </p>
                     </div>
@@ -1015,23 +1015,23 @@ function PracticeContent() {
                     <div className="flex gap-3">
                       <button
                         onClick={handleShuffleChallenge}
-                        className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-semibold text-xs text-white flex items-center justify-center gap-1.5"
+                        className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-750 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 dark:text-white transition-all font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         Shuffle
                       </button>
                       <button
                         onClick={startChallenge}
-                        className="flex-1 py-2.5 rounded-xl bg-white text-zinc-950 font-bold text-xs transition-all hover:bg-zinc-200 flex items-center justify-center gap-1"
+                        className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white font-bold text-xs transition-all shadow-[0_4px_12px_rgba(2,132,199,0.15)] flex items-center justify-center gap-1 cursor-pointer"
                       >
                         Start Warm-up
                       </button>
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-2xl border border-dashed border-white/5 text-center">
+                  <div className="p-4 rounded-2xl border border-dashed border-slate-200 dark:border-white/5 text-center">
                     <Sparkles className="w-5 h-5 text-zinc-500 mx-auto mb-2 animate-pulse" />
-                    <h5 className="text-[11px] font-bold text-white mb-1">Consistency pays off!</h5>
-                    <p className="text-[10px] text-zinc-500 font-light leading-relaxed">
+                    <h5 className="text-[11px] font-bold text-themeText dark:text-white mb-1">Consistency pays off!</h5>
+                    <p className="text-[10px] text-slate-500 dark:text-zinc-500 font-light leading-relaxed">
                       Explaining a random topic for 30s daily is a proven way to eliminate pacing issues and filter out filler words.
                     </p>
                   </div>
