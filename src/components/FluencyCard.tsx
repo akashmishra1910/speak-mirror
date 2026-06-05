@@ -302,21 +302,21 @@ export function FluencyCard({ metrics, userName }: FluencyCardProps) {
   };
 
   return (
-    <div className="w-full glass-panel p-6 md:p-8 rounded-3xl border border-white/10 bg-[#09090d]/90 backdrop-blur-3xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] mt-8 text-left">
+    <div className="w-full glass-panel p-6 md:p-8 rounded-3xl dark:border-white/10 dark:bg-[#09090d]/90 dark:shadow-[0_10px_30px_rgba(0,0,0,0.5)] mt-8 text-left">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" />
+          <h3 className="text-xl font-extrabold text-themeText dark:text-white flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
             Fluency Share Card
           </h3>
-          <p className="text-xs text-zinc-400 font-light mt-1">
+          <p className="text-xs text-slate-500 dark:text-zinc-400 font-light mt-1">
             Showcase your technical speaking metrics to your peers and recruiters.
           </p>
         </div>
         <button
           onClick={handleDownload}
           disabled={isGenerating}
-          className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all font-bold text-xs flex items-center gap-2"
+          className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200/60 text-slate-800 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 dark:text-white transition-all font-bold text-xs flex items-center gap-2 cursor-pointer"
         >
           <Download className="w-4 h-4" />
           Save Local PNG
@@ -327,7 +327,7 @@ export function FluencyCard({ metrics, userName }: FluencyCardProps) {
       <canvas ref={canvasRef} className="hidden" />
 
       {/* Image Preview Container */}
-      <div className="relative w-full aspect-[1200/630] rounded-2xl overflow-hidden border border-white/5 bg-zinc-950 flex items-center justify-center">
+      <div className="relative w-full aspect-[1200/630] rounded-2xl overflow-hidden border border-slate-200/60 dark:border-white/5 bg-zinc-950 flex items-center justify-center">
         {isGenerating || !imgUrl ? (
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
@@ -344,14 +344,14 @@ export function FluencyCard({ metrics, userName }: FluencyCardProps) {
       </div>
 
       {/* Share Actions - Premium Quote and Unified Share Button */}
-      <div className="mt-6 flex flex-col md:flex-row items-stretch gap-4 border-t border-white/5 pt-6">
-        <div className="flex-1 flex items-start justify-between gap-3 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
-          <p className="text-xs md:text-sm text-zinc-300 italic leading-relaxed whitespace-pre-wrap">
+      <div className="mt-6 flex flex-col md:flex-row items-stretch gap-4 border-t border-slate-200/60 dark:border-white/5 pt-6">
+        <div className="flex-1 flex items-start justify-between gap-3 bg-slate-100/50 dark:bg-white/[0.02] border border-slate-200/65 dark:border-white/5 p-4 rounded-2xl">
+          <p className="text-xs md:text-sm text-slate-700 dark:text-zinc-300 italic leading-relaxed whitespace-pre-wrap">
             "{shareText}"
           </p>
           <button
             onClick={handleCopyText}
-            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 hover:text-white transition-all shrink-0 border border-white/5 text-zinc-400"
+            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200/60 dark:bg-white/5 dark:hover:bg-white/10 dark:hover:text-white transition-all shrink-0 dark:border-white/5 text-slate-550 dark:text-zinc-400 cursor-pointer"
             title="Copy Share Text"
           >
             {isCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
@@ -361,7 +361,7 @@ export function FluencyCard({ metrics, userName }: FluencyCardProps) {
         <button
           onClick={handleShareCard}
           disabled={isGenerating || isSharing}
-          className="px-6 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-extrabold text-xs md:text-sm transition-all shadow-[0_0_20px_rgba(99,102,241,0.25)] flex items-center justify-center gap-2 md:w-[220px]"
+          className="px-6 py-4 rounded-2xl bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 disabled:opacity-50 text-white font-extrabold text-xs md:text-sm transition-all shadow-[0_4px_15px_rgba(14,165,233,0.15)] hover:shadow-[0_4px_20px_rgba(14,165,233,0.25)] active:scale-98 flex items-center justify-center gap-2 md:w-[220px] cursor-pointer"
         >
           {isSharing ? <Loader2 className="w-4.5 h-4.5 animate-spin" /> : <Share2 className="w-4.5 h-4.5" />}
           Share Card Direct

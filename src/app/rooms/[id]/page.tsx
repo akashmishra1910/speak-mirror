@@ -305,7 +305,7 @@ export default function RoomDetailPage() {
   if (authLoading || loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-white" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#5B7C99] dark:text-white" />
       </div>
     );
   }
@@ -313,13 +313,13 @@ export default function RoomDetailPage() {
   if (!room) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-24 text-center flex flex-col items-center justify-center min-h-[50vh]">
-        <h1 className="text-2xl md:text-3xl font-extrabold mb-4 text-white">Room was deleted by owner or does not exist</h1>
-        <p className="text-zinc-400 mb-8 font-light text-sm max-w-sm leading-relaxed">
+        <h1 className="text-2xl md:text-3xl font-extrabold mb-4 text-slate-800 dark:text-white">Room was deleted by owner or does not exist</h1>
+        <p className="text-slate-650 dark:text-zinc-400 mb-8 font-light text-sm max-w-sm leading-relaxed">
           The collaborative practice room for this team has been permanently deleted by the team creator.
         </p>
         <Link 
           href="/rooms" 
-          className="px-6 py-3 rounded-xl bg-white text-zinc-950 font-bold hover:bg-zinc-200 transition-all text-sm shadow-[0_0_20px_rgba(255,255,255,0.08)] border border-white/10"
+          className="px-6 py-3 rounded-xl bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white shadow-[0_4px_12px_rgba(2,132,199,0.15)] dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 dark:bg-none dark:shadow-none transition-all font-bold text-sm border border-transparent"
         >
           Return to Rooms
         </Link>
@@ -333,7 +333,7 @@ export default function RoomDetailPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <Link href="/rooms" className="inline-flex items-center gap-2 text-sm font-medium text-white/60 hover:text-white mb-8 transition-all">
+      <Link href="/rooms" className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-white/60 dark:hover:text-white mb-8 transition-all">
         <ArrowLeft className="w-4 h-4" />
         Back to Rooms
       </Link>
@@ -341,21 +341,21 @@ export default function RoomDetailPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
         <div>
           <div className="flex items-center gap-3 mb-2 flex-wrap">
-            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.02)]">
-              <Mic className="w-5 h-5 text-zinc-300" />
+            <div className="w-10 h-10 rounded-xl bg-white/40 border border-slate-200/40 dark:bg-white/5 dark:border-white/10 flex items-center justify-center shadow-sm dark:shadow-[0_0_15px_rgba(255,255,255,0.02)]">
+              <Mic className="w-5 h-5 text-[#5B7C99] dark:text-zinc-300" />
             </div>
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="px-3 py-1 bg-white/5 border border-white/5 rounded-lg text-xs font-mono tracking-widest text-zinc-300 truncate max-w-[200px] xs:max-w-none">
+              <span className="px-3 py-1 bg-white/40 border border-slate-200/50 rounded-lg text-xs font-mono tracking-widest text-slate-650 dark:bg-white/5 dark:border-white/5 dark:text-zinc-300 truncate max-w-[200px] xs:max-w-none">
                 TEAM ID: {room.invite_token || "N/A"}
               </span>
               {room.invite_token && (
                 <button
                   onClick={handleCopyTeamId}
-                  className="p-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 text-zinc-300 hover:text-white transition-all cursor-pointer shadow-[0_0_15px_rgba(255,255,255,0.02)] flex items-center justify-center shrink-0"
+                  className="p-1.5 rounded-lg bg-white/40 border border-slate-200/50 hover:bg-slate-100 hover:border-slate-300/50 text-slate-650 dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10 dark:hover:border-white/10 dark:text-zinc-300 dark:hover:text-white transition-all cursor-pointer shadow-sm flex items-center justify-center shrink-0"
                   title="Copy Team ID"
                 >
                   {copiedTeamId ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <Check className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
                   ) : (
                     <Copy className="w-3.5 h-3.5" />
                   )}
@@ -363,13 +363,13 @@ export default function RoomDetailPage() {
               )}
             </div>
           </div>
-          <h1 className="text-3xl md:text-5xl font-extrabold text-white leading-tight break-words">{room.name}</h1>
+          <h1 className="text-3xl md:text-5xl font-extrabold text-slate-800 dark:text-white leading-tight break-words">{room.name}</h1>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
           {user?.id === room.created_by && (
             <button
               onClick={handleDeleteRoom}
-              className="px-6 py-3 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-500 hover:text-red-400 border border-red-500/20 hover:border-red-500/30 transition-all font-semibold text-sm flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(239,68,68,0.05)] cursor-pointer w-full sm:w-auto shrink-0"
+              className="px-6 py-3 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-650 hover:text-red-500 border border-red-500/20 hover:border-red-500/30 transition-all font-semibold text-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer w-full sm:w-auto shrink-0"
             >
               <Trash2 className="w-4 h-4" />
               Delete Room
@@ -377,7 +377,7 @@ export default function RoomDetailPage() {
           )}
           <Link 
             href={activeTask ? `/practice?roomId=${room.id}&taskId=${activeTask.id}` : `/practice?roomId=${room.id}`}
-            className="px-6 py-3 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all font-semibold text-sm flex items-center justify-center gap-2 border border-white/10 shadow-[0_0_25px_rgba(255,255,255,0.08)] w-full sm:w-auto text-center font-bold"
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white shadow-[0_4px_12px_rgba(2,132,199,0.15)] dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 dark:bg-none dark:shadow-none transition-all font-semibold text-sm flex items-center justify-center gap-2 border border-transparent w-full sm:w-auto text-center font-bold"
           >
             <Mic className="w-4 h-4" />
             {activeTask ? "Start Daily Task" : "Practice for Team"}
@@ -386,27 +386,27 @@ export default function RoomDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-        <div className="glass-panel p-6 rounded-3xl flex items-center gap-6 float-slow interactive-card">
-          <div className="text-4xl font-extrabold text-white">{recordings.length}</div>
-          <div className="text-foreground/40 text-xs font-semibold uppercase tracking-wider">Total Submissions</div>
+        <div className="glass-panel p-6 rounded-3xl flex items-center gap-6 float-slow interactive-card border-slate-200/50 bg-white/70 shadow-sm dark:border-white/5 dark:bg-white/[0.01]">
+          <div className="text-4xl font-extrabold text-slate-800 dark:text-white">{recordings.length}</div>
+          <div className="text-slate-500 dark:text-foreground/40 text-xs font-semibold uppercase tracking-wider">Total Submissions</div>
         </div>
-        <div className="glass-panel p-6 rounded-3xl flex items-center gap-6 float-medium interactive-card">
-          <div className="text-4xl font-extrabold text-white">{avgConfidence}%</div>
-          <div className="text-foreground/40 text-xs font-semibold uppercase tracking-wider">Team Avg Confidence</div>
+        <div className="glass-panel p-6 rounded-3xl flex items-center gap-6 float-medium interactive-card border-slate-200/50 bg-white/70 shadow-sm dark:border-white/5 dark:bg-white/[0.01]">
+          <div className="text-4xl font-extrabold text-slate-800 dark:text-white">{avgConfidence}%</div>
+          <div className="text-slate-500 dark:text-foreground/40 text-xs font-semibold uppercase tracking-wider">Team Avg Confidence</div>
         </div>
       </div>
 
       {/* Active Task Section */}
       {activeTask && (
-        <div className="mb-12 glass-panel p-8 rounded-3xl border border-white/10 relative overflow-hidden float-slow interactive-card">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+        <div className="mb-12 glass-panel p-8 rounded-3xl border border-slate-200/50 relative overflow-hidden float-slow interactive-card shadow-sm dark:border-white/10">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#5B7C99]/5 dark:bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
-            <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
-              <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+            <h2 className="text-2xl font-bold flex items-center gap-2 text-slate-800 dark:text-white">
+              <span className="w-2 h-2 rounded-full bg-slate-800 dark:bg-white animate-pulse"></span>
               Today's Task
             </h2>
             <div className="flex flex-wrap items-center gap-3">
-              <div className="text-sm font-semibold text-zinc-300 mr-2">
+              <div className="text-sm font-semibold text-slate-650 dark:text-zinc-300 mr-2">
                 {new Date(activeTask.created_at).toLocaleDateString()}
               </div>
               <a 
@@ -421,7 +421,7 @@ export default function RoomDetailPage() {
               {user?.id === room.created_by && (
                 <button 
                   onClick={() => handleSendEmail(activeTask)}
-                  className="px-3 py-1.5 rounded-lg bg-white/5 text-zinc-300 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all text-xs font-bold flex items-center gap-2 cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg bg-white/40 text-slate-700 border border-slate-200/50 hover:bg-white/60 hover:border-slate-350/50 dark:bg-white/5 dark:text-zinc-300 dark:border-white/5 dark:hover:bg-white/10 dark:hover:border-white/10 transition-all text-xs font-bold flex items-center gap-2 cursor-pointer"
                 >
                   <Mail className="w-4 h-4" />
                   Email Team
@@ -431,42 +431,42 @@ export default function RoomDetailPage() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-white/[0.01] border border-white/5 p-4 rounded-2xl flex flex-col justify-center">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-foreground/40 mb-1">Topic of the Day</div>
-              <div className="font-semibold text-lg mb-4 text-white">{activeTask.topic_of_the_day}</div>
+            <div className="bg-slate-50/50 border border-slate-200/60 dark:bg-white/[0.01] dark:border-white/5 p-4 rounded-2xl flex flex-col justify-center">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-foreground/40 mb-1">Topic of the Day</div>
+              <div className="font-semibold text-lg mb-4 text-slate-800 dark:text-white">{activeTask.topic_of_the_day}</div>
               
               {activeTask.idiom_of_the_day && (
                 <>
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-foreground/40 mb-1">Idiom of the Day</div>
-                  <div className="font-semibold text-white">{activeTask.idiom_of_the_day}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-foreground/40 mb-1">Idiom of the Day</div>
+                  <div className="font-semibold text-slate-800 dark:text-white">{activeTask.idiom_of_the_day}</div>
                 </>
               )}
             </div>
-            <div className="bg-white/[0.01] border border-white/5 p-4 rounded-2xl">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-foreground/40 mb-1">Word of the Day</div>
-              <div className="font-semibold text-lg text-white mb-2">{activeTask.word_of_the_day}</div>
+            <div className="bg-slate-50/50 border border-slate-200/60 dark:bg-white/[0.01] dark:border-white/5 p-4 rounded-2xl">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-foreground/40 mb-1">Word of the Day</div>
+              <div className="font-semibold text-lg text-slate-800 dark:text-white mb-2">{activeTask.word_of_the_day}</div>
               {activeTask.word_meaning && (
-                <div className="text-sm text-foreground/85 mb-2 font-light"><span className="opacity-40">Meaning:</span> {activeTask.word_meaning}</div>
+                <div className="text-sm text-slate-700 dark:text-zinc-350 mb-2 font-light"><span className="opacity-40">Meaning:</span> {activeTask.word_meaning}</div>
               )}
               {activeTask.word_example && (
-                <div className="text-sm text-foreground/85 italic font-light"><span className="opacity-40 not-italic">Example:</span> "{activeTask.word_example}"</div>
+                <div className="text-sm text-slate-700 dark:text-zinc-350 italic font-light"><span className="opacity-40 not-italic">Example:</span> "{activeTask.word_example}"</div>
               )}
             </div>
           </div>
           
-          <div className="bg-white/[0.01] border border-white/5 p-5 rounded-2xl">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-foreground/40 mb-2">Reading Text (Pronunciation & Articulation)</div>
-            <p className="text-foreground/90 leading-relaxed italic border-l border-white/20 pl-4 bg-white/[0.01] rounded-r-xl py-2 font-light text-sm md:text-base">"{activeTask.reading_text}"</p>
+          <div className="bg-slate-50/50 border border-slate-200/60 dark:bg-white/[0.01] dark:border-white/5 p-5 rounded-2xl">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-foreground/40 mb-2">Reading Text (Pronunciation & Articulation)</div>
+            <p className="text-slate-750 dark:text-zinc-300 leading-relaxed italic border-l-2 border-[#5B7C99] pl-4 rounded-r-xl py-2 font-light text-sm md:text-base">"{activeTask.reading_text}"</p>
           </div>
         </div>
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
-        <h2 className="text-2xl font-bold text-white">Shared Team Feed</h2>
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Shared Team Feed</h2>
         {user?.id === room.created_by && (
           <button 
             onClick={() => setIsTaskModalOpen(true)}
-            className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all text-sm font-semibold flex items-center justify-center gap-2 w-full sm:w-auto cursor-pointer"
+            className="px-4 py-2 rounded-lg bg-white/40 border border-slate-200/50 hover:bg-white/75 text-slate-755 transition-all text-sm font-semibold flex items-center justify-center gap-2 w-full sm:w-auto cursor-pointer dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 dark:text-white shadow-sm"
           >
             Assign New Task
           </button>
@@ -475,20 +475,20 @@ export default function RoomDetailPage() {
 
       {user?.id === room.created_by && members.length > 0 && (
         <div className="mb-12">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-white">
-            <Users className="w-5 h-5 text-zinc-400" />
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-slate-800 dark:text-white">
+            <Users className="w-5 h-5 text-[#5B7C99] dark:text-zinc-400" />
             Team Members ({members.length})
           </h2>
-          <div className="glass-panel p-6 rounded-[2rem] border border-white/5 float-medium interactive-card">
+          <div className="glass-panel p-6 rounded-[2rem] border border-slate-200/50 shadow-sm float-medium interactive-card dark:border-white/5 dark:bg-white/[0.01]">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {members.map(member => (
-                <div key={member.user_id} className="flex items-center gap-4 bg-white/[0.01] p-4 rounded-xl border border-white/5">
-                  <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 text-white flex items-center justify-center font-bold">
+                <div key={member.user_id} className="flex items-center gap-4 bg-slate-50/50 p-4 rounded-xl border border-slate-200/50 dark:bg-white/[0.01] dark:border-white/5">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-700 dark:bg-white/5 dark:border-white/10 dark:text-white flex items-center justify-center font-bold">
                     {member.full_name.charAt(0).toUpperCase()}
                   </div>
                   <div className="overflow-hidden">
-                    <div className="font-semibold text-sm truncate text-white">{member.full_name}</div>
-                    <div className="text-xs text-foreground/40 truncate font-light">{member.email}</div>
+                    <div className="font-semibold text-sm truncate text-slate-800 dark:text-white">{member.full_name}</div>
+                    <div className="text-xs text-slate-500 dark:text-zinc-400 truncate font-light">{member.email}</div>
                   </div>
                 </div>
               ))}
@@ -498,9 +498,9 @@ export default function RoomDetailPage() {
       )}
       
       {recordings.length === 0 ? (
-        <div className="glass-panel p-12 rounded-3xl text-center border border-white/5 float-slow">
-          <p className="text-foreground/60 mb-4 font-light">No one has practiced for this team yet.</p>
-          <Link href={`/practice?roomId=${room.id}`} className="text-white hover:underline font-semibold">Be the first to submit a video!</Link>
+        <div className="glass-panel p-12 rounded-3xl text-center border border-slate-200/50 shadow-sm float-slow dark:border-white/5 dark:bg-white/[0.01]">
+          <p className="text-slate-650 dark:text-zinc-400 mb-4 font-light">No one has practiced for this team yet.</p>
+          <Link href={`/practice?roomId=${room.id}`} className="text-[#5B7C99] dark:text-white hover:underline font-semibold">Be the first to submit a video!</Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -509,20 +509,20 @@ export default function RoomDetailPage() {
               key={rec.id} 
               initial={{ opacity: 0, y: 10 }} 
               animate={{ opacity: 1, y: 0 }} 
-              className={`glass-panel p-5 rounded-3xl border border-white/5 flex flex-col h-full ${idx % 3 === 0 ? 'float-slow' : idx % 3 === 1 ? 'float-medium' : 'float-fast'} interactive-card`}
+              className={`glass-panel p-5 rounded-3xl border border-slate-200/50 shadow-sm flex flex-col h-full ${idx % 3 === 0 ? 'float-slow' : idx % 3 === 1 ? 'float-medium' : 'float-fast'} interactive-card dark:border-white/5 dark:bg-white/[0.01]`}
             >
               <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg border ${rec.confidence >= 80 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : rec.confidence >= 70 ? "bg-white/5 text-zinc-300 border-white/10" : "bg-amber-500/10 text-amber-400 border-amber-500/20"}`}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg border ${rec.confidence >= 80 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" : rec.confidence >= 70 ? "bg-slate-100 text-slate-700 border-slate-200 dark:bg-white/5 dark:text-zinc-300 dark:border-white/10" : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"}`}>
                   {rec.confidence}%
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="text-xs text-foreground/40 font-light">
+                  <div className="text-xs text-slate-500 dark:text-zinc-400 font-light">
                     {new Date(rec.created_at).toLocaleDateString()}
                   </div>
                   {user?.id === room.created_by && (
                     <button 
                       onClick={() => handleDeleteSubmission(rec.id)}
-                      className="p-1.5 text-foreground/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                      className="p-1.5 text-slate-450 hover:text-red-500 hover:bg-red-500/10 dark:text-foreground/40 dark:hover:text-red-400 dark:hover:bg-red-400/10 rounded-lg transition-colors cursor-pointer"
                       title="Delete Submission"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -531,18 +531,18 @@ export default function RoomDetailPage() {
                 </div>
               </div>
               
-              <div className="text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wide">
+              <div className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-2 uppercase tracking-wide">
                 {rec.user_name || "Team Member"}
               </div>
               
-              <h3 className="font-bold text-base mb-4 text-white line-clamp-2 flex-1">{rec.topic}</h3>
+              <h3 className="font-bold text-base mb-4 text-slate-800 dark:text-white line-clamp-2 flex-1">{rec.topic}</h3>
               
               {rec.video_url && (
                 <a 
                   href={rec.video_url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="mt-auto w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 text-white transition-all rounded-xl font-semibold text-sm"
+                  className="mt-auto w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 hover:text-slate-800 text-slate-750 border border-slate-200/60 dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10 dark:hover:border-white/10 dark:text-white transition-all rounded-xl font-semibold text-sm shadow-sm"
                 >
                   <Play className="w-4 h-4" />
                   Watch Video
@@ -555,95 +555,95 @@ export default function RoomDetailPage() {
 
       {/* Create Task Modal */}
       {isTaskModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm dark:bg-black/70">
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="glass-panel p-5 sm:p-8 rounded-[1.5rem] sm:rounded-[2rem] w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto relative z-10 border border-white/10 bg-zinc-950/90"
+            className="glass-panel p-5 sm:p-8 rounded-[1.5rem] sm:rounded-[2rem] w-full max-w-lg shadow-lg max-h-[90vh] overflow-y-auto relative z-10 border border-slate-200/50 bg-white dark:border-white/10 dark:bg-zinc-950/90"
           >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
-              <h2 className="text-2xl font-extrabold text-white">Assign Daily Task</h2>
+              <h2 className="text-2xl font-extrabold text-slate-800 dark:text-white">Assign Daily Task</h2>
               <button 
                 type="button"
                 onClick={handleAIGenerate}
                 disabled={isGenerating}
-                className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 text-zinc-300 hover:bg-white/10 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-2 disabled:opacity-50 shadow-[0_0_15px_rgba(255,255,255,0.02)] w-full sm:w-auto cursor-pointer"
+                className="px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-650 hover:bg-slate-200 hover:text-slate-800 dark:bg-white/5 dark:border-white/5 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm w-full sm:w-auto cursor-pointer"
               >
                 {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                 AI Generate Task
               </button>
             </div>
-            <p className="text-foreground/60 mb-6 text-sm font-light">Create a reading task for your team to practice pronunciation.</p>
+            <p className="text-slate-600 dark:text-foreground/60 mb-6 text-sm font-light">Create a reading task for your team to practice pronunciation.</p>
             
             <form onSubmit={handleCreateTask}>
               <div className="space-y-4 mb-6">
                 <div>
-                  <label className="block text-sm font-medium mb-1.5 text-zinc-300">Topic of the Day</label>
+                  <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-zinc-300">Topic of the Day</label>
                   <input 
                     type="text" 
                     required
                     value={newTask.topic}
                     onChange={e => setNewTask({...newTask, topic: e.target.value})}
                     placeholder="e.g. Sales Pitch Opening"
-                    className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 focus:outline-none focus:border-white/20 focus:bg-white/10 transition-all text-white placeholder-zinc-500 font-light text-sm"
+                    className="w-full bg-slate-50 border border-slate-250/50 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5B7C99]/50 focus:ring-1 focus:ring-[#5B7C99]/50 transition-all text-slate-800 placeholder-slate-400 dark:bg-white/5 dark:border-white/5 dark:text-white dark:placeholder-zinc-500 font-light text-sm"
                   />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1.5 text-zinc-300">Word of the Day</label>
+                    <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-zinc-300">Word of the Day</label>
                     <input 
                       type="text" 
                       required
                       value={newTask.word}
                       onChange={e => setNewTask({...newTask, word: e.target.value})}
                       placeholder="e.g. Articulate"
-                      className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 focus:outline-none focus:border-white/20 focus:bg-white/10 transition-all text-white placeholder-zinc-500 font-light text-sm"
+                      className="w-full bg-slate-50 border border-slate-250/50 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5B7C99]/50 focus:ring-1 focus:ring-[#5B7C99]/50 transition-all text-slate-800 placeholder-slate-400 dark:bg-white/5 dark:border-white/5 dark:text-white dark:placeholder-zinc-500 font-light text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1.5 text-zinc-300">Idiom of the Day</label>
+                    <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-zinc-300">Idiom of the Day</label>
                     <input 
                       type="text" 
                       value={newTask.idiom}
                       onChange={e => setNewTask({...newTask, idiom: e.target.value})}
                       placeholder="e.g. Break the ice"
-                      className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 focus:outline-none focus:border-white/20 focus:bg-white/10 transition-all text-white placeholder-zinc-500 font-light text-sm"
+                      className="w-full bg-slate-50 border border-slate-250/50 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5B7C99]/50 focus:ring-1 focus:ring-[#5B7C99]/50 transition-all text-slate-800 placeholder-slate-400 dark:bg-white/5 dark:border-white/5 dark:text-white dark:placeholder-zinc-500 font-light text-sm"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1.5 text-zinc-300">Word Meaning</label>
+                  <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-zinc-300">Word Meaning</label>
                   <input 
                     type="text" 
                     value={newTask.meaning}
                     onChange={e => setNewTask({...newTask, meaning: e.target.value})}
                     placeholder="Dictionary definition..."
-                    className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 focus:outline-none focus:border-white/20 focus:bg-white/10 transition-all text-white placeholder-zinc-500 font-light text-sm"
+                    className="w-full bg-slate-50 border border-slate-250/50 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5B7C99]/50 focus:ring-1 focus:ring-[#5B7C99]/50 transition-all text-slate-800 placeholder-slate-400 dark:bg-white/5 dark:border-white/5 dark:text-white dark:placeholder-zinc-500 font-light text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1.5 text-zinc-300">Example Sentence</label>
+                  <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-zinc-300">Example Sentence</label>
                   <input 
                     type="text" 
                     value={newTask.example}
                     onChange={e => setNewTask({...newTask, example: e.target.value})}
                     placeholder="Example usage..."
-                    className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 focus:outline-none focus:border-white/20 focus:bg-white/10 transition-all text-white placeholder-zinc-500 font-light text-sm"
+                    className="w-full bg-slate-50 border border-slate-250/50 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5B7C99]/50 focus:ring-1 focus:ring-[#5B7C99]/50 transition-all text-slate-800 placeholder-slate-400 dark:bg-white/5 dark:border-white/5 dark:text-white dark:placeholder-zinc-500 font-light text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1.5 text-zinc-300">Reading Text</label>
+                  <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-zinc-300">Reading Text</label>
                   <textarea 
                     required
                     rows={4}
                     value={newTask.text}
                     onChange={e => setNewTask({...newTask, text: e.target.value})}
                     placeholder="Enter the exact script you want them to read. The AI will grade their pronunciation against this text."
-                    className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 focus:outline-none focus:border-white/20 focus:bg-white/10 transition-all text-white placeholder-zinc-500 font-light text-sm resize-none"
+                    className="w-full bg-slate-50 border border-slate-250/50 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5B7C99]/50 focus:ring-1 focus:ring-[#5B7C99]/50 transition-all text-slate-800 placeholder-slate-400 dark:bg-white/5 dark:border-white/5 dark:text-white dark:placeholder-zinc-500 font-light text-sm resize-none"
                   />
                 </div>
               </div>
@@ -652,14 +652,14 @@ export default function RoomDetailPage() {
                 <button 
                   type="button"
                   onClick={() => setIsTaskModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all font-semibold text-sm"
+                  className="px-4 py-2 rounded-xl text-slate-550 hover:text-slate-800 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5 transition-all font-semibold text-sm cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
                   disabled={savingTask}
-                  className="px-5 py-2.5 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all font-semibold text-sm flex items-center gap-2 border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.08)] disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white shadow-[0_4px_12px_rgba(2,132,199,0.15)] dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 dark:bg-none dark:shadow-none transition-all font-semibold text-sm flex items-center gap-2 border border-transparent disabled:opacity-50 cursor-pointer"
                 >
                   {savingTask && <Loader2 className="w-4 h-4 animate-spin" />}
                   Publish Task

@@ -380,8 +380,8 @@ export function Recorder({
     return (
       <div className="glass-panel p-8 rounded-3xl flex flex-col items-center justify-center w-full max-w-sm mx-auto text-center h-[500px] float-slow">
         <Video className="w-12 h-12 text-red-400 mb-4 animate-pulse" />
-        <h2 className="text-xl font-bold mb-2 text-white">Camera Access Required</h2>
-        <p className="text-foreground/60 text-sm">Please allow camera and microphone access to use SpeakMirror.</p>
+        <h2 className="text-xl font-bold mb-2 text-slate-800 dark:text-white">Camera Access Required</h2>
+        <p className="text-slate-600 dark:text-zinc-400 text-sm">Please allow camera and microphone access to use SpeakMirror.</p>
       </div>
     );
   }
@@ -522,7 +522,7 @@ export function Recorder({
           {mode === "reading" ? (
             <button 
               onClick={() => setIsAssistEnabled(!isAssistEnabled)}
-              className={`pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md transition-all border ${isAssistEnabled ? 'bg-white text-zinc-950 border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.15)] font-semibold' : 'bg-black/50 border-white/10 text-white/70 hover:bg-black/80 hover:text-white'}`}
+              className={`pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md transition-all border ${isAssistEnabled ? 'bg-white text-zinc-950 border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.15)] font-semibold cursor-pointer' : 'bg-black/50 border-white/10 text-white/70 hover:bg-black/80 hover:text-white cursor-pointer'}`}
             >
               <HelpCircle className="w-4 h-4" />
               <span className="text-[10px] font-bold uppercase tracking-wider">Teleprompter</span>
@@ -530,7 +530,7 @@ export function Recorder({
           ) : (
             <button 
               onClick={() => setIsAssistEnabled(!isAssistEnabled)}
-              className={`pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md transition-all border ${isAssistEnabled ? 'bg-white text-zinc-950 border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.15)] font-semibold' : 'bg-black/50 border-white/10 text-white/70 hover:bg-black/80 hover:text-white'}`}
+              className={`pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md transition-all border ${isAssistEnabled ? 'bg-white text-zinc-950 border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.15)] font-semibold cursor-pointer' : 'bg-black/50 border-white/10 text-white/70 hover:bg-black/80 hover:text-white cursor-pointer'}`}
             >
               <HelpCircle className="w-4 h-4" />
               <span className="text-[10px] font-bold uppercase tracking-wider">Assist</span>
@@ -603,14 +603,14 @@ export function Recorder({
             isRecording ? (
               <button
                 onClick={stopRecording}
-                className="w-16 h-16 md:w-20 md:h-20 bg-red-600/90 hover:bg-red-500 backdrop-blur-md text-white rounded-full flex items-center justify-center transition-all shadow-[0_0_30px_0_rgba(239,68,68,0.3)] hover:shadow-[0_0_40px_0_rgba(239,68,68,0.5)] border border-red-400/30 scale-100 hover:scale-105 active:scale-95"
+                className="w-16 h-16 md:w-20 md:h-20 bg-red-600/90 hover:bg-red-500 backdrop-blur-md text-white rounded-full flex items-center justify-center transition-all shadow-[0_0_30px_0_rgba(239,68,68,0.3)] hover:shadow-[0_0_40px_0_rgba(239,68,68,0.5)] border border-red-400/30 scale-100 hover:scale-105 active:scale-95 cursor-pointer"
               >
                 <Square className="w-6 h-6 md:w-8 md:h-8 fill-current" />
               </button>
             ) : (
               <button
                 onClick={startRecording}
-                className="w-16 h-16 md:w-20 md:h-20 bg-white hover:bg-zinc-200 backdrop-blur-md text-zinc-950 rounded-full flex items-center justify-center transition-all shadow-[0_0_30px_0_rgba(255,255,255,0.15)] hover:shadow-[0_0_40px_0_rgba(255,255,255,0.25)] border border-white/20 scale-100 hover:scale-105 active:scale-95"
+                className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white rounded-full flex items-center justify-center transition-all shadow-[0_4px_20px_rgba(2,132,199,0.3)] hover:shadow-[0_4px_30px_rgba(2,132,199,0.5)] border border-white/20 scale-100 hover:scale-105 active:scale-95 cursor-pointer"
               >
                 <Mic className="w-6 h-6 md:w-8 md:h-8" />
               </button>
@@ -623,7 +623,7 @@ export function Recorder({
       <div className="w-full md:w-64 shrink-0 flex flex-col gap-4 mt-2 md:mt-0 float-medium interactive-card">
         {/* Beautify Filters (Available to all users) */}
         <div className="glass-panel p-5 md:p-6 rounded-3xl bg-white/[0.01] border-white/5 text-left">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
             Beautify Filters
           </span>
           <div className="mt-3 flex flex-col gap-2">
@@ -635,15 +635,15 @@ export function Recorder({
                 localStorage.setItem("speak_mirror_beautify_filter", val);
               }}
               disabled={isRecording}
-              className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 text-xs text-white font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+              className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200/60 hover:border-slate-300 text-xs text-slate-700 dark:bg-white/5 dark:border-white/10 dark:hover:border-white/20 dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-[#5B7C99] cursor-pointer"
             >
-              <option value="none" className="bg-[#09090d]">Original</option>
-              <option value="studio" className="bg-[#09090d]">Studio Glow ✨</option>
-              <option value="warm" className="bg-[#09090d]">Warm Golden ☀️</option>
-              <option value="cool" className="bg-[#09090d]">Nordic Cool ❄️</option>
-              <option value="smooth" className="bg-[#09090d]">Soft Focus 🌸</option>
+              <option value="none" className="bg-white text-slate-800 dark:bg-[#09090d] dark:text-white">Original</option>
+              <option value="studio" className="bg-white text-slate-800 dark:bg-[#09090d] dark:text-white">Studio Glow ✨</option>
+              <option value="warm" className="bg-white text-slate-800 dark:bg-[#09090d] dark:text-white">Warm Golden ☀️</option>
+              <option value="cool" className="bg-white text-slate-800 dark:bg-[#09090d] dark:text-white">Nordic Cool ❄️</option>
+              <option value="smooth" className="bg-white text-slate-800 dark:bg-[#09090d] dark:text-white">Soft Focus 🌸</option>
             </select>
-            <span className="text-[9px] text-zinc-500 font-light leading-snug">
+            <span className="text-[9px] text-slate-500 dark:text-zinc-400 font-light leading-snug">
               Enhance video lighting and clarity. Applies instantly to your practice and shareable playback.
             </span>
           </div>
@@ -652,13 +652,13 @@ export function Recorder({
         {/* Alert Settings (Only visible when logged in) */}
         {userId && (
           <div className="glass-panel p-5 md:p-6 rounded-3xl bg-white/[0.01] border-white/5 text-left">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
               Alert Settings
             </span>
             <div className="mt-3 flex flex-col gap-2">
-              <div className="flex justify-between text-xs text-zinc-300 font-medium">
+              <div className="flex justify-between text-xs text-slate-700 dark:text-zinc-300 font-medium">
                 <span>Bell Alarm:</span>
-                <span className="text-indigo-400 font-bold">{bellTiming}s</span>
+                <span className="text-[#5B7C99] dark:text-indigo-400 font-bold">{bellTiming}s</span>
               </div>
               <input 
                 type="range" 
@@ -671,9 +671,9 @@ export function Recorder({
                   localStorage.setItem("speak_mirror_bell_timing", val.toString());
                 }}
                 disabled={isRecording}
-                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500 mt-1"
+                className="w-full h-1 bg-slate-200 dark:bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#5B7C99] dark:accent-indigo-500 mt-1"
               />
-              <span className="text-[9px] text-zinc-500 font-light leading-snug">
+              <span className="text-[9px] text-slate-500 dark:text-zinc-400 font-light leading-snug">
                 Plays a chime and prompts you to conclude your speech at {bellTiming} seconds ({timeLimit - bellTiming}s remaining).
               </span>
             </div>
@@ -681,35 +681,35 @@ export function Recorder({
         )}
         <div className="glass-panel p-5 md:p-6 rounded-3xl">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
               {mode === "reading" ? "Reading Practice" : (mode === "warmup" ? "Daily Warm-up" : "Your Topic")}
             </span>
             {mode === "freeform" && !taskTopic && (
               <button 
                 onClick={() => fetchDynamicTopic(false)}
                 disabled={isRecording || isLoadingTopic}
-                className="p-1.5 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white transition-colors rounded-full text-foreground/70 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1.5 bg-slate-100 border border-slate-200 hover:bg-slate-200 hover:text-slate-800 text-slate-500 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 dark:hover:text-white dark:text-zinc-400 transition-colors rounded-full disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 title="Shuffle Topic"
               >
                 <Shuffle className={`w-3.5 h-3.5 ${isLoadingTopic ? 'animate-spin' : ''}`} />
               </button>
             )}
           </div>
-          <p className="font-semibold text-sm md:text-base leading-relaxed text-white">
+          <p className="font-semibold text-sm md:text-base leading-relaxed text-slate-800 dark:text-white">
             {topic}
           </p>
         </div>
 
         {mode === "warmup" && wordOfTheDay && (
-          <div className="glass-panel p-5 md:p-6 rounded-3xl bg-indigo-500/[0.02] border-indigo-500/10">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
+          <div className="glass-panel p-5 md:p-6 rounded-3xl bg-indigo-500/[0.02] border-[#5B7C99]/15 dark:border-indigo-500/10">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#5B7C99] dark:text-indigo-400">
               Vocabulary Word
             </span>
-            <p className="font-extrabold text-lg text-white mt-1.5 leading-tight">
+            <p className="font-extrabold text-lg text-slate-800 dark:text-white mt-1.5 leading-tight">
               {wordOfTheDay}
             </p>
             {wordDefinition && (
-              <p className="text-[11px] text-zinc-400 font-light mt-1.5 leading-relaxed">
+              <p className="text-[11px] text-slate-500 dark:text-zinc-400 font-light mt-1.5 leading-relaxed">
                 {wordDefinition}
               </p>
             )}
@@ -718,11 +718,11 @@ export function Recorder({
 
         {mode === "warmup" && tips && tips.length > 0 ? (
           <div className="glass-panel p-5 md:p-6 rounded-3xl bg-white/[0.01] border-white/5 hidden md:block">
-            <h3 className="text-xs font-bold mb-2 flex items-center gap-2 text-white">
-              <Lightbulb className="w-4 h-4 text-zinc-300 animate-pulse" />
+            <h3 className="text-xs font-bold mb-2 flex items-center gap-2 text-slate-800 dark:text-white">
+              <Lightbulb className="w-4 h-4 text-slate-500 dark:text-zinc-300 animate-pulse" />
               Warm-up Tips
             </h3>
-            <ul className="space-y-2 text-xs text-foreground/60 leading-relaxed font-light list-disc list-inside">
+            <ul className="space-y-2 text-xs text-slate-600 dark:text-zinc-400 leading-relaxed font-light list-disc list-inside">
               {tips.map((tip, i) => (
                 <li key={i}>{tip}</li>
               ))}
@@ -730,11 +730,11 @@ export function Recorder({
           </div>
         ) : (
           <div className="glass-panel p-5 md:p-6 rounded-3xl bg-white/[0.01] border-white/5 hidden md:block">
-            <h3 className="text-xs font-bold mb-2 flex items-center gap-2 text-white">
-              <Lightbulb className="w-4 h-4 text-zinc-300 animate-pulse" />
+            <h3 className="text-xs font-bold mb-2 flex items-center gap-2 text-slate-800 dark:text-white">
+              <Lightbulb className="w-4 h-4 text-slate-500 dark:text-zinc-300 animate-pulse" />
               Pro Tip
             </h3>
-            <p className="text-xs text-foreground/60 leading-relaxed font-light">
+            <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed font-light">
               {mode === "reading" 
                 ? "Use the Teleprompter button on the camera view to reveal the exact text you need to read aloud. The AI will grade your pronunciation!"
                 : "Use the Assist button on the camera view to reveal the 4W+1H guiding framework if you get stuck!"}
@@ -743,5 +743,6 @@ export function Recorder({
         )}
       </div>
     </div>
+
   );
 }

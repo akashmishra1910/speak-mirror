@@ -373,7 +373,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
       <motion.div variants={itemVariants} className="w-full lg:w-1/3 flex flex-col gap-4 float-slow interactive-card">
         {videoUrl ? (
           <>
-            <div className="glass-panel rounded-3xl overflow-hidden aspect-[9/16] max-h-[calc(100vh-120px)] shadow-2xl border border-zinc-800/80 relative bg-black group">
+            <div className="glass-panel rounded-3xl overflow-hidden aspect-[9/16] max-h-[calc(100vh-120px)] shadow-2xl border border-slate-200/50 dark:border-zinc-800/80 relative bg-black group">
               <video 
                 ref={videoRef}
                 src={videoUrl} 
@@ -390,15 +390,15 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
               <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${isPlaying ? 'opacity-0 group-hover:opacity-100' : 'opacity-100 bg-black/20'}`}>
                 <button 
                   onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-                  className="w-16 h-16 md:w-20 md:h-20 bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md rounded-full flex items-center justify-center pointer-events-auto transition-all text-white shadow-xl"
+                  className="w-16 h-16 md:w-20 md:h-20 bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md rounded-full flex items-center justify-center pointer-events-auto transition-all text-white shadow-xl cursor-pointer"
                 >
                   {isPlaying ? <Pause className="w-8 h-8 md:w-10 md:h-10 fill-current" /> : <Play className="w-8 h-8 md:w-10 md:h-10 fill-current ml-2" />}
                 </button>
               </div>
             </div>
             {/* Filter Selector in Feedback Dashboard */}
-            <div className="glass-panel px-4 py-3 rounded-2xl border border-zinc-800/80 bg-[#09090d]/60 flex items-center justify-between text-left font-mono">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-500">// active_filter</span>
+            <div className="glass-panel px-4 py-3 rounded-2xl border border-slate-200/50 bg-white/70 dark:border-zinc-800/80 dark:bg-[#09090d]/60 flex items-center justify-between text-left font-mono">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">// active_filter</span>
               <select
                 value={activeFilter}
                 onChange={(e) => {
@@ -406,19 +406,19 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
                   setActiveFilter(val);
                   localStorage.setItem("speak_mirror_beautify_filter", val);
                 }}
-                className="p-1.5 px-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-[10px] text-zinc-300 font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                className="p-1.5 px-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-300 font-semibold focus:outline-none focus:ring-1 focus:ring-[#5B7C99] cursor-pointer text-[10px]"
               >
-                <option value="none" className="bg-[#09090d]">Original</option>
-                <option value="studio" className="bg-[#09090d]">Studio Glow ✨</option>
-                <option value="warm" className="bg-[#09090d]">Warm Golden ☀️</option>
-                <option value="cool" className="bg-[#09090d]">Nordic Cool ❄️</option>
-                <option value="smooth" className="bg-[#09090d]">Soft Focus 🌸</option>
+                <option value="none" className="bg-white text-slate-800 dark:bg-[#09090d] dark:text-white">Original</option>
+                <option value="studio" className="bg-white text-slate-800 dark:bg-[#09090d] dark:text-white">Studio Glow ✨</option>
+                <option value="warm" className="bg-white text-slate-800 dark:bg-[#09090d] dark:text-white">Warm Golden ☀️</option>
+                <option value="cool" className="bg-white text-slate-800 dark:bg-[#09090d] dark:text-white">Nordic Cool ❄️</option>
+                <option value="smooth" className="bg-white text-slate-800 dark:bg-[#09090d] dark:text-white">Soft Focus 🌸</option>
               </select>
             </div>
           </>
         ) : (
-          <div className="glass-panel rounded-3xl aspect-[9/16] max-h-[60vh] border border-zinc-800/80 flex items-center justify-center bg-white/[0.01]">
-            <p className="text-foreground/40 text-sm font-mono">[ NO_VIDEO_RECORDED ]</p>
+          <div className="glass-panel rounded-3xl aspect-[9/16] max-h-[60vh] border border-slate-200/50 dark:border-zinc-800/80 flex items-center justify-center bg-white/[0.01]">
+            <p className="text-slate-400 dark:text-foreground/40 text-sm font-mono">[ NO_VIDEO_RECORDED ]</p>
           </div>
         )}
         
@@ -428,10 +428,10 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
             <button 
               onClick={onSave}
               disabled={isSaving || isSaved || !videoUrl}
-              className={`flex items-center justify-center gap-2 px-3 py-2.5 transition-all rounded-xl font-bold text-xs border ${
+              className={`flex items-center justify-center gap-2 px-3 py-2.5 transition-all rounded-xl font-bold text-xs border cursor-pointer ${
                 isSaved 
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_4px_12px_rgba(16,185,129,0.05)]' 
-                  : 'bg-white text-zinc-950 hover:bg-zinc-200 border-white/10 disabled:opacity-50'
+                  ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400 shadow-[0_4px_12px_rgba(16,185,129,0.05)]' 
+                  : 'bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white shadow-[0_4px_12px_rgba(2,132,199,0.15)] dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 dark:bg-none dark:shadow-none border-transparent disabled:opacity-50'
               }`}
             >
               {isSaving ? (
@@ -448,7 +448,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
             <button 
               onClick={onRetake}
               disabled={isSaving || isSaved}
-              className="flex items-center justify-center gap-2 px-3 py-2.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 hover:border-rose-500/30 transition-all rounded-xl font-bold text-xs disabled:opacity-50 shadow-[0_4px_12px_rgba(244,63,94,0.05)]"
+              className="flex items-center justify-center gap-2 px-3 py-2.5 bg-rose-500/10 text-rose-600 border border-rose-500/20 hover:bg-rose-500/25 hover:border-rose-500/40 dark:text-rose-400 dark:border-rose-500/20 dark:hover:bg-rose-500/20 transition-all rounded-xl font-bold text-xs disabled:opacity-50 shadow-[0_4px_12px_rgba(244,63,94,0.05)] cursor-pointer"
             >
               RETAKE_TEST
             </button>
@@ -456,7 +456,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
           <button 
             onClick={handleDownload}
             disabled={!videoUrl}
-            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white/[0.03] border border-white/10 hover:bg-white/[0.08] hover:border-white/20 transition-all rounded-xl font-bold text-white disabled:opacity-50 text-xs cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.3)] backdrop-blur-md"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 hover:border-slate-300 dark:bg-white/[0.03] dark:border-white/10 dark:hover:bg-white/[0.08] dark:hover:border-white/20 dark:text-white transition-all rounded-xl font-bold disabled:opacity-50 text-xs cursor-pointer shadow-sm dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] backdrop-blur-md border"
           >
             <Download className="w-3.5 h-3.5" />
             EXPORT_MP4
@@ -464,7 +464,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
           <button 
             onClick={handleExportPDF}
             disabled={isExportingPDF}
-            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white/[0.03] border border-white/10 hover:bg-white/[0.08] hover:border-white/20 transition-all rounded-xl font-bold text-white disabled:opacity-50 text-xs cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.3)] backdrop-blur-md"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 hover:border-slate-300 dark:bg-white/[0.03] dark:border-white/10 dark:hover:bg-white/[0.08] dark:hover:border-white/20 dark:text-white transition-all rounded-xl font-bold disabled:opacity-50 text-xs cursor-pointer shadow-sm dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] backdrop-blur-md border"
           >
             {isExportingPDF ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -475,7 +475,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
           </button>
           <button 
             onClick={handleShare}
-            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white/[0.03] border border-white/10 hover:bg-white/[0.08] hover:border-white/20 transition-all rounded-xl font-bold text-white text-xs cursor-pointer col-span-2 shadow-[0_4px_12px_rgba(0,0,0,0.3)] backdrop-blur-md"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 hover:border-slate-300 dark:bg-white/[0.03] dark:border-white/10 dark:hover:bg-white/[0.08] dark:hover:border-white/20 dark:text-white transition-all rounded-xl font-bold text-xs cursor-pointer col-span-2 shadow-sm dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] backdrop-blur-md border"
           >
             <Share2 className="w-3.5 h-3.5" />
             {isCopied ? "COPIED" : "SHARE_INDEX"}
@@ -487,62 +487,62 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
       <div className="w-full lg:w-2/3 flex flex-col gap-6">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {/* Confidence */}
-          <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-slow interactive-card relative overflow-hidden font-mono border-zinc-800/80 bg-[#09090d]/60 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-            <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_confidence</span>
-            <div className="text-2xl font-black text-white mt-1">{metrics.confidence}%</div>
-            <div className="w-full bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-zinc-800">
-              <div className={`h-full rounded-full ${metrics.confidence >= 80 ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.confidence >= 60 ? 'bg-amber-400' : 'bg-rose-400'}`} style={{ width: `${metrics.confidence}%` }} />
+          <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-slow interactive-card relative overflow-hidden font-mono border-slate-200/50 bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-800/80 dark:bg-[#09090d]/60 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+            <span className="text-slate-500 dark:text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_confidence</span>
+            <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">{metrics.confidence}%</div>
+            <div className="w-full bg-slate-200 dark:bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-slate-300/30 dark:border-zinc-800">
+              <div className={`h-full rounded-full ${metrics.confidence >= 80 ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.confidence >= 60 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-rose-500 dark:bg-rose-400'}`} style={{ width: `${metrics.confidence}%` }} />
             </div>
-            <span className="text-[8px] text-zinc-500 mt-2 font-bold">
+            <span className="text-[8px] text-slate-500 dark:text-zinc-500 mt-2 font-bold">
               DIAGNOSTIC: {metrics.confidence >= 80 ? 'SECURE' : metrics.confidence >= 60 ? 'STABLE' : 'LOW_INDEX'}
             </span>
           </motion.div>
 
           {/* Clarity */}
-          <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-medium interactive-card relative overflow-hidden font-mono border-zinc-800/80 bg-[#09090d]/60 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-            <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_clarity</span>
-            <div className="text-2xl font-black text-white mt-1">{metrics.clarity}%</div>
-            <div className="w-full bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-zinc-800">
-              <div className={`h-full rounded-full ${metrics.clarity >= 80 ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.clarity >= 60 ? 'bg-amber-400' : 'bg-rose-400'}`} style={{ width: `${metrics.clarity}%` }} />
+          <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-medium interactive-card relative overflow-hidden font-mono border-slate-200/50 bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-800/80 dark:bg-[#09090d]/60 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+            <span className="text-slate-500 dark:text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_clarity</span>
+            <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">{metrics.clarity}%</div>
+            <div className="w-full bg-slate-200 dark:bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-slate-300/30 dark:border-zinc-800">
+              <div className={`h-full rounded-full ${metrics.clarity >= 80 ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.clarity >= 60 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-rose-500 dark:bg-rose-400'}`} style={{ width: `${metrics.clarity}%` }} />
             </div>
-            <span className="text-[8px] text-zinc-500 mt-2 font-bold">
+            <span className="text-[8px] text-slate-500 dark:text-zinc-500 mt-2 font-bold">
               EVALUATION: {metrics.clarity >= 80 ? 'OPTIMAL' : metrics.clarity >= 60 ? 'STABLE' : 'DEVIATED'}
             </span>
           </motion.div>
 
           {/* Filler Words */}
-          <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-fast interactive-card relative overflow-hidden font-mono border-zinc-800/80 bg-[#09090d]/60 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-            <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// counter_fillers</span>
-            <div className="text-2xl font-black text-white mt-1">{metrics.fillerWords}</div>
-            <div className="w-full bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-zinc-800">
-              <div className={`h-full rounded-full ${metrics.fillerWords <= 2 ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.fillerWords <= 5 ? 'bg-amber-400' : 'bg-rose-400'}`} style={{ width: `${Math.max(0, 100 - (metrics.fillerWords * 10))}%` }} />
+          <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-fast interactive-card relative overflow-hidden font-mono border-slate-200/50 bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-800/80 dark:bg-[#09090d]/60 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+            <span className="text-slate-500 dark:text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// counter_fillers</span>
+            <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">{metrics.fillerWords}</div>
+            <div className="w-full bg-slate-200 dark:bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-slate-300/30 dark:border-zinc-800">
+              <div className={`h-full rounded-full ${metrics.fillerWords <= 2 ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.fillerWords <= 5 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-rose-500 dark:bg-rose-400'}`} style={{ width: `${Math.max(0, 100 - (metrics.fillerWords * 10))}%` }} />
             </div>
-            <span className="text-[8px] text-zinc-500 mt-2 font-bold">
+            <span className="text-[8px] text-slate-500 dark:text-zinc-500 mt-2 font-bold">
               DIAGNOSTIC: {metrics.fillerWords <= 2 ? 'CLEAN' : metrics.fillerWords <= 5 ? 'MODERATE' : 'HIGH_FREQUENCY'}
             </span>
           </motion.div>
 
           {/* Pace */}
-          <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-slow interactive-card relative overflow-hidden font-mono border-zinc-800/80 bg-[#09090d]/60 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-            <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// rate_wpm</span>
-            <div className="text-2xl font-black text-white mt-1">{metrics.wpm} <span className="text-[10px] text-zinc-500">WPM</span></div>
-            <div className="w-full bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-zinc-800">
+          <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-slow interactive-card relative overflow-hidden font-mono border-slate-200/50 bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-800/80 dark:bg-[#09090d]/60 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+            <span className="text-slate-500 dark:text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// rate_wpm</span>
+            <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">{metrics.wpm} <span className="text-[10px] text-slate-500 dark:text-zinc-500">WPM</span></div>
+            <div className="w-full bg-slate-200 dark:bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-slate-300/30 dark:border-zinc-800">
               <div className="h-full rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" style={{ width: `${Math.min(100, (metrics.wpm / 200) * 100)}%` }} />
             </div>
-            <span className="text-[8px] text-zinc-500 mt-2 font-bold">
+            <span className="text-[8px] text-slate-500 dark:text-zinc-500 mt-2 font-bold">
               DIAGNOSTIC: {metrics.wpm >= 110 && metrics.wpm <= 170 ? 'BALANCED' : metrics.wpm > 170 ? 'COMPRESSED' : 'LACONIC'}
             </span>
           </motion.div>
 
           {/* Eye Contact (Conditional) */}
           {metrics.eyeContact !== undefined && metrics.eyeContact !== null && (
-            <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-slow interactive-card relative overflow-hidden font-mono border-zinc-800/80 bg-[#09090d]/60 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-              <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_gaze</span>
-              <div className="text-2xl font-black text-white mt-1">{metrics.eyeContact}%</div>
-              <div className="w-full bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-zinc-800">
-                <div className={`h-full rounded-full ${metrics.eyeContact >= 80 ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.eyeContact >= 60 ? 'bg-amber-400' : 'bg-rose-400'}`} style={{ width: `${metrics.eyeContact}%` }} />
+            <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-slow interactive-card relative overflow-hidden font-mono border-slate-200/50 bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-800/80 dark:bg-[#09090d]/60 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+              <span className="text-slate-500 dark:text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_gaze</span>
+              <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">{metrics.eyeContact}%</div>
+              <div className="w-full bg-slate-200 dark:bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-slate-300/30 dark:border-zinc-800">
+                <div className={`h-full rounded-full ${metrics.eyeContact >= 80 ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.eyeContact >= 60 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-rose-500 dark:bg-rose-400'}`} style={{ width: `${metrics.eyeContact}%` }} />
               </div>
-              <span className="text-[8px] text-zinc-500 mt-2 font-bold">
+              <span className="text-[8px] text-slate-500 dark:text-zinc-500 mt-2 font-bold">
                 DIAGNOSTIC: {metrics.eyeContact >= 80 ? 'OPTIMAL' : metrics.eyeContact >= 60 ? 'DEVIATING' : 'LOW_CONTACT'}
               </span>
             </motion.div>
@@ -550,13 +550,13 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
 
           {/* Expression / Engagement (Conditional) */}
           {metrics.expressionScore !== undefined && metrics.expressionScore !== null && (
-            <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-medium interactive-card relative overflow-hidden font-mono border-zinc-800/80 bg-[#09090d]/60 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-              <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_expression</span>
-              <div className="text-2xl font-black text-white mt-1">{metrics.expressionScore}%</div>
-              <div className="w-full bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-zinc-800">
-                <div className={`h-full rounded-full ${metrics.expressionScore >= 75 ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.expressionScore >= 40 ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-amber-400'}`} style={{ width: `${metrics.expressionScore}%` }} />
+            <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-medium interactive-card relative overflow-hidden font-mono border-slate-200/50 bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-800/80 dark:bg-[#09090d]/60 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+              <span className="text-slate-500 dark:text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_expression</span>
+              <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">{metrics.expressionScore}%</div>
+              <div className="w-full bg-slate-200 dark:bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-slate-300/30 dark:border-zinc-800">
+                <div className={`h-full rounded-full ${metrics.expressionScore >= 75 ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.expressionScore >= 40 ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-amber-500 dark:bg-amber-400'}`} style={{ width: `${metrics.expressionScore}%` }} />
               </div>
-              <span className="text-[8px] text-zinc-500 mt-2 font-bold">
+              <span className="text-[8px] text-slate-500 dark:text-zinc-500 mt-2 font-bold">
                 DIAGNOSTIC: {metrics.expressionScore >= 75 ? 'EXPRESSIVE' : metrics.expressionScore >= 40 ? 'BALANCED' : 'NEUTRAL'}
               </span>
             </motion.div>
@@ -564,22 +564,22 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
         </div>
 
         {/* AI Insights Panel */}
-        <motion.div variants={itemVariants} className="glass-panel p-6 md:p-8 rounded-3xl flex-1 float-slow interactive-card border-zinc-800/80 bg-[#09090d]/60 font-mono shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
-          <h3 className="text-sm font-bold mb-5 flex items-center gap-2 text-white uppercase tracking-wider">
-            <Activity className="w-4 h-4 text-indigo-400" />
+        <motion.div variants={itemVariants} className="glass-panel p-6 md:p-8 rounded-3xl flex-1 float-slow interactive-card border-slate-200/50 bg-white/70 font-mono shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-800/80 dark:bg-[#09090d]/60 dark:shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
+          <h3 className="text-sm font-bold mb-5 flex items-center gap-2 text-slate-800 dark:text-white uppercase tracking-wider">
+            <Activity className="w-4 h-4 text-[#5B7C99] dark:text-indigo-400" />
             [ DIAGNOSTIC_ANALYSIS ]
           </h3>
           <ul className="space-y-4">
             {metrics.suggestions && metrics.suggestions.length > 0 ? (
               metrics.suggestions.map((suggestion, i) => (
-                <li key={i} className="flex items-start gap-3.5 text-zinc-300 text-xs md:text-sm leading-relaxed font-light">
-                  <span className="mt-0.5 shrink-0 select-none font-bold text-indigo-500">{`0${i+1} //`}</span>
+                <li key={i} className="flex items-start gap-3.5 text-slate-600 dark:text-zinc-300 text-xs md:text-sm leading-relaxed font-light">
+                  <span className="mt-0.5 shrink-0 select-none font-bold text-[#5B7C99] dark:text-indigo-500">{`0${i+1} //`}</span>
                   <span>{suggestion.text}</span>
                 </li>
               ))
             ) : (
-              <li className="flex items-start gap-3.5 text-zinc-500 text-xs md:text-sm leading-relaxed">
-                <span className="mt-0.5 shrink-0 select-none font-bold text-indigo-500">-- //</span>
+              <li className="flex items-start gap-3.5 text-slate-500 dark:text-zinc-500 text-xs md:text-sm leading-relaxed">
+                <span className="mt-0.5 shrink-0 select-none font-bold text-[#5B7C99] dark:text-indigo-500">-- //</span>
                 <span>Consistent daily practice is required to gather trend data. Continue recording to unlock advanced coaching telemetry.</span>
               </li>
             )}
@@ -588,18 +588,18 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
         
         {/* Transcript Section */}
         {metrics.transcript && (
-          <motion.div variants={itemVariants} className="glass-panel p-6 md:p-8 rounded-3xl float-medium interactive-card border-zinc-800/80 bg-[#09090d]/60 font-mono shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
-            <h3 className="text-sm font-bold mb-4 text-white uppercase tracking-wider flex items-center justify-between">
+          <motion.div variants={itemVariants} className="glass-panel p-6 md:p-8 rounded-3xl float-medium interactive-card border-slate-200/50 bg-white/70 font-mono shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-800/80 dark:bg-[#09090d]/60 dark:shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
+            <h3 className="text-sm font-bold mb-4 text-slate-800 dark:text-white uppercase tracking-wider flex items-center justify-between">
               <span>[ TRANSCRIPT_DUMP ]</span>
-              <span className="text-[9px] text-zinc-600 font-normal">CHAR_COUNT: {metrics.transcript.length}</span>
+              <span className="text-[9px] text-slate-500 dark:text-zinc-600 font-normal">CHAR_COUNT: {metrics.transcript.length}</span>
             </h3>
-            <div className="relative bg-[#050508] border border-zinc-900 rounded-2xl p-4 md:p-5 overflow-hidden">
-              <div className="absolute left-4 top-4 md:top-5 text-[10px] text-zinc-700 select-none flex flex-col gap-1 text-right font-semibold">
+            <div className="relative bg-slate-50 border border-slate-200 dark:bg-black/40 dark:border-zinc-900 rounded-2xl p-4 md:p-5 overflow-hidden">
+              <div className="absolute left-4 top-4 md:top-5 text-[10px] text-slate-400 dark:text-zinc-700 select-none flex flex-col gap-1 text-right font-semibold">
                 <span>01</span>
                 {metrics.transcript.length > 80 && <span>02</span>}
                 {metrics.transcript.length > 160 && <span>03</span>}
               </div>
-              <p className="text-zinc-300 leading-relaxed font-light text-xs md:text-sm pl-8">
+              <p className="text-slate-650 dark:text-zinc-350 leading-relaxed font-light text-xs md:text-sm pl-8">
                 {metrics.transcript}
               </p>
             </div>

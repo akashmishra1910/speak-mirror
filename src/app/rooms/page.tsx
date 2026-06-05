@@ -122,8 +122,8 @@ export default function RoomsPage() {
   if (isLoading || fetchingRooms) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-white" />
-        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">Loading Room...</span>
+        <Loader2 className="w-8 h-8 animate-spin text-[#5B7C99] dark:text-white" />
+        <span className="text-xs font-semibold text-slate-500 dark:text-zinc-500 uppercase tracking-widest">Loading Room...</span>
       </div>
     );
   }
@@ -131,22 +131,22 @@ export default function RoomsPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative flex flex-col items-center justify-center min-h-[70vh]">
       <div className="text-center mb-12">
-        <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 text-zinc-300 text-xs md:text-sm font-medium border border-white/5 mb-4 shadow-[0_0_15px_rgba(255,255,255,0.02)]">
-          <Sparkles className="w-4 h-4 text-zinc-400 animate-pulse" />
+        <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/45 text-slate-700 text-xs md:text-sm font-medium border border-slate-200/50 mb-4 shadow-sm dark:bg-white/5 dark:text-zinc-300 dark:border-white/5 dark:shadow-[0_0_15px_rgba(255,255,255,0.02)]">
+          <Sparkles className="w-4 h-4 text-[#5B7C99] dark:text-zinc-400 animate-pulse" />
           {activeWorkspace?.name || "Team Workspace"}
         </span>
-        <h1 className="text-4xl md:text-5xl font-extrabold mb-4 text-white">Team Practice Room</h1>
-        <p className="text-foreground/60 max-w-xl mx-auto font-light leading-relaxed text-sm md:text-base">
+        <h1 className="text-4xl md:text-5xl font-extrabold mb-4 text-slate-800 dark:text-white">Team Practice Room</h1>
+        <p className="text-slate-650 dark:text-foreground/60 max-w-xl mx-auto font-light leading-relaxed text-sm md:text-base">
           Collaborate with peers, practice together, and view each other's progress in private spaces.
         </p>
       </div>
 
-      <div className="w-full max-w-lg glass-panel p-12 rounded-[2rem] text-center flex flex-col items-center border border-white/5 float-slow bg-white/[0.01]">
-        <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-full flex items-center justify-center mb-6 shadow-[0_0_15px_rgba(255,255,255,0.02)]">
-          <Users className="w-10 h-10 text-zinc-300" />
+      <div className="w-full max-w-lg glass-panel p-12 rounded-[2rem] text-center flex flex-col items-center border border-slate-200/50 float-slow shadow-sm dark:border-white/5 dark:bg-white/[0.01]">
+        <div className="w-20 h-20 bg-white/40 border border-slate-200/40 dark:bg-white/5 dark:border-white/10 rounded-full flex items-center justify-center mb-6 shadow-sm dark:shadow-[0_0_15px_rgba(255,255,255,0.02)]">
+          <Users className="w-10 h-10 text-[#5B7C99] dark:text-zinc-300" />
         </div>
-        <h2 className="text-2xl font-extrabold mb-3 text-white">No Room Setup</h2>
-        <p className="text-zinc-400 mb-8 max-w-sm font-light text-sm leading-relaxed">
+        <h2 className="text-2xl font-extrabold mb-3 text-slate-800 dark:text-white">No Room Setup</h2>
+        <p className="text-slate-600 dark:text-zinc-400 mb-8 max-w-sm font-light text-sm leading-relaxed">
           {isAuthorizedToCreate
             ? "Your team workspace doesn't have a practice room yet. Initialize the room to get started."
             : "Your team owner or mentor hasn't created a practice room yet. Please contact them to initialize the space."
@@ -159,7 +159,7 @@ export default function RoomsPage() {
               setNewRoomName(`${activeWorkspace?.name || "Team"} Practice Room`);
               setIsCreateModalOpen(true);
             }}
-            className="px-6 py-3 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all font-bold text-sm flex items-center gap-2 border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.08)] cursor-pointer"
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white shadow-[0_4px_12px_rgba(2,132,199,0.15)] dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 dark:bg-none dark:shadow-none transition-all font-bold text-sm flex items-center gap-2 border border-transparent cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             Create Team Room
@@ -170,40 +170,40 @@ export default function RoomsPage() {
       {/* Create Room Modal */}
       <AnimatePresence>
         {isCreateModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm dark:bg-black/70">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-panel p-8 rounded-[2rem] w-full max-w-md shadow-2xl relative z-10 border border-white/10 bg-[#09090d]/90 backdrop-blur-3xl"
+              className="glass-panel p-8 rounded-[2rem] w-full max-w-md shadow-lg relative z-10 border border-slate-200/50 bg-white dark:border-white/10 dark:bg-[#09090d]/90 dark:backdrop-blur-3xl"
             >
-              <h2 className="text-2xl font-extrabold mb-2 text-white">Create a Room</h2>
-              <p className="text-zinc-400 mb-6 text-sm font-light leading-relaxed">
-                Setting up the practice space for <strong>{activeWorkspace?.name}</strong>.
+              <h2 className="text-2xl font-extrabold mb-2 text-slate-800 dark:text-white">Create a Room</h2>
+              <p className="text-slate-650 dark:text-zinc-400 mb-6 text-sm font-light leading-relaxed">
+                Setting up the practice space for <strong className="text-slate-800 dark:text-white">{activeWorkspace?.name}</strong>.
               </p>
               
               <form onSubmit={handleCreateRoom}>
-                <label className="block text-xs font-semibold mb-2 text-zinc-500 uppercase tracking-wider">Room Name</label>
+                <label className="block text-xs font-semibold mb-2 text-slate-500 dark:text-zinc-500 uppercase tracking-wider">Room Name</label>
                 <input 
                   type="text" 
                   required
                   value={newRoomName}
                   onChange={e => setNewRoomName(e.target.value)}
                   placeholder="e.g. Sales Pitch Practice"
-                  className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 mb-6 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-white placeholder-zinc-600 font-light text-sm"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mb-6 focus:outline-none focus:border-[#5B7C99]/50 focus:ring-1 focus:ring-[#5B7C99]/50 transition-all text-slate-850 placeholder-slate-400 dark:bg-white/[0.02] dark:border-white/10 dark:text-white dark:placeholder-zinc-600 dark:focus:border-indigo-500 dark:focus:ring-1 dark:focus:ring-indigo-500 font-light text-sm"
                 />
                 <div className="flex items-center justify-end gap-3">
                   <button 
                     type="button"
                     onClick={() => setIsCreateModalOpen(false)}
-                    className="px-4 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all font-semibold text-xs cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5 transition-all font-semibold text-xs cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit"
                     disabled={actionLoading}
-                    className="px-5 py-2.5 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 transition-all font-bold text-xs flex items-center gap-2 border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.08)] disabled:opacity-50 cursor-pointer"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white shadow-[0_4px_12px_rgba(2,132,199,0.15)] dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 dark:bg-none dark:shadow-none transition-all font-bold text-xs flex items-center gap-2 border border-transparent disabled:opacity-50 cursor-pointer"
                   >
                     {actionLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                     <span>Create Room</span>
