@@ -495,9 +495,9 @@ export default function AdminDashboard() {
   // Authenticating Loader
   if (authLoading || !user || user.user_metadata?.role !== "admin") {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center">
-        <Activity className="w-8 h-8 animate-spin text-foreground/40 mb-3" />
-        <span className="text-sm uppercase tracking-widest text-foreground/50">Verifying Admin Access...</span>
+      <div className="min-h-screen bg-gradient-to-br from-[#E0F2FE] via-[#FAF8F5] to-[#E0F2FE] dark:from-gray-950 dark:via-slate-900 dark:to-gray-950 flex flex-col items-center justify-center">
+        <Activity className="w-8 h-8 animate-spin text-[#5B7C99] dark:text-foreground/40 mb-3" />
+        <span className="text-sm font-semibold uppercase tracking-widest text-slate-600 dark:text-foreground/50">Verifying Admin Access...</span>
       </div>
     );
   }
@@ -509,23 +509,23 @@ export default function AdminDashboard() {
     : 78;
 
   return (
-    <div className="min-h-screen bg-black text-foreground pb-24">
+    <div className="min-h-screen bg-gradient-to-br from-[#E0F2FE] via-[#FAF8F5] to-[#E0F2FE] dark:from-gray-950 dark:via-slate-900 dark:to-gray-950 text-slate-800 dark:text-foreground pb-24 transition-colors duration-300">
       
       {/* -------------------- TOP BAR HEADER -------------------- */}
-      <div className="border-b border-surface-border bg-surface/20 backdrop-blur-md sticky top-0 z-50">
+      <div className="border-b border-slate-200/80 bg-white/60 dark:border-surface-border dark:bg-surface/20 backdrop-blur-md sticky top-0 z-50 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-zinc-900 border border-surface-border rounded-xl text-white">
+            <div className="p-2 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-surface-border rounded-xl text-[#5B7C99] dark:text-white">
               <Shield className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl font-bold flex items-center gap-2 text-white">
+              <h1 className="text-xl font-bold flex items-center gap-2 text-slate-800 dark:text-white">
                 Control Tower
-                <span className="text-xs bg-zinc-800 text-zinc-300 border border-zinc-700 px-2 py-0.5 rounded font-mono font-normal">
+                <span className="text-xs bg-slate-200 text-slate-700 border border-slate-300 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700 px-2 py-0.5 rounded font-mono font-normal">
                   B2C Launch
                 </span>
               </h1>
-              <p className="text-xs text-foreground/50 mt-0.5">AI Cost Control & storage health manager</p>
+              <p className="text-xs text-slate-500 dark:text-foreground/50 mt-0.5">AI Cost Control & storage health manager</p>
             </div>
           </div>
 
@@ -533,45 +533,65 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-2">
             <button
               onClick={fetchAllData}
-              className="p-2 bg-surface hover:bg-zinc-800 border border-surface-border rounded-xl transition-all text-foreground/80 hover:text-white"
+              className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-surface dark:hover:bg-zinc-800 border border-slate-200 dark:border-surface-border rounded-xl transition-all text-slate-700 hover:text-black dark:text-foreground/80 dark:hover:text-white cursor-pointer"
               title="Refresh Telemetry Data"
             >
               <RefreshCw className="w-4 h-4" />
             </button>
-            <div className="flex bg-surface rounded-xl p-1 border border-surface-border">
+            <div className="flex bg-slate-100/80 dark:bg-surface rounded-xl p-1 border border-slate-200/80 dark:border-surface-border">
               <button 
                 onClick={() => setActiveTab("overview")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === "overview" ? "bg-white text-black shadow-lg font-bold" : "text-foreground/70 hover:text-white"}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === "overview" 
+                    ? "bg-[#5B7C99] text-white shadow-md dark:bg-white dark:text-black font-bold" 
+                    : "text-slate-600 hover:text-[#5B7C99] dark:text-foreground/70 dark:hover:text-white"
+                }`}
               >
                 Overview
               </button>
               <button 
                 onClick={() => setActiveTab("users")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === "users" ? "bg-white text-black shadow-lg font-bold" : "text-foreground/70 hover:text-white"}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === "users" 
+                    ? "bg-[#5B7C99] text-white shadow-md dark:bg-white dark:text-black font-bold" 
+                    : "text-slate-600 hover:text-[#5B7C99] dark:text-foreground/70 dark:hover:text-white"
+                }`}
               >
                 Users
               </button>
               <button 
                 onClick={() => setActiveTab("topics")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === "topics" ? "bg-white text-black shadow-lg font-bold" : "text-foreground/70 hover:text-white"}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === "topics" 
+                    ? "bg-[#5B7C99] text-white shadow-md dark:bg-white dark:text-black font-bold" 
+                    : "text-slate-600 hover:text-[#5B7C99] dark:text-foreground/70 dark:hover:text-white"
+                }`}
               >
                 Topics
               </button>
               <button 
                 onClick={() => setActiveTab("feedback")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === "feedback" ? "bg-white text-black shadow-lg font-bold" : "text-foreground/70 hover:text-white"}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === "feedback" 
+                    ? "bg-[#5B7C99] text-white shadow-md dark:bg-white dark:text-black font-bold" 
+                    : "text-slate-600 hover:text-[#5B7C99] dark:text-foreground/70 dark:hover:text-white"
+                }`}
               >
                 Feedbacks
               </button>
               <button 
                 onClick={() => setActiveTab("support")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all relative ${activeTab === "support" ? "bg-white text-black shadow-lg font-bold" : "text-foreground/70 hover:text-white"}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all relative cursor-pointer ${
+                  activeTab === "support" 
+                    ? "bg-[#5B7C99] text-white shadow-md dark:bg-white dark:text-black font-bold" 
+                    : "text-slate-600 hover:text-[#5B7C99] dark:text-foreground/70 dark:hover:text-white"
+                }`}
               >
                 Support
                 {tickets.filter(t => t.status !== "resolved").length > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-50"></span>
                   </span>
                 )}
               </button>
@@ -594,67 +614,67 @@ export default function AdminDashboard() {
             >
               {/* Cost & Infrastructure Health Monitor */}
               <div>
-                <h2 className="text-base font-bold mb-4 flex items-center gap-2 text-white">
-                  <Database className="w-5 h-5 text-zinc-400" />
+                <h2 className="text-base font-bold mb-4 flex items-center gap-2 text-slate-800 dark:text-white">
+                  <Database className="w-5 h-5 text-[#5B7C99] dark:text-zinc-400" />
                   Infrastructure & Cost Monitoring
                 </h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Card 1: AI API Usage */}
-                  <div className="glass-panel p-6 rounded-2xl border border-surface-border bg-surface/10 hover:border-zinc-800 transition-colors">
+                  <div className="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-surface-border bg-white/60 dark:bg-surface/10 hover:border-slate-300 dark:hover:border-zinc-800 transition-colors">
                     <div className="flex justify-between items-start mb-4">
-                      <span className="text-xs font-bold uppercase tracking-wider text-foreground/50">Groq AI Analytics</span>
-                      <div className="p-2 bg-zinc-900 border border-surface-border text-zinc-400 rounded-lg">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-foreground/50">Groq AI Analytics</span>
+                      <div className="p-2 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-surface-border text-[#5B7C99] dark:text-zinc-400 rounded-lg">
                         <Activity className="w-4 h-4" />
                       </div>
                     </div>
-                    <h3 className="text-3xl font-extrabold tracking-tight text-white">
+                    <h3 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white">
                       {loadingStats ? "..." : (stats?.totalAnalyzeCalls ?? mockStats.totalAnalyzeCalls)}
-                      <span className="text-xs text-foreground/40 font-normal ml-1.5 uppercase">API Calls</span>
+                      <span className="text-xs text-slate-500 dark:text-foreground/40 font-normal ml-1.5 uppercase">API Calls</span>
                     </h3>
-                    <p className="text-xs text-foreground/60 mt-2">
+                    <p className="text-xs text-slate-650 dark:text-foreground/60 mt-2">
                       Telemetry logs tracking `/api/analyze` Whisper and Llama processing.
                     </p>
                   </div>
 
                   {/* Card 2: Storage Health */}
-                  <div className="glass-panel p-6 rounded-2xl border border-surface-border bg-surface/10 hover:border-zinc-800 transition-colors">
+                  <div className="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-surface-border bg-white/60 dark:bg-surface/10 hover:border-slate-300 dark:hover:border-zinc-800 transition-colors">
                     <div className="flex justify-between items-start mb-4">
-                      <span className="text-xs font-bold uppercase tracking-wider text-foreground/50">Storage Health</span>
-                      <div className="p-2 bg-zinc-900 border border-surface-border text-zinc-400 rounded-lg">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-foreground/50">Storage Health</span>
+                      <div className="p-2 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-surface-border text-[#5B7C99] dark:text-zinc-400 rounded-lg">
                         <HardDrive className="w-4 h-4" />
                       </div>
                     </div>
-                    <h3 className="text-3xl font-extrabold tracking-tight text-white">
+                    <h3 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white">
                       {loadingStats ? "..." : formatBytes(stats?.storageBytes ?? mockStats.storageBytes)}
                     </h3>
-                    <p className="text-xs text-foreground/60 mt-2">
+                    <p className="text-xs text-slate-650 dark:text-foreground/60 mt-2">
                       Total disk space consumed in the Supabase S3 `videos` recording bucket.
                     </p>
                   </div>
 
                   {/* Card 3: Storage Janitor Tool */}
-                  <div className="glass-panel p-6 rounded-2xl border border-surface-border bg-surface/10 hover:border-zinc-800 transition-colors">
+                  <div className="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-surface-border bg-white/60 dark:bg-surface/10 hover:border-slate-300 dark:hover:border-zinc-800 transition-colors">
                     <div className="flex justify-between items-start mb-2">
-                      <span className="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
+                      <span className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
                         <Trash2 className="w-4 h-4" />
                         Storage Janitor
                       </span>
                     </div>
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs text-foreground/60">Purge binaries older than</span>
+                      <span className="text-xs text-slate-650 dark:text-foreground/60">Purge binaries older than</span>
                       <input 
                         type="number" 
                         value={cleanupDays} 
                         onChange={(e) => setCleanupDays(parseInt(e.target.value) || 30)}
-                        className="bg-black border border-surface-border rounded-lg text-center px-2 py-1 text-xs w-14 text-white font-mono"
+                        className="bg-slate-105 dark:bg-black border border-slate-200 dark:border-surface-border rounded-lg text-center px-2 py-1 text-xs w-14 text-slate-800 dark:text-white font-mono focus:outline-none"
                       />
-                      <span className="text-xs text-foreground/60">days</span>
+                      <span className="text-xs text-slate-650 dark:text-foreground/60">days</span>
                     </div>
                     <button 
                       onClick={handleStorageCleanup}
                       disabled={isCleaning}
-                      className="mt-4 w-full py-2 bg-rose-950/20 hover:bg-rose-500 border border-rose-500/30 hover:border-rose-400 text-rose-400 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      className="mt-4 w-full py-2 bg-rose-50 hover:bg-rose-500 border border-rose-200 hover:border-rose-400 text-rose-600 hover:text-white dark:bg-rose-950/20 dark:hover:bg-rose-500 dark:border-rose-500/30 dark:hover:border-rose-400 dark:text-rose-400 dark:hover:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
                     >
                       {isCleaning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                       {isCleaning ? "Executing Purge..." : "Execute Purge Job"}
@@ -664,69 +684,69 @@ export default function AdminDashboard() {
 
                 {/* Storage Janitor Status Log */}
                 {cleanupResult && (
-                  <div className="mt-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 text-xs flex justify-between items-center">
+                  <div className="mt-4 p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-750 dark:border-emerald-500/20 dark:bg-emerald-500/5 dark:text-emerald-400 text-xs flex justify-between items-center">
                     <span className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
                       {cleanupResult.error ? (
-                        <span className="text-rose-400">Purge Failed: {cleanupResult.error}</span>
+                        <span className="text-rose-600 dark:text-rose-400">Purge Failed: {cleanupResult.error}</span>
                       ) : (
                         <span>Cleaned up {cleanupResult.recordingsCleaned} recordings. Deleted {cleanupResult.filesDeleted} S3 file binaries.</span>
                       )}
                     </span>
-                    <button onClick={() => setCleanupResult(null)} className="font-extrabold hover:text-white text-xs px-2">Dismiss</button>
+                    <button onClick={() => setCleanupResult(null)} className="font-extrabold hover:text-[#5B7C99] dark:hover:text-white text-xs px-2 cursor-pointer">Dismiss</button>
                   </div>
                 )}
               </div>
 
               {/* Growth & Retention Monitor */}
               <div>
-                <h2 className="text-base font-bold mb-4 flex items-center gap-2 text-white">
-                  <TrendingUp className="w-5 h-5 text-zinc-400" />
+                <h2 className="text-base font-bold mb-4 flex items-center gap-2 text-slate-800 dark:text-white">
+                  <TrendingUp className="w-5 h-5 text-[#5B7C99] dark:text-zinc-400" />
                   Growth & Habitual Analytics
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   {/* Metric 1: Power Users Streak */}
-                  <div className="glass-panel p-5 rounded-2xl border border-surface-border bg-surface/10 hover:border-zinc-800 transition-colors">
-                    <span className="text-xs font-bold uppercase tracking-wider text-foreground/50">Habitual Users</span>
-                    <h3 className="text-3xl font-extrabold tracking-tight text-white mt-2">
+                  <div className="glass-panel p-5 rounded-2xl border border-slate-200/80 dark:border-surface-border bg-white/60 dark:bg-surface/10 hover:border-slate-300 dark:hover:border-zinc-800 transition-colors">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-foreground/50">Habitual Users</span>
+                    <h3 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white mt-2">
                       {loadingStats ? "..." : (stats?.activeStreakUsersCount ?? mockStats.activeStreakUsersCount)}
-                      <span className="text-xs text-foreground/40 font-normal ml-1 uppercase">Streak</span>
+                      <span className="text-xs text-slate-500 dark:text-foreground/40 font-normal ml-1 uppercase">Streak</span>
                     </h3>
-                    <p className="text-xs text-foreground/60 mt-2">
+                    <p className="text-xs text-slate-600 dark:text-foreground/60 mt-2">
                       Number of B2C speakers maintaining a 3+ day practice streak.
                     </p>
                   </div>
 
                   {/* Metric 2: Completion Rate */}
-                  <div className="glass-panel p-5 rounded-2xl border border-surface-border bg-surface/10 hover:border-zinc-800 transition-colors">
-                    <span className="text-xs font-bold uppercase tracking-wider text-foreground/50">Completion Rate</span>
-                    <h3 className="text-3xl font-extrabold tracking-tight text-white mt-2">
+                  <div className="glass-panel p-5 rounded-2xl border border-slate-200/80 dark:border-surface-border bg-white/60 dark:bg-surface/10 hover:border-slate-300 dark:hover:border-zinc-800 transition-colors">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-foreground/50">Completion Rate</span>
+                    <h3 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white mt-2">
                       {loadingStats ? "..." : `${stats?.sessionCompletionRate ?? mockStats.sessionCompletionRate}%`}
                     </h3>
-                    <p className="text-xs text-foreground/60 mt-2">
+                    <p className="text-xs text-slate-600 dark:text-foreground/60 mt-2">
                       Percent of speeches successfully completed vs abandoned.
                     </p>
                   </div>
 
                   {/* Metric 3: Engagement Stickiness Index */}
-                  <div className="glass-panel p-5 rounded-2xl border border-surface-border bg-surface/10 hover:border-zinc-800 transition-colors">
-                    <span className="text-xs font-bold uppercase tracking-wider text-foreground/50">Stickiness Index</span>
-                    <h3 className="text-3xl font-extrabold tracking-tight text-white mt-2">
+                  <div className="glass-panel p-5 rounded-2xl border border-slate-200/80 dark:border-surface-border bg-white/60 dark:bg-surface/10 hover:border-slate-300 dark:hover:border-zinc-800 transition-colors">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-foreground/50">Stickiness Index</span>
+                    <h3 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white mt-2">
                       {loadingStats ? "..." : `${stats?.dauMauRatio ?? mockStats.dauMauRatio}%`}
                     </h3>
-                    <p className="text-xs text-foreground/60 mt-2">
+                    <p className="text-xs text-slate-600 dark:text-foreground/60 mt-2">
                       DAU/MAU engagement ratio ({loadingStats ? "..." : (stats?.dau ?? mockStats.dau)} Active Users today).
                     </p>
                   </div>
 
                   {/* Metric 4: Avg Fluency */}
-                  <div className="glass-panel p-5 rounded-2xl border border-surface-border bg-surface/10 hover:border-zinc-800 transition-colors">
-                    <span className="text-xs font-bold uppercase tracking-wider text-foreground/50">Avg Fluency</span>
-                    <h3 className="text-3xl font-extrabold tracking-tight text-white mt-2">
-                      {averageFluency} <span className="text-xs text-foreground/40 font-normal uppercase">/ 100</span>
+                  <div className="glass-panel p-5 rounded-2xl border border-slate-200/80 dark:border-surface-border bg-white/60 dark:bg-surface/10 hover:border-slate-300 dark:hover:border-zinc-800 transition-colors">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-foreground/50">Avg Fluency</span>
+                    <h3 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white mt-2">
+                      {averageFluency} <span className="text-xs text-slate-500 dark:text-foreground/40 font-normal uppercase">/ 100</span>
                     </h3>
-                    <p className="text-xs text-foreground/60 mt-2">
+                    <p className="text-xs text-slate-600 dark:text-foreground/60 mt-2">
                       Average user practice score aggregated across recording diagnostics.
                     </p>
                   </div>
@@ -735,15 +755,15 @@ export default function AdminDashboard() {
 
               {/* Database View Warning Banner */}
               {!loadingStats && stats?.databaseViewStatus !== "active" && (
-                <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-50/5 text-rose-400 text-xs flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/50 dark:border-rose-500/20 dark:bg-rose-50/5 text-rose-600 dark:text-rose-400 text-xs flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-rose-500" />
                   <div>
                     <h4 className="font-bold text-sm">Supabase Database View Offline</h4>
-                    <p className="mt-1 leading-relaxed text-foreground/80 text-xs">
+                    <p className="mt-1 leading-relaxed text-slate-700 dark:text-foreground/80 text-xs">
                       The view `admin_stats` was not detected. Local metrics are calculated using client estimations.
                       Execute the database migration file to activate optimized telemetry logging:
                     </p>
-                    <code className="block mt-2 bg-black/60 p-2.5 rounded-lg border border-surface-border text-foreground/80 font-mono text-[11px] break-all select-all">
+                    <code className="block mt-2 bg-slate-100 dark:bg-black/60 p-2.5 rounded-lg border border-slate-200 dark:border-surface-border text-slate-800 dark:text-foreground/80 font-mono text-[11px] break-all select-all">
                       supabase/migrations/20260603000000_admin_features.sql
                     </code>
                   </div>
@@ -763,38 +783,38 @@ export default function AdminDashboard() {
             >
               {/* Abuse Monitor */}
               <div>
-                <h2 className="text-base font-bold mb-4 flex items-center gap-2 text-rose-400">
+                <h2 className="text-base font-bold mb-4 flex items-center gap-2 text-rose-650 dark:text-rose-400">
                   <AlertTriangle className="w-5 h-5 text-rose-500" />
                   Abuse Monitor (High API Consumables)
                 </h2>
                 
                 {loadingUsers ? (
-                  <div className="glass-panel p-6 rounded-2xl animate-pulse h-48 border border-surface-border" />
+                  <div className="glass-panel p-6 rounded-2xl animate-pulse h-48 border border-slate-200/80 dark:border-surface-border" />
                 ) : (
-                  <div className="glass-panel rounded-2xl border border-surface-border overflow-hidden bg-surface/10">
+                  <div className="glass-panel rounded-2xl border border-slate-200/80 dark:border-surface-border overflow-hidden bg-white/60 dark:bg-surface/10">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="border-b border-surface-border bg-surface/35 text-xs font-bold uppercase tracking-wider text-foreground/50">
+                          <tr className="border-b border-slate-200 dark:border-surface-border bg-slate-100/50 dark:bg-surface/35 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-foreground/50">
                             <th className="p-4">User Details</th>
                             <th className="p-4">Email Address</th>
                             <th className="p-4 text-center">Recordings Count</th>
                             <th className="p-4">Status / Action</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-surface-border/50 text-sm">
+                        <tbody className="divide-y divide-slate-100 dark:divide-surface-border/50 text-sm">
                           {usersData?.abuseList?.map((u: AdminUser) => (
-                            <tr key={u.id} className="hover:bg-surface/5 transition-colors">
-                              <td className="p-4 font-semibold text-white">{u.name}</td>
-                              <td className="p-4 font-mono text-foreground/70">{u.email}</td>
-                              <td className="p-4 text-center font-bold text-white">{u.recordings_count}</td>
+                            <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-surface/5 transition-colors">
+                              <td className="p-4 font-semibold text-slate-800 dark:text-white">{u.name}</td>
+                              <td className="p-4 font-mono text-slate-650 dark:text-foreground/70">{u.email}</td>
+                              <td className="p-4 text-center font-bold text-slate-800 dark:text-white">{u.recordings_count}</td>
                               <td className="p-4">
                                 {u.recordings_count > 50 ? (
-                                  <span className="px-2.5 py-0.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-lg text-xs font-bold">
+                                  <span className="px-2.5 py-0.5 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-bold">
                                     ABUSE RISK
                                   </span>
                                 ) : (
-                                  <span className="px-2.5 py-0.5 bg-zinc-800 border border-zinc-700 text-zinc-400 rounded-lg text-xs">
+                                  <span className="px-2.5 py-0.5 bg-slate-100 dark:bg-zinc-805 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 rounded-lg text-xs">
                                     NORMAL
                                   </span>
                                 )}
@@ -811,8 +831,8 @@ export default function AdminDashboard() {
               {/* User Search Table */}
               <div>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                  <h2 className="text-base font-bold flex items-center gap-2 text-white">
-                    <Users className="w-5 h-5 text-zinc-400" />
+                  <h2 className="text-base font-bold flex items-center gap-2 text-slate-800 dark:text-white">
+                    <Users className="w-5 h-5 text-[#5B7C99] dark:text-zinc-400" />
                     B2C User Registry
                   </h2>
                   <div className="relative w-full sm:w-72">
@@ -821,45 +841,45 @@ export default function AdminDashboard() {
                       placeholder="Search users by name or email..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full bg-surface border border-surface-border rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder:text-foreground/30 focus:outline-none focus:border-white transition-colors"
+                      className="w-full bg-white/80 dark:bg-surface border border-slate-200 dark:border-surface-border rounded-xl pl-9 pr-4 py-2 text-xs text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-foreground/30 focus:outline-none focus:border-slate-400 dark:focus:border-white transition-colors"
                     />
-                    <Search className="w-4 h-4 text-foreground/30 absolute left-3 top-3" />
+                    <Search className="w-4 h-4 text-slate-400 dark:text-foreground/30 absolute left-3 top-3" />
                   </div>
                 </div>
 
                 {loadingUsers ? (
-                  <div className="glass-panel p-6 rounded-2xl animate-pulse h-64 border border-surface-border" />
+                  <div className="glass-panel p-6 rounded-2xl animate-pulse h-64 border border-slate-200/80 dark:border-surface-border" />
                 ) : (
-                  <div className="glass-panel rounded-2xl border border-surface-border overflow-hidden bg-surface/10">
+                  <div className="glass-panel rounded-2xl border border-slate-200/80 dark:border-surface-border overflow-hidden bg-white/60 dark:bg-surface/10">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="border-b border-surface-border bg-surface/35 text-xs font-bold uppercase tracking-wider text-foreground/50">
+                          <tr className="border-b border-slate-200 dark:border-surface-border bg-slate-100/50 dark:bg-surface/35 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-foreground/50">
                             <th className="p-4">Speaker</th>
                             <th className="p-4">Email</th>
                             <th className="p-4">Created Date</th>
                             <th className="p-4 text-center">Practice Videos</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-surface-border/50 text-sm">
+                        <tbody className="divide-y divide-slate-100 dark:divide-surface-border/50 text-sm">
                           {filteredUsers.map((u: AdminUser) => (
-                            <tr key={u.id} className="hover:bg-surface/5 transition-colors">
+                            <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-surface/5 transition-colors">
                               <td className="p-4">
                                 <div className="flex items-center gap-2.5">
-                                  <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 text-white flex items-center justify-center font-bold text-xs">
+                                  <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 text-slate-800 dark:text-white flex items-center justify-center font-bold text-xs">
                                     {u.name[0]?.toUpperCase()}
                                   </div>
-                                  <span className="font-semibold text-white">{u.name}</span>
+                                  <span className="font-semibold text-slate-800 dark:text-white">{u.name}</span>
                                 </div>
                               </td>
-                              <td className="p-4 font-mono text-foreground/70">{u.email}</td>
-                              <td className="p-4 text-foreground/60">{new Date(u.created_at).toLocaleDateString()}</td>
-                              <td className="p-4 text-center font-bold text-foreground/80">{u.recordings_count}</td>
+                              <td className="p-4 font-mono text-slate-650 dark:text-foreground/70">{u.email}</td>
+                              <td className="p-4 text-slate-600 dark:text-foreground/60">{new Date(u.created_at).toLocaleDateString()}</td>
+                              <td className="p-4 text-center font-bold text-slate-800 dark:text-foreground/80">{u.recordings_count}</td>
                             </tr>
                           ))}
                           {filteredUsers.length === 0 && (
                             <tr>
-                              <td colSpan={4} className="p-12 text-center text-foreground/40 text-sm">
+                              <td colSpan={4} className="p-12 text-center text-slate-500 dark:text-foreground/40 text-sm">
                                 No registered users found matching that query.
                               </td>
                             </tr>
@@ -886,49 +906,49 @@ export default function AdminDashboard() {
               <div className="lg:col-span-1 space-y-6">
                 
                 {/* AI prompt seed tools */}
-                <div className="glass-panel p-6 rounded-2xl border border-surface-border bg-surface/10">
-                  <h3 className="font-bold text-sm mb-2 flex items-center gap-2 text-white">
-                    <Sparkles className="w-4 h-4 text-zinc-400" />
+                <div className="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-surface-border bg-white/60 dark:bg-surface/10">
+                  <h3 className="font-bold text-sm mb-2 flex items-center gap-2 text-slate-800 dark:text-white">
+                    <Sparkles className="w-4 h-4 text-[#5B7C99] dark:text-zinc-400" />
                     AI Topic Seeder
                   </h3>
-                  <p className="text-xs text-foreground/60 mb-4 leading-relaxed">
+                  <p className="text-xs text-slate-650 dark:text-foreground/60 mb-4 leading-relaxed">
                     Auto-generate custom speak challenges based on templates cached in your DB using Groq API.
                   </p>
                   
                   <div className="flex items-center gap-3 mb-4">
-                    <span className="text-xs text-foreground/60">Generate</span>
+                    <span className="text-xs text-slate-650 dark:text-foreground/60">Generate</span>
                     <input 
                       type="number"
                       value={aiGenCount}
                       onChange={(e) => setAiGenCount(parseInt(e.target.value) || 10)}
-                      className="bg-black border border-surface-border text-center rounded-lg py-1 text-xs w-16 text-white font-mono"
+                      className="bg-slate-100 dark:bg-black border border-slate-200 dark:border-surface-border text-center rounded-lg py-1 text-xs w-16 text-slate-800 dark:text-white font-mono focus:outline-none"
                     />
-                    <span className="text-xs text-foreground/60">prompts</span>
+                    <span className="text-xs text-slate-650 dark:text-foreground/60">prompts</span>
                   </div>
 
                   <button 
                     onClick={handleAiPreGenerate}
                     disabled={isGenerating}
-                    className="w-full py-2.5 bg-white text-black hover:bg-zinc-200 disabled:opacity-50 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg"
+                    className="w-full py-2.5 bg-[#5B7C99] hover:bg-[#5B7C99]/90 text-white dark:bg-white dark:text-black dark:hover:bg-zinc-200 disabled:opacity-50 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
                   >
                     {isGenerating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                     {isGenerating ? "Pre-generating Prompts..." : "Pre-generate Month's Pool"}
                   </button>
 
                   {genResult && (
-                    <div className={`mt-4 p-3 rounded-lg border text-xs leading-relaxed ${genResult.success ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/5 border-rose-500/20 text-rose-400'}`}>
+                    <div className={`mt-4 p-3 rounded-lg border text-xs leading-relaxed ${genResult.success ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-500/5 dark:border-emerald-500/20 dark:text-emerald-400' : 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-500/5 dark:border-rose-500/20 dark:text-rose-400'}`}>
                       {genResult.success ? `Success: Generated and stored ${genResult.count} speaking prompts!` : `Generation failed: ${genResult.error}`}
                     </div>
                   )}
                 </div>
 
                 {/* Bulk Topic Importer */}
-                <div className="glass-panel p-6 rounded-2xl border border-surface-border bg-surface/10">
-                  <h3 className="font-bold text-sm mb-2 flex items-center gap-2 text-white">
-                    <Upload className="w-4 h-4 text-zinc-400" />
+                <div className="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-surface-border bg-white/60 dark:bg-surface/10">
+                  <h3 className="font-bold text-sm mb-2 flex items-center gap-2 text-slate-800 dark:text-white">
+                    <Upload className="w-4 h-4 text-[#5B7C99] dark:text-zinc-400" />
                     Bulk Prompts Importer
                   </h3>
-                  <p className="text-xs text-foreground/60 mb-3 leading-relaxed">
+                  <p className="text-xs text-slate-655 dark:text-foreground/60 mb-3 leading-relaxed">
                     Paste raw JSON arrays of topics to bulk insert into database tables.
                   </p>
                   <textarea 
@@ -936,59 +956,59 @@ export default function AdminDashboard() {
                     onChange={(e) => setBulkJsonText(e.target.value)}
                     placeholder='[{"topic": "Explain async collaboration", "difficulty_level": "Intermediate"}]'
                     rows={4}
-                    className="w-full bg-black border border-surface-border rounded-xl p-2.5 text-xs text-foreground font-mono focus:outline-none focus:border-white leading-normal"
+                    className="w-full bg-slate-50 dark:bg-black border border-slate-200 dark:border-surface-border rounded-xl p-2.5 text-xs text-slate-800 dark:text-foreground font-mono focus:outline-none focus:border-slate-400 dark:focus:border-white leading-normal"
                   />
                   <button 
                     onClick={handleBulkImport}
                     disabled={isImporting || !bulkJsonText}
-                    className="w-full mt-3 py-2.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border border-zinc-700"
+                    className="w-full mt-3 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 disabled:opacity-50 text-slate-700 dark:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border border-slate-200 dark:border-zinc-700 cursor-pointer"
                   >
                     {isImporting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                     Import Prompts
                   </button>
 
                   {importResult && (
-                    <div className={`mt-3 p-3 rounded-lg border text-xs leading-relaxed ${importResult.success ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/5 border-rose-500/20 text-rose-400'}`}>
+                    <div className={`mt-3 p-3 rounded-lg border text-xs leading-relaxed ${importResult.success ? 'bg-emerald-50 border-emerald-200 text-emerald-750 dark:bg-emerald-500/5 dark:border-emerald-500/20 dark:text-emerald-400' : 'bg-rose-50 border-rose-200 text-rose-750 dark:bg-rose-500/5 dark:border-rose-500/20 dark:text-rose-400'}`}>
                       {importResult.success ? `Successfully imported ${importResult.count} prompts!` : importResult.error}
                     </div>
                   )}
                 </div>
 
                 {/* Create Manual Topic Form */}
-                <div className="glass-panel p-6 rounded-2xl border border-surface-border bg-surface/10">
-                  <h3 className="font-bold text-sm mb-3 flex items-center gap-2 text-white">
-                    <Layers className="w-4 h-4 text-zinc-400" />
+                <div className="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-surface-border bg-white/60 dark:bg-surface/10">
+                  <h3 className="font-bold text-sm mb-3 flex items-center gap-2 text-slate-800 dark:text-white">
+                    <Layers className="w-4 h-4 text-[#5B7C99] dark:text-zinc-400" />
                     Create Speaking Task
                   </h3>
                   <form onSubmit={handleCreateSingleTopic} className="space-y-4">
                     <div>
-                      <label className="block text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-1">Prompt Topic</label>
+                      <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-foreground/50 mb-1">Prompt Topic</label>
                       <input 
                         type="text" 
                         required 
                         placeholder="Explain the importance of public speaking..."
                         value={newTopic.topic}
                         onChange={(e) => setNewTopic({...newTopic, topic: e.target.value})}
-                        className="w-full bg-black border border-surface-border rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-white"
+                        className="w-full bg-slate-50 dark:bg-black border border-slate-200 dark:border-surface-border rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-slate-400 dark:focus:border-white"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-1">Vocabulary Word</label>
+                        <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-foreground/50 mb-1">Vocabulary Word</label>
                         <input 
                           type="text" 
                           placeholder="e.g. Articulate"
                           value={newTopic.word}
                           onChange={(e) => setNewTopic({...newTopic, word: e.target.value})}
-                          className="w-full bg-black border border-surface-border rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-white"
+                          className="w-full bg-slate-50 dark:bg-black border border-slate-200 dark:border-surface-border rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-slate-400 dark:focus:border-white"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-1">Difficulty</label>
+                        <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-foreground/50 mb-1">Difficulty</label>
                         <select 
                           value={newTopic.difficulty}
                           onChange={(e) => setNewTopic({...newTopic, difficulty: e.target.value})}
-                          className="w-full bg-black border border-surface-border rounded-lg px-2 py-1.5 text-xs text-zinc-400 focus:outline-none focus:border-white"
+                          className="w-full bg-slate-50 dark:bg-black border border-slate-200 dark:border-surface-border rounded-lg px-2 py-1.5 text-xs text-slate-700 dark:text-zinc-400 focus:outline-none focus:border-slate-400 dark:focus:border-white"
                         >
                           <option>Beginner</option>
                           <option>Intermediate</option>
@@ -997,29 +1017,29 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-1">Definition</label>
+                      <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-foreground/50 mb-1">Definition</label>
                       <input 
                         type="text" 
                         placeholder="e.g. Express an idea fluently and coherently"
                         value={newTopic.definition}
                         onChange={(e) => setNewTopic({...newTopic, definition: e.target.value})}
-                        className="w-full bg-black border border-surface-border rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-white"
+                        className="w-full bg-slate-50 dark:bg-black border border-slate-200 dark:border-surface-border rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-slate-400 dark:focus:border-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] uppercase font-bold tracking-wider text-foreground/50 mb-1">Reading Practice Text</label>
+                      <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-foreground/50 mb-1">Reading Practice Text</label>
                       <textarea 
                         placeholder="Optional template paragraph to guide the speech..."
                         value={newTopic.readingText}
                         onChange={(e) => setNewTopic({...newTopic, readingText: e.target.value})}
                         rows={2}
-                        className="w-full bg-black border border-surface-border rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-white"
+                        className="w-full bg-slate-50 dark:bg-black border border-slate-200 dark:border-surface-border rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-slate-400 dark:focus:border-white"
                       />
                     </div>
                     <button 
                       type="submit" 
                       disabled={isCreatingTopic}
-                      className="w-full py-2 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 text-white border border-zinc-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                      className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 disabled:opacity-50 text-slate-700 dark:text-white border border-slate-200 dark:border-zinc-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       Publish Prompt Topic
                     </button>
@@ -1029,48 +1049,48 @@ export default function AdminDashboard() {
 
               {/* Right Column: Pre-generated Topic Pool List */}
               <div className="lg:col-span-2">
-                <h2 className="text-base font-bold mb-4 flex items-center gap-2 text-white">
-                  <BookOpen className="w-5 h-5 text-zinc-400" />
+                <h2 className="text-base font-bold mb-4 flex items-center gap-2 text-slate-800 dark:text-white">
+                  <BookOpen className="w-5 h-5 text-[#5B7C99] dark:text-zinc-400" />
                   B2C Speaking Topics Pool
                 </h2>
 
                 {loadingTasks ? (
-                  <div className="glass-panel p-6 rounded-2xl animate-pulse h-96 border border-surface-border" />
+                  <div className="glass-panel p-6 rounded-2xl animate-pulse h-96 border border-slate-200/80 dark:border-surface-border" />
                 ) : (
-                  <div className="glass-panel rounded-2xl border border-surface-border overflow-hidden bg-surface/10">
-                    <div className="max-h-[680px] overflow-y-auto divide-y divide-surface-border">
+                  <div className="glass-panel rounded-2xl border border-slate-200/80 dark:border-surface-border overflow-hidden bg-white/60 dark:bg-surface/10">
+                    <div className="max-h-[680px] overflow-y-auto divide-y divide-slate-100 dark:divide-surface-border">
                       {tasks.length > 0 ? tasks.map((t) => (
-                        <div key={t.id} className="p-4 hover:bg-surface/5 transition-colors flex flex-col sm:flex-row justify-between items-start gap-4">
+                        <div key={t.id} className="p-4 hover:bg-slate-50/50 dark:hover:bg-surface/5 transition-colors flex flex-col sm:flex-row justify-between items-start gap-4">
                           <div className="space-y-1.5">
                             <div className="flex items-center gap-2.5">
-                              <span className="text-sm font-semibold text-white">{t.topic_of_the_day}</span>
+                              <span className="text-sm font-semibold text-slate-800 dark:text-white">{t.topic_of_the_day}</span>
                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                                 t.difficulty_level === 'Advanced' 
-                                  ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' 
+                                  ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20' 
                                   : t.difficulty_level === 'Intermediate' 
-                                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' 
-                                  : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+                                  ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-750 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20' 
+                                  : 'bg-cyan-50 dark:bg-cyan-500/10 text-[#5B7C99] dark:text-cyan-400 border border-cyan-200 dark:border-cyan-500/20'
                               }`}>
                                 {t.difficulty_level}
                               </span>
                             </div>
                             {t.word_of_the_day && (
-                              <p className="text-xs text-foreground/80 leading-normal">
-                                <span className="font-semibold text-zinc-400">Vocabulary:</span> {t.word_of_the_day} — <span className="italic text-foreground/60">{t.definition}</span>
+                              <p className="text-xs text-slate-655 dark:text-foreground/80 leading-normal">
+                                <span className="font-semibold text-slate-500 dark:text-zinc-400">Vocabulary:</span> <strong className="text-slate-700 dark:text-zinc-200">{t.word_of_the_day}</strong> — <span className="italic text-slate-600 dark:text-foreground/60">{t.definition}</span>
                               </p>
                             )}
                             {t.reading_text && (
-                              <p className="text-[11px] text-foreground/50 border-l border-zinc-800 pl-2 italic leading-relaxed">
+                              <p className="text-[11px] text-slate-500 dark:text-foreground/50 border-l border-slate-200 dark:border-zinc-800 pl-2 italic leading-relaxed">
                                 "{t.reading_text}"
                               </p>
                             )}
                           </div>
-                          <div className="text-[10px] text-foreground/40 self-end shrink-0 sm:self-auto font-mono">
+                          <div className="text-[10px] text-slate-500 dark:text-foreground/40 self-end shrink-0 sm:self-auto font-mono">
                             {new Date(t.created_at).toLocaleDateString()}
                           </div>
                         </div>
                       )) : (
-                        <div className="p-12 text-center text-foreground/40 text-xs">
+                        <div className="p-12 text-center text-slate-500 dark:text-foreground/40 text-xs">
                           Speaking pool is empty. Click AI pre-generate to populate pool topics.
                         </div>
                       )}
@@ -1090,34 +1110,34 @@ export default function AdminDashboard() {
               exit={{ opacity: 0, y: -15 }}
               className="space-y-6"
             >
-              <h2 className="text-base font-bold flex items-center gap-2 text-white">
-                <Activity className="w-5 h-5 text-zinc-400" />
+              <h2 className="text-base font-bold flex items-center gap-2 text-slate-800 dark:text-white">
+                <Activity className="w-5 h-5 text-[#5B7C99] dark:text-zinc-400" />
                 Speech Quality & Diagnostic Feed
               </h2>
 
               {loadingFeedbacks ? (
-                <div className="glass-panel p-6 rounded-2xl animate-pulse h-96 border border-surface-border" />
+                <div className="glass-panel p-6 rounded-2xl animate-pulse h-96 border border-slate-200/80 dark:border-surface-border" />
               ) : (
                 <div className="space-y-4">
                   {feedbacks.length > 0 ? feedbacks.map((f) => (
-                    <div key={f.id} className="glass-panel p-5 rounded-2xl border border-surface-border bg-surface/10 space-y-4">
+                    <div key={f.id} className="glass-panel p-5 rounded-2xl border border-slate-200/80 dark:border-surface-border bg-white/60 dark:bg-surface/10 space-y-4">
                       {/* Top Header */}
-                      <div className="flex flex-wrap justify-between items-center gap-2 border-b border-surface-border/50 pb-3">
+                      <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-100 dark:border-surface-border/50 pb-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 text-white flex items-center justify-center font-bold text-xs">
+                          <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 text-slate-800 dark:text-white flex items-center justify-center font-bold text-xs">
                             {f.user_name ? f.user_name[0]?.toUpperCase() : "U"}
                           </div>
                           <div>
-                            <span className="text-sm font-semibold text-white">{f.user_name}</span>
-                            <span className="text-[10px] font-mono text-foreground/50 block leading-none mt-1">{f.user_email}</span>
+                            <span className="text-sm font-semibold text-slate-800 dark:text-white">{f.user_name}</span>
+                            <span className="text-[10px] font-mono text-slate-500 dark:text-foreground/50 block leading-none mt-1">{f.user_email}</span>
                           </div>
                         </div>
                         
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="text-[10px] text-foreground/40 font-mono">
+                          <span className="text-[10px] text-slate-500 dark:text-foreground/40 font-mono">
                             {new Date(f.created_at).toLocaleString()}
                           </span>
-                          <span className="px-2.5 py-0.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 font-medium">
+                          <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium">
                             {f.topic}
                           </span>
                         </div>
@@ -1125,50 +1145,50 @@ export default function AdminDashboard() {
 
                       {/* Info / Metric Grid */}
                       <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
-                        <div className="glass-panel bg-black/40 p-3 rounded-xl text-center border border-surface-border/50">
-                          <span className="text-[9px] uppercase font-bold tracking-widest text-foreground/50 block">Confidence</span>
-                          <span className="text-base font-extrabold text-white">{f.confidence}%</span>
+                        <div className="glass-panel bg-slate-50/50 dark:bg-black/40 p-3 rounded-xl text-center border border-slate-200 dark:border-surface-border/50">
+                          <span className="text-[9px] uppercase font-bold tracking-widest text-slate-500 dark:text-foreground/50 block">Confidence</span>
+                          <span className="text-base font-extrabold text-slate-800 dark:text-white">{f.confidence}%</span>
                         </div>
-                        <div className="glass-panel bg-black/40 p-3 rounded-xl text-center border border-surface-border/50">
-                          <span className="text-[9px] uppercase font-bold tracking-widest text-foreground/50 block">Clarity</span>
-                          <span className="text-base font-extrabold text-emerald-400">{f.clarity}%</span>
+                        <div className="glass-panel bg-slate-50/50 dark:bg-black/40 p-3 rounded-xl text-center border border-slate-200 dark:border-surface-border/50">
+                          <span className="text-[9px] uppercase font-bold tracking-widest text-slate-500 dark:text-foreground/50 block">Clarity</span>
+                          <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">{f.clarity}%</span>
                         </div>
-                        <div className="glass-panel bg-black/40 p-3 rounded-xl text-center border border-surface-border/50">
-                          <span className="text-[9px] uppercase font-bold tracking-widest text-foreground/50 block">Pacing</span>
-                          <span className="text-base font-extrabold text-cyan-400">
-                            {f.wpm} <span className="text-[9px] font-normal text-foreground/50">WPM</span>
+                        <div className="glass-panel bg-slate-50/50 dark:bg-black/40 p-3 rounded-xl text-center border border-slate-200 dark:border-surface-border/50">
+                          <span className="text-[9px] uppercase font-bold tracking-widest text-slate-500 dark:text-foreground/50 block">Pacing</span>
+                          <span className="text-base font-extrabold text-cyan-600 dark:text-cyan-400">
+                            {f.wpm} <span className="text-[9px] font-normal text-slate-500 dark:text-foreground/50">WPM</span>
                           </span>
                         </div>
-                        <div className="glass-panel bg-black/40 p-3 rounded-xl text-center border border-surface-border/50">
-                          <span className="text-[9px] uppercase font-bold tracking-widest text-foreground/50 block">Filler Words</span>
-                          <span className={`text-base font-extrabold ${f.filler_words > 5 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                        <div className="glass-panel bg-slate-50/50 dark:bg-black/40 p-3 rounded-xl text-center border border-slate-200 dark:border-surface-border/50">
+                          <span className="text-[9px] uppercase font-bold tracking-widest text-slate-500 dark:text-foreground/50 block">Filler Words</span>
+                          <span className={`text-base font-extrabold ${f.filler_words > 5 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                             {f.filler_words}
                           </span>
                         </div>
-                        <div className="glass-panel bg-black/40 p-3 rounded-xl text-center border border-surface-border/50">
-                          <span className="text-[9px] uppercase font-bold tracking-widest text-foreground/50 block">Eye Contact</span>
-                          <span className="text-base font-extrabold text-purple-400">
+                        <div className="glass-panel bg-slate-50/50 dark:bg-black/40 p-3 rounded-xl text-center border border-slate-200 dark:border-surface-border/50">
+                          <span className="text-[9px] uppercase font-bold tracking-widest text-slate-500 dark:text-foreground/50 block">Eye Contact</span>
+                          <span className="text-base font-extrabold text-purple-600 dark:text-purple-400">
                             {f.eye_contact !== null ? `${Math.round(f.eye_contact)}%` : "N/A"}
                           </span>
                         </div>
-                        <div className="glass-panel bg-black/40 p-3 rounded-xl text-center border border-surface-border/50">
-                          <span className="text-[9px] uppercase font-bold tracking-widest text-foreground/50 block">Expression</span>
-                          <span className="text-base font-extrabold text-pink-400">
+                        <div className="glass-panel bg-slate-50/50 dark:bg-black/40 p-3 rounded-xl text-center border border-slate-200 dark:border-surface-border/50">
+                          <span className="text-[9px] uppercase font-bold tracking-widest text-slate-500 dark:text-foreground/50 block">Expression</span>
+                          <span className="text-base font-extrabold text-pink-600 dark:text-pink-400">
                             {f.expression_score !== null ? `${Math.round(f.expression_score)}%` : "N/A"}
                           </span>
                         </div>
                       </div>
 
                       {/* Transcription Window */}
-                      <div className="bg-black/30 p-3.5 rounded-xl border border-surface-border/50">
-                        <span className="text-[10px] uppercase font-bold tracking-widest text-foreground/50 block mb-1.5">User Speech Transcript</span>
-                        <p className="text-xs text-foreground/80 leading-relaxed italic">
+                      <div className="bg-slate-100/50 dark:bg-black/30 p-3.5 rounded-xl border border-slate-200 dark:border-surface-border/50">
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500 dark:text-foreground/50 block mb-1.5">User Speech Transcript</span>
+                        <p className="text-xs text-slate-755 dark:text-foreground/80 leading-relaxed italic">
                           "{f.transcript}"
                         </p>
                       </div>
                     </div>
                   )) : (
-                    <div className="glass-panel p-12 text-center text-foreground/40 text-xs border border-surface-border">
+                    <div className="glass-panel p-12 text-center text-slate-500 dark:text-foreground/40 text-xs border border-slate-200 dark:border-surface-border">
                       No recording feedbacks submitted yet.
                     </div>
                   )}
@@ -1187,26 +1207,26 @@ export default function AdminDashboard() {
               className="space-y-6"
             >
               <div className="flex justify-between items-center">
-                <h2 className="text-base font-bold flex items-center gap-2 text-white">
-                  <HelpCircle className="w-5 h-5 text-zinc-400" />
+                <h2 className="text-base font-bold flex items-center gap-2 text-slate-800 dark:text-white">
+                  <HelpCircle className="w-5 h-5 text-[#5B7C99] dark:text-zinc-400" />
                   Customer Support Desk
                 </h2>
-                <span className="px-2.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold">
+                <span className="px-2.5 py-0.5 rounded bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold">
                   {tickets.filter(t => t.status !== "resolved").length} unresolved issues
                 </span>
               </div>
 
               {/* Warning Banner if table is missing */}
               {ticketsDbStatus === "missing_migration" && (
-                <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-50/5 text-rose-400 text-xs flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/50 dark:border-rose-500/20 dark:bg-rose-50/5 text-rose-600 dark:text-rose-400 text-xs flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-rose-500" />
                   <div>
                     <h4 className="font-bold text-sm">Supabase Table `support_tickets` Offline</h4>
-                    <p className="mt-1 leading-relaxed text-foreground/80 text-xs">
+                    <p className="mt-1 leading-relaxed text-slate-700 dark:text-foreground/80 text-xs">
                       The table `support_tickets` was not detected. Local customer inquiries fall back to mock data.
                       Execute the database migration file to activate ticket persistence:
                     </p>
-                    <code className="block mt-2 bg-black/60 p-2.5 rounded-lg border border-surface-border text-foreground/80 font-mono text-[11px] break-all select-all">
+                    <code className="block mt-2 bg-slate-100 dark:bg-black/60 p-2.5 rounded-lg border border-slate-200 dark:border-surface-border text-slate-800 dark:text-foreground/80 font-mono text-[11px] break-all select-all">
                       supabase/migrations/20260603000001_support_tickets.sql
                     </code>
                   </div>
@@ -1214,46 +1234,46 @@ export default function AdminDashboard() {
               )}
 
               {loadingTickets ? (
-                <div className="glass-panel p-12 text-center text-foreground/40 text-xs border border-surface-border">
+                <div className="glass-panel p-12 text-center text-slate-500 dark:text-foreground/40 text-xs border border-slate-200 dark:border-surface-border">
                   <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-zinc-500" />
                   Loading customer inquiries...
                 </div>
               ) : (
                 <div className="space-y-4">
                   {tickets.length > 0 ? tickets.map((t) => (
-                    <div key={t.id} className="glass-panel p-5 rounded-2xl border border-surface-border bg-surface/10 space-y-4">
+                    <div key={t.id} className="glass-panel p-5 rounded-2xl border border-slate-200/80 dark:border-surface-border bg-white/60 dark:bg-surface/10 space-y-4">
                       
                       {/* Header */}
-                      <div className="flex flex-wrap justify-between items-start gap-2 border-b border-surface-border/50 pb-3">
+                      <div className="flex flex-wrap justify-between items-start gap-2 border-b border-slate-100 dark:border-surface-border/50 pb-3">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded text-xs font-mono">
+                            <span className="px-2 py-0.5 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-805 text-slate-600 dark:text-zinc-400 rounded text-xs font-mono">
                               {t.id.slice(0, 8)}
                             </span>
-                            <span className="text-sm font-semibold text-white">{t.category}</span>
+                            <span className="text-sm font-semibold text-slate-800 dark:text-white">{t.category}</span>
                           </div>
-                          <div className="text-xs text-foreground/50 mt-1 flex items-center gap-1.5">
+                          <div className="text-xs text-slate-500 dark:text-foreground/50 mt-1 flex items-center gap-1.5">
                             {t.user && (
                               <>
                                 <span>User ID:</span>
-                                <span className="font-mono text-[11px] text-foreground/60">{t.user.slice(0, 8)}</span>
+                                <span className="font-mono text-[11px] text-slate-655 dark:text-foreground/60">{t.user.slice(0, 8)}</span>
                                 <span>|</span>
                               </>
                             )}
-                            <span className="text-foreground/60">{t.email}</span>
+                            <span className="text-slate-600 dark:text-foreground/60">{t.email}</span>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-3">
-                          <span className="text-[10px] text-foreground/40 font-mono">
+                          <span className="text-[10px] text-slate-500 dark:text-foreground/40 font-mono">
                             {new Date(t.created_at).toLocaleString()}
                           </span>
                           <span className={`text-xs uppercase font-bold tracking-wider px-2 py-0.5 rounded-lg ${
                             t.status === "open"
-                              ? "bg-rose-500/10 border border-rose-500/20 text-rose-400"
+                              ? "bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400"
                               : t.status === "investigating"
-                              ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
-                              : "bg-zinc-900 border border-zinc-800 text-zinc-500"
+                              ? "bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400"
+                              : "bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-500 dark:text-zinc-555"
                           }`}>
                             {t.status}
                           </span>
@@ -1261,9 +1281,9 @@ export default function AdminDashboard() {
                       </div>
 
                       {/* Message Details */}
-                      <div className="p-3.5 bg-black/40 rounded-xl border border-surface-border/50">
-                        <span className="text-[10px] uppercase font-bold tracking-widest text-foreground/50 block mb-1">Issue Description</span>
-                        <p className="text-xs text-foreground/80 leading-relaxed font-sans">{t.message}</p>
+                      <div className="p-3.5 bg-slate-50/80 dark:bg-black/40 rounded-xl border border-slate-200 dark:border-surface-border/50">
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500 dark:text-foreground/50 block mb-1">Issue Description</span>
+                        <p className="text-xs text-slate-755 dark:text-foreground/80 leading-relaxed font-sans">{t.message}</p>
                       </div>
 
                       {/* Actions */}
@@ -1272,14 +1292,14 @@ export default function AdminDashboard() {
                           {t.status === "open" && (
                             <button
                               onClick={() => resolveTicket(t.id, "investigating")}
-                              className="text-xs bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 px-3 py-1.5 rounded-xl font-semibold transition-all"
+                              className="text-xs bg-slate-105 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 px-3 py-1.5 rounded-xl font-semibold transition-all cursor-pointer"
                             >
                               Mark Investigating
                             </button>
                           )}
                           <button
                             onClick={() => resolveTicket(t.id, "resolved")}
-                            className="text-xs bg-white text-black hover:bg-zinc-200 px-3 py-1.5 rounded-xl font-bold transition-all shadow-lg"
+                            className="text-xs bg-[#5B7C99] hover:bg-[#5B7C99]/90 text-white dark:bg-white dark:text-black dark:hover:bg-zinc-200 px-3 py-1.5 rounded-xl font-bold transition-all shadow-lg cursor-pointer"
                           >
                             Mark Resolved
                           </button>
@@ -1287,7 +1307,7 @@ export default function AdminDashboard() {
                       )}
                     </div>
                   )) : (
-                    <div className="glass-panel p-12 text-center text-foreground/40 text-xs border border-surface-border">
+                    <div className="glass-panel p-12 text-center text-slate-500 dark:text-foreground/40 text-xs border border-slate-200 dark:border-surface-border">
                       No customer support tickets found.
                     </div>
                   )}
