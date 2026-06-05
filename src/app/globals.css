@@ -86,14 +86,14 @@
   }
   
   .text-gradient {
-    background: linear-gradient(180deg, #1E293B 30%, #5B7C99 100%);
+    background-image: linear-gradient(180deg, #1E293B 30%, #5B7C99 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .dark .text-gradient {
-    background: linear-gradient(180deg, #ffffff 30%, #a1a1aa 100%);
+    background-image: linear-gradient(180deg, #ffffff 30%, #a1a1aa 100%);
   }
 
   .grid-matrix {
