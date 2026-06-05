@@ -43,6 +43,17 @@ export function Navbar() {
           {/* Desktop Navigation */}
           <div className="hidden sm:flex items-center gap-2 md:gap-4">
             <Link 
+              href="/" 
+              className={`text-sm font-medium px-4 py-2 rounded-lg transition-all ${
+                pathname === "/" 
+                  ? "bg-[#5B7C99]/10 border border-[#5B7C99]/20 text-[#5B7C99] font-semibold dark:bg-white/5 dark:border-white/10 dark:text-white" 
+                  : "text-slate-600 hover:text-themeText hover:bg-slate-100/50 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5"
+              }`}
+            >
+              Home
+            </Link>
+
+            <Link 
               href="/practice" 
               className={`text-sm font-medium px-4 py-2 rounded-lg transition-all ${
                 pathname === "/practice" 
@@ -163,6 +174,18 @@ export function Navbar() {
             transition={{ duration: 0.25, ease: "easeInOut" }}
             className="fixed top-16 inset-x-0 border-b border-slate-200/50 bg-white/95 backdrop-blur-3xl dark:border-white/10 dark:bg-[#09090e]/95 z-40 overflow-hidden flex flex-col px-6 py-6 gap-3.5 shadow-2xl sm:hidden"
           >
+            <Link 
+              href="/" 
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`text-sm font-semibold p-3.5 rounded-xl transition-all ${
+                pathname === "/" 
+                  ? "bg-[#5B7C99]/10 border border-[#5B7C99]/20 text-[#5B7C99] dark:bg-white/5 dark:border-white/10 dark:text-white" 
+                  : "text-slate-600 dark:text-zinc-400 hover:text-themeText hover:bg-slate-100/50 dark:hover:text-white dark:hover:bg-white/5"
+              }`}
+            >
+              Home
+            </Link>
+
             <Link 
               href="/practice" 
               onClick={() => setIsMobileMenuOpen(false)}
