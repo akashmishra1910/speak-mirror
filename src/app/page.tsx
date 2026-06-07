@@ -206,7 +206,7 @@ export default function Home() {
               <Mic className="w-5 h-5" />
               Start Practicing
             </Link>
-            <Link href="#features" className="inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-semibold text-slate-700 bg-white/40 rounded-2xl hover:bg-white/60 transition-all border border-slate-200/40 hover:-translate-y-1 backdrop-blur-md dark:text-white dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10">
+            <Link href="/auth" className="inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-semibold text-slate-700 bg-white/40 rounded-2xl hover:bg-white/60 transition-all border border-slate-200/40 hover:-translate-y-1 backdrop-blur-md dark:text-white dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10">
               Learn More
               <ChevronRight className="w-5 h-5 text-slate-400 dark:text-white/50" />
             </Link>
