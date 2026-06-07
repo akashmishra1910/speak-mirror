@@ -116,12 +116,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const syncCookies = (session: any) => {
       if (typeof document !== "undefined") {
+        const secureFlag = process.env.NODE_ENV === "production" ? "; Secure" : "";
         if (session) {
-          document.cookie = `sb-access-token=${session.access_token}; path=/; SameSite=Lax; Secure`;
-          document.cookie = `sb-refresh-token=${session.refresh_token}; path=/; SameSite=Lax; Secure`;
+          document.cookie = `sb-access-token=${session.access_token}; path=/; SameSite=Lax${secureFlag}`;
+          document.cookie = `sb-refresh-token=${session.refresh_token}; path=/; SameSite=Lax${secureFlag}`;
         } else {
-          document.cookie = "sb-access-token=; path=/; max-age=0; SameSite=Lax; Secure";
-          document.cookie = "sb-refresh-token=; path=/; max-age=0; SameSite=Lax; Secure";
+          document.cookie = `sb-access-token=; path=/; max-age=0; SameSite=Lax${secureFlag}`;
+          document.cookie = `sb-refresh-token=; path=/; max-age=0; SameSite=Lax${secureFlag}`;
         }
       }
     };

@@ -27,13 +27,15 @@ export async function middleware(request: NextRequest) {
           );
         },
       },
+      cookieOptions: {
+        secure: process.env.NODE_ENV === "production",
+      },
     }
   );
 
   // Validate server-side JWT signatures
-  const { data: { user } } = await supabase.auth.getUser();
-
   const { pathname } = request.nextUrl;
+  const { data: { user } } = await supabase.auth.getUser();
 
   // Protect paths: /profile, /rooms, /admin
   const isProtectedPath =

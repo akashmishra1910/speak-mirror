@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import ProfileDashboardClient from "@/components/ProfileDashboardClient";
 
+
 interface Recording {
   id: string;
   created_at: string;
