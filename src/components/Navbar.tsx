@@ -29,7 +29,7 @@ export function Navbar() {
               <div className="w-8 h-8 rounded-lg bg-white/40 border border-slate-200/40 dark:bg-white/5 dark:border-white/10 flex items-center justify-center group-hover:bg-slate-100 dark:group-hover:bg-white/10 transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
                 <Mic className="w-4 h-4 text-[#5B7C99] dark:text-white" />
               </div>
-              <span className="font-bold text-lg tracking-tight text-themeText dark:text-white hidden min-[380px]:block">SpeakMirror</span>
+              <span className={`font-bold text-lg tracking-tight text-themeText dark:text-white ${user ? "hidden min-[540px]:block" : "hidden min-[380px]:block"}`}>SpeakMirror</span>
             </Link>
             
             {user && (

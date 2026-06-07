@@ -167,7 +167,7 @@ export function WorkspaceSwitcher() {
         <span className="text-[9px] font-bold text-[#5B7C99] bg-[#5B7C99]/10 px-1.5 py-0.5 rounded border border-[#5B7C99]/20 dark:text-indigo-400 dark:bg-indigo-950/40 dark:border-indigo-800/40 uppercase tracking-widest shrink-0">
           {activeWorkspace.id === "personal" ? "SYS" : "TEAM"}
         </span>
-        <span className="max-w-[120px] truncate uppercase font-bold tracking-wider">{activeWorkspace.name}</span>
+        <span className="max-w-[70px] min-[400px]:max-w-[100px] sm:max-w-[120px] truncate uppercase font-bold tracking-wider">{activeWorkspace.name}</span>
         <ChevronDown 
           className={`w-3 h-3 text-slate-400 dark:text-zinc-500 transition-transform duration-300 ${
             isOpen ? "rotate-180 text-slate-800 dark:text-white" : ""
