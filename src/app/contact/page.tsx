@@ -48,7 +48,7 @@ export default function ContactPage() {
           
           <div className="mt-12 text-center text-sm text-slate-500 dark:text-foreground/30 flex items-center justify-center gap-2 font-light">
             <MessageSquare className="w-4 h-4" />
-            Designed and built by Akash Mishra
+            Designed and built by Team ClassIQ
           </div>
         </div>
       </div>
