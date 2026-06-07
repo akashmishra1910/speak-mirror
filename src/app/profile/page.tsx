@@ -565,7 +565,7 @@ export default function ProfilePage() {
           
           <button
             onClick={() => setActiveTab("overview")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+            className={`w-auto md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "overview"
                 ? "bg-[#5B7C99] text-white shadow-md dark:bg-white dark:text-black font-bold"
                 : "text-slate-600 hover:text-[#5B7C99] dark:text-zinc-400 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5"
@@ -577,7 +577,7 @@ export default function ProfilePage() {
 
           <button
             onClick={() => setActiveTab("recordings")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+            className={`w-auto md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "recordings"
                 ? "bg-[#5B7C99] text-white shadow-md dark:bg-white dark:text-black font-bold"
                 : "text-slate-600 hover:text-[#5B7C99] dark:text-zinc-400 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5"
@@ -589,7 +589,7 @@ export default function ProfilePage() {
 
           <button
             onClick={() => setActiveTab("settings")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+            className={`w-auto md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "settings"
                 ? "bg-[#5B7C99] text-white shadow-md dark:bg-white dark:text-black font-bold"
                 : "text-slate-600 hover:text-[#5B7C99] dark:text-zinc-400 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5"
@@ -663,9 +663,9 @@ export default function ProfilePage() {
                       View all recordings <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
-
-                  {/* Summary Table */}
-                  <div className="overflow-x-auto rounded-xl border border-slate-200/60 dark:border-white/5">
+                  
+                  {/* Summary Table (Desktop) */}
+                  <div className="hidden sm:block overflow-x-auto rounded-xl border border-slate-200/60 dark:border-white/5">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="border-b border-slate-200 dark:border-white/5 bg-slate-100/50 dark:bg-white/[0.02] text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-foreground/50">
@@ -759,6 +759,94 @@ export default function ProfilePage() {
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Summary List (Mobile) */}
+                  <div className="block sm:hidden space-y-4">
+                    {recordings.slice(0, 5).map((item) => {
+                      const hasScore = item.confidence !== undefined && item.confidence !== null;
+                      return (
+                        <div key={item.id} className="p-4 rounded-2xl border border-slate-200/80 dark:border-white/5 bg-white/60 dark:bg-surface/10 space-y-3">
+                          <div className="flex justify-between items-start">
+                            <h3 className="font-semibold text-slate-800 dark:text-white text-xs truncate max-w-[70%]">
+                              {item.topic || "Free Practice"}
+                            </h3>
+                            <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-light">
+                              {formatDate(item.created_at)}
+                            </span>
+                          </div>
+                          
+                          <div className="flex justify-between items-center text-xs">
+                            <div className="flex gap-4">
+                              <div>
+                                <span className="text-slate-555 dark:text-zinc-500 text-[9px] block uppercase font-bold tracking-wider">Confidence</span>
+                                <span className="font-bold text-slate-800 dark:text-white">{hasScore ? `${item.confidence}%` : "—"}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-555 dark:text-zinc-500 text-[9px] block uppercase font-bold tracking-wider">Clarity</span>
+                                <span className="font-semibold text-slate-600 dark:text-zinc-300">{hasScore ? `${item.clarity}%` : "—"}</span>
+                              </div>
+                            </div>
+                            <div>
+                              {hasScore ? (
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20">
+                                  Completed
+                                </span>
+                              ) : (
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-500/20 animate-pulse">
+                                  Analyzing
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-white/5">
+                            {item.video_url && (
+                              <>
+                                <button 
+                                  onClick={() => setWatchRecording(item)}
+                                  className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-600/10 dark:hover:bg-indigo-600/20 border border-indigo-500/10 text-indigo-600 dark:text-indigo-400 transition-all cursor-pointer"
+                                  title="Watch Video"
+                                >
+                                  <Play className="w-3.5 h-3.5 fill-current" />
+                                </button>
+                                <button 
+                                  onClick={() => handleExportPDF(item)}
+                                  disabled={exportingId !== null}
+                                  className="p-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-600/10 dark:hover:bg-emerald-600/20 border border-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-all cursor-pointer disabled:opacity-50"
+                                  title="Download PDF Report"
+                                >
+                                  {exportingId === item.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <FileText className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                                <button 
+                                  onClick={() => setShareRecording(item)}
+                                  className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 transition-all cursor-pointer"
+                                  title="Share Card"
+                                >
+                                  <Share2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteRecording(item.id)}
+                                  className="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-600/10 dark:hover:bg-rose-600/20 border border-rose-500/10 text-rose-600 dark:text-rose-400 transition-all cursor-pointer"
+                                  title="Delete Recording"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {recordings.length === 0 && (
+                      <div className="p-8 text-center text-slate-500 dark:text-zinc-500 font-light text-xs">
+                        No recordings found. Go practice to populate your history dashboard!
+                      </div>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -804,8 +892,8 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  {/* Main Extended Data Table */}
-                  <div className="overflow-x-auto rounded-xl border border-slate-200/60 dark:border-white/5">
+                  {/* Main Extended Data Table (Desktop) */}
+                  <div className="hidden sm:block overflow-x-auto rounded-xl border border-slate-200/60 dark:border-white/5">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="border-b border-slate-200 dark:border-white/5 bg-slate-100/50 dark:bg-white/[0.02] text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-foreground/50">
@@ -900,6 +988,96 @@ export default function ProfilePage() {
                         )}
                       </tbody>
                     </table>
+                  </div>
+
+                  {/* Main Extended List (Mobile) */}
+                  <div className="block sm:hidden space-y-4">
+                    {filteredRecordings.map((item) => {
+                      const hasScore = item.confidence !== undefined && item.confidence !== null;
+                      return (
+                        <div key={item.id} className="p-4 rounded-2xl border border-slate-200/80 dark:border-white/5 bg-white/60 dark:bg-surface/10 space-y-3">
+                          <div className="flex justify-between items-start">
+                            <h3 className="font-semibold text-slate-800 dark:text-white text-xs truncate max-w-[70%]">
+                              {item.topic || "Free Practice"}
+                            </h3>
+                            <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-light">
+                              {formatDate(item.created_at)}
+                            </span>
+                          </div>
+                          
+                          <div className="flex justify-between items-center text-xs">
+                            <div className="flex gap-4">
+                              <div>
+                                <span className="text-slate-555 dark:text-zinc-500 text-[9px] block uppercase font-bold tracking-wider">Confidence</span>
+                                <span className="font-bold text-slate-800 dark:text-white">{hasScore ? `${item.confidence}%` : "—"}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-555 dark:text-zinc-500 text-[9px] block uppercase font-bold tracking-wider">Clarity</span>
+                                <span className="font-semibold text-slate-600 dark:text-zinc-300">{hasScore ? `${item.clarity}%` : "—"}</span>
+                              </div>
+                            </div>
+                            <div>
+                              {hasScore ? (
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20">
+                                  Completed
+                                </span>
+                              ) : (
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-500/20 animate-pulse">
+                                  Analyzing
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-white/5">
+                            {item.video_url && (
+                              <>
+                                <button 
+                                  onClick={() => setWatchRecording(item)}
+                                  className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-600/10 dark:hover:bg-indigo-600/20 border border-indigo-500/10 text-indigo-600 dark:text-indigo-400 transition-all cursor-pointer"
+                                  title="Watch Video"
+                                >
+                                  <Play className="w-3.5 h-3.5 fill-current" />
+                                </button>
+                                <button 
+                                  onClick={() => handleExportPDF(item)}
+                                  disabled={exportingId !== null}
+                                  className="p-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-600/10 dark:hover:bg-emerald-600/20 border border-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-all cursor-pointer disabled:opacity-50"
+                                  title="Download PDF Report"
+                                >
+                                  {exportingId === item.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <FileText className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                                <button 
+                                  onClick={() => setShareRecording(item)}
+                                  className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 transition-all cursor-pointer"
+                                  title="Share Card"
+                                >
+                                  <Share2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteRecording(item.id)}
+                                  className="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-600/10 dark:hover:bg-rose-600/20 border border-rose-500/10 text-rose-600 dark:text-rose-400 transition-all cursor-pointer"
+                                  title="Delete Recording"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {filteredRecordings.length === 0 && (
+                      <div className="p-12 text-center text-slate-500 dark:text-zinc-500 font-light text-xs">
+                        {recordings.length === 0 
+                          ? "No recordings found. Go practice to populate your history!" 
+                          : "No results match your search parameters."}
+                      </div>
+                    )}
                   </div>
                 </div>
               </motion.div>
