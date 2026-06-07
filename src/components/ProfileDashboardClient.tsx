@@ -409,8 +409,8 @@ export default function ProfileDashboardClient({ user, initialRecordings }: { us
     ? Math.round(recordings.reduce((acc, curr) => acc + (curr.confidence || 0), 0) / recordings.length) 
     : 0;
 
-  const calculateStreak = () => {
-    if (recordings.length === 0) return 0;
+  const getPracticeMetrics = () => {
+    if (recordings.length === 0) return { streak: 0, activeDays: 0 };
     
     const dates = recordings.map(r => {
       const d = new Date(r.created_at);
@@ -418,6 +418,7 @@ export default function ProfileDashboardClient({ user, initialRecordings }: { us
     });
     
     const uniqueTimestamps = Array.from(new Set(dates)).sort((a, b) => b - a);
+    const activeDays = uniqueTimestamps.length;
     
     const today = new Date();
     const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
@@ -425,23 +426,23 @@ export default function ProfileDashboardClient({ user, initialRecordings }: { us
     
     const mostRecent = uniqueTimestamps[0];
     
-    if (mostRecent !== todayMidnight && mostRecent !== yesterdayMidnight) {
-      return 0;
-    }
-    
-    let currentStreak = 1;
-    for (let i = 0; i < uniqueTimestamps.length - 1; i++) {
-      const diff = uniqueTimestamps[i] - uniqueTimestamps[i + 1];
-      if (diff === 86400000) {
-        currentStreak++;
-      } else if (diff > 86400000) {
-        break;
+    let streak = 0;
+    if (mostRecent === todayMidnight || mostRecent === yesterdayMidnight) {
+      streak = 1;
+      for (let i = 0; i < uniqueTimestamps.length - 1; i++) {
+        const diff = uniqueTimestamps[i] - uniqueTimestamps[i + 1];
+        if (diff === 86400000) {
+          streak++;
+        } else if (diff > 86400000) {
+          break;
+        }
       }
     }
-    return currentStreak;
+    
+    return { streak, activeDays };
   };
 
-  const streak = calculateStreak();
+  const { streak, activeDays } = getPracticeMetrics();
 
   const formatDate = (dateString: string) => {
     const d = new Date(dateString);
@@ -568,14 +569,14 @@ export default function ProfileDashboardClient({ user, initialRecordings }: { us
                     </div>
                   </div>
 
-                  {/* Total Sessions Card */}
+                  {/* Practice Days Card */}
                   <div className="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-white/5 bg-white/60 dark:bg-surface/10 hover:border-slate-300 dark:hover:border-zinc-800 transition-colors flex items-center gap-5 float-fast interactive-card">
                     <div className="w-14 h-14 shrink-0 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
                       <Trophy className="w-7 h-7 text-purple-500" />
                     </div>
                     <div>
-                      <div className="text-2xl font-extrabold text-slate-800 dark:text-white">{user?.user_metadata?.login_count || 1}</div>
-                      <div className="text-slate-555 dark:text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Login Sessions</div>
+                      <div className="text-2xl font-extrabold text-slate-800 dark:text-white">{activeDays} Days</div>
+                      <div className="text-slate-555 dark:text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Practice Days</div>
                     </div>
                   </div>
                 </div>
