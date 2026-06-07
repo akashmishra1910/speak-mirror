@@ -15,6 +15,8 @@ interface Recording {
   transcript?: string | null;
   eye_contact?: number | null;
   expression_score?: number | null;
+  primary_emotion?: string | null;
+  pause_duration?: number | null;
 }
 
 export default async function ProfilePage() {

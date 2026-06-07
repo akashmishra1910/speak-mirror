@@ -21,6 +21,7 @@ import {
   FileText
 } from "lucide-react";
 import { FluencyCard } from "@/components/FluencyCard";
+import { FluencyAchievementCard } from "@/components/FluencyAchievementCard";
 import { useEffect, useState } from "react";
 import { BEAUTIFY_FILTERS } from "@/lib/filters";
 import { supabase } from "@/lib/supabase";
@@ -38,6 +39,8 @@ interface Recording {
   transcript?: string | null;
   eye_contact?: number | null;
   expression_score?: number | null;
+  primary_emotion?: string | null;
+  pause_duration?: number | null;
 }
 
 export default function ProfileDashboardClient({ user, initialRecordings }: { user: any; initialRecordings: Recording[] }) {
@@ -51,6 +54,7 @@ export default function ProfileDashboardClient({ user, initialRecordings }: { us
   const [isLoading, setIsLoading] = useState(false);
   const [watchRecording, setWatchRecording] = useState<Recording | null>(null);
   const [shareRecording, setShareRecording] = useState<Recording | null>(null);
+  const [cardStyle, setCardStyle] = useState<"classic" | "achievement">("classic");
   const [activeFilter, setActiveFilter] = useState("studio");
 
   // Preferences States
@@ -1287,17 +1291,64 @@ export default function ProfileDashboardClient({ user, initialRecordings }: { us
                 <X className="w-5 h-5" />
               </button>
 
-              <FluencyCard 
-                metrics={{
-                  confidence: shareRecording.confidence,
-                  clarity: shareRecording.clarity,
-                  wpm: shareRecording.wpm || 135,
-                  fillerWords: typeof shareRecording.filler_words === 'number' 
-                    ? shareRecording.filler_words 
-                    : Math.max(0, Math.round((100 - shareRecording.confidence) / 10))
-                }}
-                userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || "A Speaker"}
-              />
+              {/* Style selector tabs */}
+              <div className="flex justify-center gap-3 mb-6 mt-4">
+                <button
+                  onClick={() => setCardStyle("classic")}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer border ${
+                    cardStyle === "classic"
+                      ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-650/30"
+                      : "bg-white/5 border-white/5 text-zinc-400 hover:text-white hover:bg-white/10"
+                  }`}
+                >
+                  Interactive Flashcard
+                </button>
+                <button
+                  onClick={() => setCardStyle("achievement")}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer border ${
+                    cardStyle === "achievement"
+                      ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-650/30"
+                      : "bg-white/5 border-white/5 text-zinc-400 hover:text-white hover:bg-white/10"
+                  }`}
+                >
+                  Achievement Certificate
+                </button>
+              </div>
+
+              {cardStyle === "classic" ? (
+                <FluencyCard 
+                  metrics={{
+                    confidence: shareRecording.confidence,
+                    clarity: shareRecording.clarity,
+                    wpm: shareRecording.wpm || 135,
+                    fillerWords: typeof shareRecording.filler_words === 'number' 
+                      ? shareRecording.filler_words 
+                      : Math.max(0, Math.round((100 - shareRecording.confidence) / 10))
+                  }}
+                  userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || "A Speaker"}
+                />
+              ) : (
+                <FluencyAchievementCard
+                  metrics={{
+                    overallScore: shareRecording.confidence,
+                    wpm: shareRecording.wpm || 135,
+                    fillerWordsCount: typeof shareRecording.filler_words === 'number' 
+                      ? shareRecording.filler_words 
+                      : Math.max(0, Math.round((100 - shareRecording.confidence) / 10)),
+                    pauseDuration: shareRecording.pause_duration || 1.8,
+                    eyeContactScore: shareRecording.eye_contact || shareRecording.clarity || 78,
+                    engagementScore: shareRecording.expression_score || 84,
+                    primaryEmotion: shareRecording.primary_emotion || "Confident"
+                  }}
+                  userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || "A Speaker"}
+                  topic={shareRecording.topic}
+                  date={new Date(shareRecording.created_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric"
+                  })}
+                />
+              )}
             </motion.div>
           </motion.div>
         )}
