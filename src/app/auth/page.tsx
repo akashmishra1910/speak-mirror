@@ -20,7 +20,7 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (user) {
-      router.push("/profile");
+      router.push("/");
     }
   }, [user, router]);
 
@@ -34,7 +34,7 @@ export default function AuthPage() {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        router.push("/profile");
+        router.push("/");
       } else {
         const { data, error } = await supabase.auth.signUp({ 
           email, 
@@ -51,7 +51,7 @@ export default function AuthPage() {
           setSuccessMsg("Success! Please check your email inbox to verify your account.");
           setIsLogin(true);
         } else {
-          router.push("/profile");
+          router.push("/");
         }
       }
     } catch (err: any) {
@@ -154,7 +154,7 @@ export default function AuthPage() {
             const { error } = await supabase.auth.signInWithOAuth({
               provider: 'google',
               options: {
-                redirectTo: `${window.location.origin}/auth/callback?next=/profile`
+                redirectTo: `${window.location.origin}/auth/callback?next=/`
               }
             });
             if (error) setError(error.message);
