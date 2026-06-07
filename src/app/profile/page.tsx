@@ -17,7 +17,8 @@ import {
   Trash2,
   Search,
   AlertTriangle,
-  ChevronRight
+  ChevronRight,
+  FileText
 } from "lucide-react";
 import { FluencyCard } from "@/components/FluencyCard";
 import { useEffect, useState } from "react";
@@ -36,6 +37,8 @@ interface Recording {
   wpm?: number | null;
   filler_words?: number | null;
   transcript?: string | null;
+  eye_contact?: number | null;
+  expression_score?: number | null;
 }
 
 export default function ProfilePage() {
@@ -62,6 +65,7 @@ export default function ProfilePage() {
 
   // Danger Zone States
   const [isClearingHistory, setIsClearingHistory] = useState(false);
+  const [exportingId, setExportingId] = useState<string | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("speak_mirror_beautify_filter");
@@ -157,6 +161,291 @@ export default function ProfilePage() {
       alert("Error clearing history. Please try again.");
     } finally {
       setIsClearingHistory(false);
+    }
+  };
+
+  const handleDeleteRecording = async (recordingId: string) => {
+    if (!user) return;
+    
+    const confirm = window.confirm("Are you sure you want to permanently delete this practice recording? This action cannot be undone.");
+    if (!confirm) return;
+
+    try {
+      const { error } = await supabase
+        .from("recordings")
+        .delete()
+        .eq("id", recordingId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      
+      setRecordings((prev) => prev.filter((r) => r.id !== recordingId));
+      if (watchRecording?.id === recordingId) setWatchRecording(null);
+      if (shareRecording?.id === recordingId) setShareRecording(null);
+      
+      alert("Recording deleted successfully.");
+    } catch (err) {
+      console.error("Failed to delete recording:", err);
+      alert("Error deleting recording. Please try again.");
+    }
+  };
+
+  const handleExportPDF = async (rec: Recording) => {
+    if (!user) return;
+    setExportingId(rec.id);
+    try {
+      // 1. Dynamic load of jsPDF from CDN
+      let jsPDFClass = (window as any).jspdf?.jsPDF;
+      if (!jsPDFClass) {
+        const scriptId = "jspdf-cdn-script";
+        let script = document.getElementById(scriptId) as HTMLScriptElement;
+        if (!script) {
+          script = document.createElement("script");
+          script.id = scriptId;
+          script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+          script.async = true;
+          document.body.appendChild(script);
+          await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = reject;
+          });
+        } else {
+          await new Promise((resolve) => {
+            const check = setInterval(() => {
+              if ((window as any).jspdf?.jsPDF) {
+                clearInterval(check);
+                resolve(true);
+              }
+            }, 100);
+          });
+        }
+        jsPDFClass = (window as any).jspdf.jsPDF;
+      }
+
+      if (!jsPDFClass) {
+        alert("Failed to load PDF export library. Please check your network connection.");
+        return;
+      }
+
+      // 2. Initialize jsPDF (A4 size: 210mm x 297mm)
+      const doc = new jsPDFClass({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+      });
+
+      const margin = 20;
+      let y = 20;
+
+      // Dark Header Banner
+      doc.setFillColor(9, 9, 13);
+      doc.rect(0, 0, 210, 40, "F");
+
+      // App Title
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(255, 255, 255);
+      doc.text("SPEAKMIRROR", margin, 26);
+      
+      // Subtitle
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(156, 163, 175);
+      doc.text("// SPONTANEOUS SPEECH DIAGNOSTICS REPORT", margin, 33);
+
+      // Date of Report
+      doc.setFont("courier", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(99, 102, 241);
+      const dateStr = new Date(rec.created_at).toLocaleDateString("en-US", {
+        year: 'numeric', month: 'long', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+      doc.text(`DATE: ${dateStr.toUpperCase()}`, 210 - margin, 26, { align: "right" });
+
+      y = 55;
+
+      // Section 1: Evaluation Details
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(31, 41, 55);
+      doc.text("SPEECH EVALUATION DETAILS", margin, y);
+      y += 8;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(107, 114, 128);
+      doc.text("SPEAKER:", margin, y);
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(17, 24, 39);
+      const speakerName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || "A Speaker";
+      doc.text(speakerName, margin + 28, y);
+      y += 6;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(107, 114, 128);
+      doc.text("TOPIC / TASK:", margin, y);
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(17, 24, 39);
+      const topicText = rec.topic || "Free Practice Session";
+      const splitTopicText = doc.splitTextToSize(topicText, 140);
+      doc.text(splitTopicText, margin + 28, y);
+      y += splitTopicText.length * 5 + 6;
+
+      // Draw line separator
+      doc.setDrawColor(229, 231, 235);
+      doc.line(margin, y, 210 - margin, y);
+      y += 10;
+
+      // Section 2: Telemetry Metrics Grid
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(31, 41, 55);
+      doc.text("DIAGNOSTIC TELEMETRY INDEX", margin, y);
+      y += 8;
+
+      const hasScore = rec.confidence !== undefined && rec.confidence !== null;
+      const gridItems = [
+        { label: "CONFIDENCE", val: hasScore ? `${rec.confidence}%` : "Pending" },
+        { label: "CLARITY", val: hasScore ? `${rec.clarity}%` : "Pending" },
+        { label: "PACING", val: rec.wpm !== undefined && rec.wpm !== null ? `${rec.wpm} WPM` : "—" },
+        { label: "FILLER WORDS", val: rec.filler_words !== undefined && rec.filler_words !== null ? `${rec.filler_words}` : "—" }
+      ];
+
+      if (rec.eye_contact !== undefined && rec.eye_contact !== null) {
+        gridItems.push({ label: "EYE CONTACT", val: `${rec.eye_contact}%` });
+      }
+      if (rec.expression_score !== undefined && rec.expression_score !== null) {
+        gridItems.push({ label: "EXPRESSION SCORE", val: `${rec.expression_score}%` });
+      }
+
+      let itemIndex = 0;
+      gridItems.forEach((item) => {
+        const col = itemIndex % 2;
+        const row = Math.floor(itemIndex / 2);
+        
+        const cardX = margin + col * 88;
+        const cardY = y + row * 18;
+        
+        // Draw card background
+        doc.setFillColor(243, 244, 246);
+        doc.rect(cardX, cardY, 82, 14, "F");
+        
+        // Text labels
+        doc.setFont("courier", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(107, 114, 128);
+        doc.text(`// ${item.label.toLowerCase().replace(" ", "_")}`, cardX + 4, cardY + 5.5);
+        
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(17, 24, 39);
+        doc.text(item.val, cardX + 4, cardY + 11.5);
+        
+        itemIndex++;
+      });
+
+      y += Math.ceil(gridItems.length / 2) * 18 + 8;
+
+      // Draw line separator
+      doc.setDrawColor(229, 231, 235);
+      doc.line(margin, y, 210 - margin, y);
+      y += 10;
+
+      // Section 3: AI Coaching Insights Suggestions
+      if (hasScore) {
+        const suggestions = [];
+        if (rec.confidence < 75) {
+          suggestions.push("Focus on breathing and deliberate pauses to enhance vocal confidence.");
+        }
+        if (rec.clarity < 75) {
+          suggestions.push("Ensure crisp articulation of word endings and adjust speech tempo.");
+        }
+        if (rec.filler_words !== undefined && rec.filler_words !== null && rec.filler_words > 5) {
+          suggestions.push("Replace conversational fillers (e.g., 'like', 'um', 'ah') with silent, intentional pauses.");
+        }
+        if (rec.wpm !== undefined && rec.wpm !== null && (rec.wpm < 110 || rec.wpm > 160)) {
+          suggestions.push(`Your pacing was ${rec.wpm} WPM. Aim for a balanced tempo of 120-150 WPM for maximum impact.`);
+        }
+        if (suggestions.length === 0) {
+          suggestions.push("Excellent delivery! Continue practicing to maintain this high level of fluency.");
+        }
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.setTextColor(31, 41, 55);
+        doc.text("AI DIAGNOSTIC ANALYSIS & INSIGHTS", margin, y);
+        y += 8;
+
+        doc.setFontSize(9);
+        
+        suggestions.forEach((text, i) => {
+          const splitSug = doc.splitTextToSize(text, 155);
+          
+          if (y + splitSug.length * 5 > 275) {
+            doc.addPage();
+            y = 20;
+          }
+
+          doc.setFont("courier", "bold");
+          doc.setTextColor(99, 102, 241);
+          doc.text(`0${i+1} //`, margin, y);
+
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(55, 65, 81);
+          doc.text(splitSug, margin + 15, y);
+          y += splitSug.length * 5 + 3;
+        });
+
+        y += 6;
+        
+        // Draw separator
+        doc.setDrawColor(229, 231, 235);
+        doc.line(margin, y, 210 - margin, y);
+        y += 10;
+      }
+
+      // Section 4: Transcript Output
+      if (rec.transcript) {
+        if (y > 250) {
+          doc.addPage();
+          y = 20;
+        }
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.setTextColor(31, 41, 55);
+        doc.text("SPEECH TRANSCRIPT DUMP", margin, y);
+        y += 8;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9.5);
+        doc.setTextColor(55, 65, 81);
+        
+        const splitTranscript = doc.splitTextToSize(rec.transcript, 170);
+        
+        splitTranscript.forEach((line: string) => {
+          if (y > 275) {
+            doc.addPage();
+            y = 20;
+          }
+          doc.text(line, margin, y);
+          y += 5.5;
+        });
+      }
+
+      // Export file download
+      doc.save(`speakmirror-evaluation-${new Date(rec.created_at).toISOString().split('T')[0]}-${rec.id.substring(0, 8)}.pdf`);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      alert("Failed to export PDF: " + (err as Error).message);
+    } finally {
+      setExportingId(null);
     }
   };
 
@@ -428,11 +717,30 @@ export default function ProfilePage() {
                                         <Play className="w-3.5 h-3.5 fill-current" />
                                       </button>
                                       <button 
+                                        onClick={() => handleExportPDF(item)}
+                                        disabled={exportingId !== null}
+                                        className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-600/10 dark:hover:bg-emerald-600/20 border border-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-all cursor-pointer disabled:opacity-50"
+                                        title="Download PDF Report"
+                                      >
+                                        {exportingId === item.id ? (
+                                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        ) : (
+                                          <FileText className="w-3.5 h-3.5" />
+                                        )}
+                                      </button>
+                                      <button 
                                         onClick={() => setShareRecording(item)}
                                         className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 transition-all cursor-pointer"
                                         title="Share Card"
                                       >
                                         <Share2 className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button 
+                                        onClick={() => handleDeleteRecording(item.id)}
+                                        className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-600/10 dark:hover:bg-rose-600/20 border border-rose-500/10 text-rose-600 dark:text-rose-400 transition-all cursor-pointer"
+                                        title="Delete Recording"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
                                       </button>
                                     </>
                                   )}
@@ -549,11 +857,30 @@ export default function ProfilePage() {
                                         <Play className="w-3.5 h-3.5 fill-current" />
                                       </button>
                                       <button 
+                                        onClick={() => handleExportPDF(item)}
+                                        disabled={exportingId !== null}
+                                        className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-600/10 dark:hover:bg-emerald-600/20 border border-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-all cursor-pointer disabled:opacity-50"
+                                        title="Download PDF Report"
+                                      >
+                                        {exportingId === item.id ? (
+                                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        ) : (
+                                          <FileText className="w-3.5 h-3.5" />
+                                        )}
+                                      </button>
+                                      <button 
                                         onClick={() => setShareRecording(item)}
                                         className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 transition-all cursor-pointer"
                                         title="Share Card"
                                       >
                                         <Share2 className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button 
+                                        onClick={() => handleDeleteRecording(item.id)}
+                                        className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-600/10 dark:hover:bg-rose-600/20 border border-rose-500/10 text-rose-600 dark:text-rose-400 transition-all cursor-pointer"
+                                        title="Delete Recording"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
                                       </button>
                                     </>
                                   )}
