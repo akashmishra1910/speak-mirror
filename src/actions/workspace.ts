@@ -1,21 +1,14 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { SupabaseClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 
-// Initialize Supabase admin client using the service role key to bypass RLS checks,
-// allowing us to securely verify roles and write the token after validation.
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "",
-  {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  }
-);
+const supabaseAdmin = {
+  get auth() { return getSupabaseAdmin().auth; },
+  from(table: string) { return getSupabaseAdmin().from(table); }
+} as unknown as SupabaseClient;
 
 /**
  * Retrieves or generates a secure team invite link for a specific organization.

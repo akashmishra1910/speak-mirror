@@ -1,18 +1,18 @@
 "use server";
 
 import nodemailer from "nodemailer";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { SupabaseClient } from "@supabase/supabase-js";
+
+const supabase = {
+  from(table: string) { return getSupabaseAdmin().from(table); }
+} as unknown as SupabaseClient;
 
 export interface SupportPayload {
   email: string;
   category: string;
   message: string;
 }
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-);
 
 export async function submitSupportRequest(payload: SupportPayload) {
   console.log("========================================");

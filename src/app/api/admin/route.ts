@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { SupabaseClient } from "@supabase/supabase-js";
 import Groq from "groq-sdk";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'dummy' });
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-);
+const supabaseAdmin = {
+  get auth() { return getSupabaseAdmin().auth; },
+  get storage() { return getSupabaseAdmin().storage; },
+  from(table: string) { return getSupabaseAdmin().from(table); }
+} as unknown as SupabaseClient;
 
 // Helper to authenticate admin
 async function checkAdminAuth(request: Request) {

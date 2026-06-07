@@ -1,12 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import nodemailer from 'nodemailer';
-
-// Use service role key to bypass RLS and access auth.users
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-);
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -17,6 +11,7 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function POST(request: Request) {
+  const supabaseAdmin = getSupabaseAdmin();
   try {
     const body = await request.json();
     const { roomId, roomName, task } = body;
