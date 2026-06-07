@@ -735,13 +735,11 @@ function PracticeContent() {
                   onRetake={handleRetake}
                 />
                 <FluencyCard 
-                  metrics={{
-                    confidence: m.confidence,
-                    clarity: m.clarity,
-                    wpm: m.wpm,
-                    fillerWords: m.fillerWords
-                  }}
                   userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || "A Speaker"}
+                  confidenceScore={m.confidence}
+                  clarityScore={m.clarity}
+                  paceWpm={m.wpm}
+                  fillerWordsCount={m.fillerWords}
                 />
               </div>
             ))}

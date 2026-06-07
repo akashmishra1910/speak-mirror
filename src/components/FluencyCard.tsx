@@ -1,62 +1,36 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { Download, Share2, Sparkles, RefreshCw, Activity, Video, Smile } from "lucide-react";
+import { Download, Copy, Check } from "lucide-react";
 import { toPng } from "html-to-image";
 
 interface FluencyCardProps {
-  metrics?: {
-    overallScore?: number;
-    wpm?: number;
-    fillerWordsCount?: number;
-    fillerWordsList?: string[];
-    pauseDuration?: number;
-    eyeContactScore?: number;
-    engagementScore?: number;
-    primaryEmotion?: string;
-    // Legacy metrics fallback support
-    confidence?: number;
-    clarity?: number;
-    fillerWords?: number;
-  };
-  userName?: string;
-  topic?: string;
-  date?: string;
+  userName: string;
+  confidenceScore: number | string;
+  clarityScore: number | string;
+  paceWpm: number | string;
+  fillerWordsCount: number | string;
 }
 
-export function FluencyCard({ metrics: rawMetrics, userName, topic, date }: FluencyCardProps) {
-  const [isFlipped, setIsFlipped] = useState(false);
+export function FluencyCard({
+  userName,
+  confidenceScore,
+  clarityScore,
+  paceWpm,
+  fillerWordsCount
+}: FluencyCardProps) {
   const [isSaving, setIsSaving] = useState(false);
-  const [isSharing, setIsSharing] = useState(false);
-
-  const frontCardRef = useRef<HTMLDivElement>(null);
-  const backCardRef = useRef<HTMLDivElement>(null);
-
-  // Normalize metrics with robust defaults
-  const overallScore = rawMetrics?.overallScore ?? rawMetrics?.confidence ?? 85;
-  const wpm = rawMetrics?.wpm ?? 135;
-  const fillerWordsCount = rawMetrics?.fillerWordsCount ?? rawMetrics?.fillerWords ?? 3;
-  const fillerWordsList = rawMetrics?.fillerWordsList ?? ["uh", "um", "like"];
-  const pauseDuration = rawMetrics?.pauseDuration ?? 1.8;
-  const eyeContactScore = rawMetrics?.eyeContactScore ?? rawMetrics?.clarity ?? 78;
-  const engagementScore = rawMetrics?.engagementScore ?? 84;
-  const primaryEmotion = rawMetrics?.primaryEmotion ?? "Confident";
+  const [isCopying, setIsCopying] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const cleanName = userName || "A Speaker";
-  const cleanTopic = topic || "Spontaneous Presentation";
-  const cleanDate = date || new Date().toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  });
 
-  const handleSaveImage = async (e: React.MouseEvent, cardRef: React.RefObject<HTMLDivElement | null>, face: string) => {
-    e.stopPropagation();
+  const handleSaveImage = async () => {
     if (!cardRef.current || isSaving) return;
     setIsSaving(true);
     try {
-      // Small delay to ensure styles and fonts are applied
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 150));
       const dataUrl = await toPng(cardRef.current, {
         cacheBust: true,
         style: {
@@ -64,334 +38,169 @@ export function FluencyCard({ metrics: rawMetrics, userName, topic, date }: Flue
         }
       });
       const link = document.createElement("a");
-      link.download = `speakmirror-fluency-${face}-${cleanName.toLowerCase().replace(/\s+/g, "-")}.png`;
+      link.download = `speakmirror-milestone-${cleanName.toLowerCase().replace(/\s+/g, "-")}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
       console.error("Save image failed:", err);
-      alert("Failed to save card image. Please try again.");
+      alert("Failed to save fluency milestone card. Please try again.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleShare = async (e: React.MouseEvent, cardRef: React.RefObject<HTMLDivElement | null>) => {
-    e.stopPropagation();
-    if (!cardRef.current || isSharing) return;
-    setIsSharing(true);
+  const handleCopyToClipboard = async () => {
+    if (!cardRef.current || isCopying) return;
+    setIsCopying(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      const dataUrl = await toPng(cardRef.current, { cacheBust: true });
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      const dataUrl = await toPng(cardRef.current, {
+        cacheBust: true,
+        style: {
+          transform: "scale(1)",
+        }
+      });
       const res = await fetch(dataUrl);
       const blob = await res.blob();
-      const file = new File([blob], `speakmirror-card.png`, { type: "image/png" });
-
-      const shareText = `Check out my speech analytics on SpeakMirror! Pace: ${wpm} WPM, Score: ${overallScore}%! 🚀`;
-
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: "SpeakMirror Fluency Card",
-          text: shareText
-        });
-      } else {
-        // Fallback
-        const link = document.createElement("a");
-        link.download = `speakmirror-card.png`;
-        link.href = dataUrl;
-        link.click();
-        alert("Direct sharing is not supported in this browser. We downloaded the card PNG for you!");
-      }
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          [blob.type]: blob
+        })
+      ]);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error("Share failed:", err);
-      alert("Failed to share card. Please try again.");
+      console.error("Copy to clipboard failed:", err);
+      // Fallback: direct download
+      handleSaveImage();
     } finally {
-      setIsSharing(false);
+      setIsCopying(false);
     }
   };
 
   return (
-    <div className="w-full max-w-[420px] mx-auto mt-8 text-left select-none">
-      {/* 3D Flashcard Flip Wrapper */}
-      <div
-        onClick={() => setIsFlipped(!isFlipped)}
-        className="w-full h-[500px] perspective-1000 cursor-pointer"
+    <div className="w-full flex flex-col items-center">
+      
+      {/* ==================== CARD CONTAINER ==================== */}
+      <div 
+        ref={cardRef}
+        className="w-full max-w-[620px] bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 border border-slate-800 rounded-3xl p-8 relative overflow-hidden shadow-2xl flex flex-col justify-between aspect-[1.6/1] text-left select-none"
       >
-        <div
-          className={`w-full h-full relative transition-transform duration-700 preserve-3d ${
-            isFlipped ? "rotate-y-180" : ""
-          }`}
-        >
-          {/* ==================== FRONT OF CARD (Speech Fluency) ==================== */}
-          <div
-            ref={frontCardRef}
-            className="absolute inset-0 w-full h-full backface-hidden rounded-3xl bg-[#faf9f6] border border-slate-200/80 shadow-[0_10px_35px_rgba(0,0,0,0.05)] p-6 flex flex-col justify-between overflow-hidden"
-          >
-            {/* Lined index card decoration */}
-            <div className="absolute top-14 inset-x-0 h-px bg-rose-200/50 pointer-events-none" />
-            <div className="absolute left-8 top-0 bottom-0 w-px bg-red-200/30 pointer-events-none" />
-
-            {/* Front Header */}
-            <div className="z-10 flex items-start justify-between gap-2 pl-4">
-              <div>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 text-indigo-650 text-[9px] font-bold uppercase tracking-wider rounded">
-                    Speech Fluency
-                  </span>
-                  <span className="text-[9px] text-slate-400 font-light">{cleanDate}</span>
-                </div>
-                <h4 className="text-base font-extrabold text-slate-900 line-clamp-1">
-                  {cleanTopic}
-                </h4>
-                <p className="text-[10px] text-slate-500 font-light mt-0.5">
-                  Speaker: {cleanName}
-                </p>
-              </div>
-
-              {/* Right Side Header Utilities */}
-              <div className="flex items-center gap-2 shrink-0">
-                {/* Overall Score Badge */}
-                <div className="w-9 h-9 rounded-full border-2 border-indigo-500/20 bg-indigo-500/5 flex items-center justify-center text-xs font-bold text-slate-900 shadow-sm" title="Overall Score">
-                  {overallScore}%
-                </div>
-
-                {/* Save/Share icons */}
-                <button
-                  onClick={(e) => handleSaveImage(e, frontCardRef, "speech")}
-                  disabled={isSaving}
-                  className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-slate-900 transition-all hover:bg-slate-50 shadow-sm cursor-pointer disabled:opacity-50"
-                  title="Download Image"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={(e) => handleShare(e, frontCardRef)}
-                  disabled={isSharing}
-                  className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-slate-900 transition-all hover:bg-slate-50 shadow-sm cursor-pointer disabled:opacity-50"
-                  title="Share Card"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                </button>
+        {/* Gradient Glows */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.08),transparent_50%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.05),transparent_50%)] pointer-events-none" />
+        
+        {/* Header */}
+        <div className="flex justify-between items-center z-10">
+          <div className="flex items-center gap-2">
+            {/* Logo */}
+            <div className="relative w-8 h-8 flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg shadow-md shadow-indigo-500/20">
+              <div className="w-4 h-4 border-2 border-white rounded-md rotate-45 flex items-center justify-center">
+                <div className="w-1.5 h-1.5 bg-white rounded-full" />
               </div>
             </div>
+            <span className="text-lg font-black tracking-tight text-white">
+              Speak<span className="text-indigo-400">Mirror</span>
+            </span>
+          </div>
+          
+          {/* Badge */}
+          <span className="px-2.5 py-1 text-[10px] tracking-widest font-extrabold uppercase bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 rounded-full">
+            Fluency
+          </span>
+        </div>
 
-            {/* Front Body (3 stacked metric widgets with white background) */}
-            <div className="z-10 space-y-3 pl-4 flex-1 mt-6 flex flex-col justify-center">
-              {/* Widget 1: Pace */}
-              <div className="bg-white rounded-2xl p-4 border border-slate-200/40 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Pace
-                  </span>
-                  <span className="text-xs font-extrabold text-slate-900">
-                    {wpm} WPM
-                  </span>
-                </div>
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden relative">
-                  {/* Normal target zone (110 - 150 WPM) */}
-                  <div className="absolute left-[55%] right-[25%] bg-emerald-500/20 h-full" />
-                  {/* Current Pace indicator */}
-                  <div
-                    className="bg-indigo-500 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(100, (wpm / 200) * 100)}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[8px] text-slate-400 mt-1 font-medium">
-                  <span>Slow</span>
-                  <span className="text-emerald-600">Target (110-150)</span>
-                  <span>Fast</span>
-                </div>
-              </div>
+        {/* Heading Section */}
+        <div className="mt-8 mb-6 z-10">
+          <span className="text-[10px] tracking-[0.2em] font-extrabold text-slate-500 uppercase">
+            Speaking Performance Milestone
+          </span>
+          <h2 className="text-2xl font-extrabold text-white mt-1.5 leading-tight tracking-tight max-w-[520px]">
+            This certifies that <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 font-black">{cleanName}</span> has successfully reached a new level of speaking excellence.
+          </h2>
+        </div>
 
-              {/* Widget 2: Filler Words */}
-              <div className="bg-white rounded-2xl p-4 border border-slate-200/40 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Filler Words
-                  </span>
-                  <span className="text-xs font-extrabold text-slate-900">
-                    {fillerWordsCount} words
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {fillerWordsList.length > 0 ? (
-                    fillerWordsList.map((word, i) => (
-                      <span
-                        key={i}
-                        onClick={(e) => e.stopPropagation()}
-                        className="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-700 text-[9px] font-semibold rounded-md uppercase tracking-wider transition-colors hover:bg-slate-200 cursor-pointer"
-                      >
-                        {word}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-[9px] text-slate-450 italic">
-                      Zero fillers! Perfect delivery.
-                    </span>
-                  )}
-                </div>
-              </div>
+        {/* Metrics Section (4 identical cards in a row/grid) */}
+        <div className="grid grid-cols-4 gap-3 z-10">
+          
+          {/* Confidence - Emerald Accent */}
+          <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800/80 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden hover:border-emerald-500/30 transition-all duration-300">
+            <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-emerald-500 rounded-r-md" />
+            <span className="text-[9px] tracking-wider font-extrabold text-slate-400 uppercase">Confidence</span>
+            <span className="text-2xl font-black text-white mt-2 leading-none">{confidenceScore}%</span>
+          </div>
 
-              {/* Widget 3: Pauses */}
-              <div className="bg-white rounded-2xl p-4 border border-slate-200/40 shadow-sm flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                    Pause Duration
-                  </span>
-                  <span className="text-[8px] text-slate-400 font-light block mt-0.5">
-                    Total pauses longer than 1.5s
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="text-sm font-extrabold text-slate-900 block">
-                    {pauseDuration}s
-                  </span>
-                  <span className="text-[8px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded px-1.5 py-0.5 uppercase tracking-wide inline-block mt-1">
-                    Good Stability
-                  </span>
-                </div>
-              </div>
-            </div>
+          {/* Clarity - Blue Accent */}
+          <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800/80 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden hover:border-blue-500/30 transition-all duration-300">
+            <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-blue-500 rounded-r-md" />
+            <span className="text-[9px] tracking-wider font-extrabold text-slate-400 uppercase">Clarity</span>
+            <span className="text-2xl font-black text-white mt-2 leading-none">{clarityScore}%</span>
+          </div>
 
-            {/* Front Footer */}
-            <div className="z-10 flex items-center justify-center gap-1.5 pt-4 border-t border-dashed border-slate-200 pl-4 mt-4 text-slate-450 hover:text-slate-700 transition-colors">
-              <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">
-                Click Card to View Face Analytics
-              </span>
+          {/* Pace - Orange Accent */}
+          <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800/80 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden hover:border-amber-500/30 transition-all duration-300">
+            <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-amber-500 rounded-r-md" />
+            <span className="text-[9px] tracking-wider font-extrabold text-slate-400 uppercase">Pace</span>
+            <span className="text-2xl font-black text-white mt-2 leading-none">
+              {paceWpm} <span className="text-[10px] font-normal text-slate-400">WPM</span>
+            </span>
+          </div>
+
+          {/* Filler Words - Teal Accent */}
+          <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800/80 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden hover:border-cyan-500/30 transition-all duration-300">
+            <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-cyan-500 rounded-r-md" />
+            <span className="text-[9px] tracking-wider font-extrabold text-slate-400 uppercase">Filler Words</span>
+            <span className="text-2xl font-black text-white mt-2 leading-none">{fillerWordsCount}</span>
+          </div>
+
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-between items-center border-t border-slate-800/60 pt-4 mt-8 z-10">
+          <div className="flex items-center gap-3">
+            <span className="text-[8px] text-slate-650 text-slate-500 font-medium max-w-[280px] leading-tight">
+              Validated via SpeakMirror AI analysis engine. Results represent statistical estimates of performance during mirror mode practice sessions.
+            </span>
+            {/* Green Colored Verified Stamp */}
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[8px] font-extrabold text-emerald-400 tracking-wider uppercase">
+              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              Verified
             </div>
           </div>
 
-          {/* ==================== BACK OF CARD (Visual Dynamics) ==================== */}
-          <div
-            ref={backCardRef}
-            className="absolute inset-0 w-full h-full backface-hidden rotate-y-180 rounded-3xl bg-[#faf9f6] border border-slate-200/80 shadow-[0_10px_35px_rgba(0,0,0,0.05)] p-6 flex flex-col justify-between overflow-hidden"
+          <a 
+            href="https://speakmirror.app" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-[10px] tracking-widest font-extrabold text-indigo-400 hover:text-indigo-300 transition-colors"
           >
-            {/* Lined index card decoration */}
-            <div className="absolute top-14 inset-x-0 h-px bg-rose-200/50 pointer-events-none" />
-            <div className="absolute left-8 top-0 bottom-0 w-px bg-red-200/30 pointer-events-none" />
-
-            {/* Back Header */}
-            <div className="z-10 flex items-start justify-between gap-2 pl-4">
-              <div>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className="px-2 py-0.5 bg-sky-50 border border-sky-100 text-sky-650 text-[9px] font-bold uppercase tracking-wider rounded">
-                    Visual Dynamics
-                  </span>
-                  <span className="text-[9px] text-slate-400 font-light">{cleanDate}</span>
-                </div>
-                <h4 className="text-base font-extrabold text-slate-900 line-clamp-1">
-                  {cleanTopic}
-                </h4>
-                <p className="text-[10px] text-slate-500 font-light mt-0.5">
-                  Speaker: {cleanName}
-                </p>
-              </div>
-
-              {/* Right Side Header Utilities */}
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="w-9 h-9 rounded-full border-2 border-sky-500/20 bg-sky-500/5 flex items-center justify-center text-xs font-bold text-slate-900 shadow-sm" title="Engagement Score">
-                  {engagementScore}%
-                </div>
-
-                <button
-                  onClick={(e) => handleSaveImage(e, backCardRef, "visual")}
-                  disabled={isSaving}
-                  className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-slate-900 transition-all hover:bg-slate-50 shadow-sm cursor-pointer disabled:opacity-50"
-                  title="Download Image"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={(e) => handleShare(e, backCardRef)}
-                  disabled={isSharing}
-                  className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-slate-900 transition-all hover:bg-slate-50 shadow-sm cursor-pointer disabled:opacity-50"
-                  title="Share Card"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Back Body (3 stacked metric widgets with white background) */}
-            <div className="z-10 space-y-3 pl-4 flex-1 mt-6 flex flex-col justify-center">
-              {/* Widget 1: Eye Contact */}
-              <div className="bg-white rounded-2xl p-4 border border-slate-200/40 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <Video className="w-3.5 h-3.5 text-slate-450" />
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Eye Contact
-                    </span>
-                  </div>
-                  <span className="text-xs font-extrabold text-slate-900">
-                    {eyeContactScore}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                  <div
-                    className="bg-indigo-500 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${eyeContactScore}%` }}
-                  />
-                </div>
-                <span className="text-[8px] text-slate-400 block mt-1 font-light">
-                  Percentage of time gaze was centered
-                </span>
-              </div>
-
-              {/* Widget 2: Expressiveness */}
-              <div className="bg-white rounded-2xl p-4 border border-slate-200/40 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <Activity className="w-3.5 h-3.5 text-slate-450" />
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Expressiveness
-                    </span>
-                  </div>
-                  <span className="text-xs font-extrabold text-slate-900">
-                    {engagementScore}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                  <div
-                    className="bg-sky-500 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${engagementScore}%` }}
-                  />
-                </div>
-                <span className="text-[8px] text-slate-400 block mt-1 font-light">
-                  Facial expression variation frequency
-                </span>
-              </div>
-
-              {/* Widget 3: Primary Emotion */}
-              <div className="bg-white rounded-2xl p-4 border border-slate-200/40 shadow-sm flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Smile className="w-4 h-4 text-slate-450" />
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                      Primary Emotion
-                    </span>
-                    <span className="text-[8px] text-slate-400 font-light block mt-0.5">
-                      Most persistent visual expression
-                    </span>
-                  </div>
-                </div>
-                <div className="px-3.5 py-1.5 bg-sky-50 border border-sky-100 rounded-xl text-sky-700 text-xs font-bold uppercase tracking-wider shrink-0 shadow-sm">
-                  {primaryEmotion}
-                </div>
-              </div>
-            </div>
-
-            {/* Back Footer */}
-            <div className="z-10 flex items-center justify-center gap-1.5 pt-4 border-t border-dashed border-slate-200 pl-4 mt-4 text-slate-450 hover:text-slate-700 transition-colors">
-              <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">
-                Click Card to Flip to Delivery
-              </span>
-            </div>
-          </div>
+            speakmirror.app
+          </a>
         </div>
       </div>
+
+      {/* Utilities */}
+      <div className="flex gap-3 mt-6">
+        <button
+          onClick={handleSaveImage}
+          disabled={isSaving}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer shadow-lg disabled:opacity-50"
+        >
+          <Download className="w-4 h-4" />
+          {isSaving ? "Creating PNG..." : "Download Certificate"}
+        </button>
+        <button
+          onClick={handleCopyToClipboard}
+          disabled={isCopying}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 font-semibold text-sm hover:bg-slate-800 hover:text-white active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+        >
+          {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+          {isCopying ? "Copying..." : copied ? "Copied!" : "Copy Image"}
+        </button>
+      </div>
+
     </div>
   );
 }
