@@ -1,100 +1,103 @@
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  let supabaseResponse = NextResponse.next({
+    request,
+  });
 
-  // 1. Retrieve the access token from cookies
-  const token = request.cookies.get("sb-access-token")?.value;
-
-  if (pathname.startsWith("/admin")) {
-    if (!token) {
-      const loginUrl = new URL("/auth", request.url);
-      return NextResponse.redirect(loginUrl);
-    }
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-    );
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user || user.user_metadata?.role !== "admin") {
-      console.warn(`Access denied to admin: User is not admin.`);
-      const loginUrl = new URL("/auth", request.url);
-      return NextResponse.redirect(loginUrl);
-    }
-    return NextResponse.next();
-  }
-
-  // Next.js config matcher handles routing triggers.
-  // But we still extract segment parameters safely.
-  const segments = pathname.split("/");
-  // segments = ["", "rooms", "room_id", "mentor-dashboard"]
-  const roomId = segments[2];
-
-  if (!roomId) {
-    return NextResponse.next();
-  }
-
-  if (!token) {
-    // If not authenticated, redirect to the auth page
-    const loginUrl = new URL("/auth", request.url);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // 2. Initialize a server-side Supabase client
-  const supabase = createClient(
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          supabaseResponse = NextResponse.next({
+            request,
+          });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
   );
 
-  // 3. Retrieve user profile safely from the token
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  // Validate server-side JWT signatures
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (authError || !user) {
+  const { pathname } = request.nextUrl;
+
+  // Protect paths: /profile, /rooms, /admin
+  const isProtectedPath =
+    pathname.startsWith("/profile") ||
+    pathname.startsWith("/rooms") ||
+    pathname.startsWith("/admin");
+
+  if (isProtectedPath && !user) {
     const loginUrl = new URL("/auth", request.url);
     return NextResponse.redirect(loginUrl);
   }
 
-  try {
-    // 4. Query the rooms table to find the organization_id of the room
-    const { data: room, error: roomError } = await supabase
-      .from("rooms")
-      .select("organization_id")
-      .eq("id", roomId)
-      .single();
-
-    if (roomError || !room || !room.organization_id) {
-      // If room is invalid or has no organization scoped, deny access to dashboard
-      console.warn(`Access denied to dashboard: Room ${roomId} has no organization scopes.`);
-      return NextResponse.redirect(new URL("/practice", request.url));
-    }
-
-    // 5. Query organization_users mapping to verify user role
-    const { data: membership, error: memberError } = await supabase
-      .from("organization_users")
-      .select("role")
-      .eq("organization_id", room.organization_id)
-      .eq("user_id", user.id)
-      .single();
-
-    if (memberError || !membership || membership.role !== "admin") {
-      // If they are only a member or do not belong to the organization, deny access
-      console.warn(`User ${user.id} denied access to room ${roomId} mentor-dashboard (role: ${membership?.role || 'none'}).`);
-      return NextResponse.redirect(new URL("/practice", request.url));
-    }
-
-    // Access granted
-    return NextResponse.next();
-
-  } catch (err) {
-    console.error("Middleware database lookup error:", err);
-    return NextResponse.redirect(new URL("/practice", request.url));
+  // Admin role check for admin routes
+  if (pathname.startsWith("/admin") && user && user.user_metadata?.role !== "admin") {
+    const url = new URL("/practice", request.url);
+    return NextResponse.redirect(url);
   }
+
+  // Mentor dashboard check
+  const segments = pathname.split("/");
+  const roomId = segments[2];
+  if (pathname.includes("/mentor-dashboard") && roomId && user) {
+    try {
+      const { data: room, error: roomError } = await supabase
+        .from("rooms")
+        .select("organization_id")
+        .eq("id", roomId)
+        .single();
+
+      if (roomError || !room || !room.organization_id) {
+        const url = new URL("/practice", request.url);
+        return NextResponse.redirect(url);
+      }
+
+      const { data: membership, error: memberError } = await supabase
+        .from("organization_users")
+        .select("role")
+        .eq("organization_id", room.organization_id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (memberError || !membership || membership.role !== "admin") {
+        const url = new URL("/practice", request.url);
+        return NextResponse.redirect(url);
+      }
+    } catch (err) {
+      console.error("Middleware dashboard check error:", err);
+      const url = new URL("/practice", request.url);
+      return NextResponse.redirect(url);
+    }
+  }
+
+  return supabaseResponse;
 }
 
-// Config matcher ensures this middleware runs for both admin and mentor-dashboard views,
-// completely avoiding any performance impact on any other page or asset requests.
 export const config = {
-  matcher: ["/rooms/:id/mentor-dashboard", "/admin/:path*"],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * Feel free to modify this pattern to include more paths.
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };
