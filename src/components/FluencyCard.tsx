@@ -31,6 +31,7 @@ export function FluencyCard({ metrics, userName }: FluencyCardProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(true);
   const [isSharing, setIsSharing] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
 
   const cleanName = userName || "A Speaker";
   const shareText = `I just hit ${metrics.wpm} WPM with ${metrics.clarity}% Clarity on SpeakMirror! 🚀 Practicing daily to refine my technical speaking fluency.`;
@@ -302,21 +303,21 @@ export function FluencyCard({ metrics, userName }: FluencyCardProps) {
   };
 
   return (
-    <div className="w-full glass-panel p-6 md:p-8 rounded-3xl dark:border-white/10 dark:bg-[#09090d]/90 dark:shadow-[0_10px_30px_rgba(0,0,0,0.5)] mt-8 text-left">
+    <div className="w-full bg-[#faf9f6] border border-slate-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:bg-[#09090d]/90 dark:border-white/10 dark:shadow-[0_10px_30px_rgba(0,0,0,0.5)] p-6 md:p-8 rounded-3xl mt-8 text-left transition-colors duration-300">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-xl font-extrabold text-themeText dark:text-white flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
             Fluency Share Card
           </h3>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 font-light mt-1">
+          <p className="text-xs text-slate-550 dark:text-zinc-400 font-light mt-1">
             Showcase your technical speaking metrics to your peers and recruiters.
           </p>
         </div>
         <button
           onClick={handleDownload}
           disabled={isGenerating}
-          className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200/60 text-slate-800 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 dark:text-white transition-all font-bold text-xs flex items-center gap-2 cursor-pointer"
+          className="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200/60 text-slate-800 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 dark:text-white transition-all font-bold text-xs flex items-center gap-2 cursor-pointer shadow-sm"
         >
           <Download className="w-4 h-4" />
           Save Local PNG
@@ -326,21 +327,86 @@ export function FluencyCard({ metrics, userName }: FluencyCardProps) {
       {/* Canvas - hidden offscreen */}
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Image Preview Container */}
-      <div className="relative w-full aspect-[1200/630] rounded-2xl overflow-hidden border border-slate-200/60 dark:border-white/5 bg-zinc-950 flex items-center justify-center">
-        {isGenerating || !imgUrl ? (
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-            <span className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">Generating Card Graphic...</span>
+      {/* 3D Flashcard Flip Container */}
+      <div
+        onClick={() => setIsFlipped(!isFlipped)}
+        className="relative w-full aspect-[1200/630] perspective-1000 cursor-pointer select-none"
+      >
+        <div
+          className={`w-full h-full relative transition-transform duration-700 preserve-3d ${
+            isFlipped ? "rotate-y-180" : ""
+          }`}
+        >
+          {/* FRONT FACE (Tactile Lined Index Card) */}
+          <div className="absolute inset-0 w-full h-full backface-hidden rounded-2xl bg-[#faf9f6] border border-slate-250/80 shadow-[0_12px_30px_rgba(0,0,0,0.04),0_4px_10px_rgba(0,0,0,0.02)] dark:bg-[#121214] dark:border-white/5 dark:shadow-[0_20px_40px_rgba(0,0,0,0.6)] p-6 md:p-10 flex flex-col justify-between overflow-hidden">
+            {/* Lined Paper Background Effect */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.04)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:100%_2.5rem] pointer-events-none" />
+            
+            {/* Index Card Lined Margin Line */}
+            <div className="absolute left-12 md:left-16 top-0 bottom-0 w-px bg-red-400/25 dark:bg-red-500/15 pointer-events-none" />
+
+            {/* Content Container */}
+            <div className="pl-10 md:pl-16 flex flex-col justify-between h-full z-10">
+              {/* Top Row */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4 h-4 rounded bg-indigo-500/10 dark:bg-indigo-400/10 flex items-center justify-center">
+                    <Sparkles className="w-2.5 h-2.5 text-indigo-500 dark:text-indigo-400" />
+                  </div>
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-slate-450 dark:text-zinc-500">
+                    Fluency Diagnostic
+                  </span>
+                </div>
+                <span className="text-[8px] font-mono text-slate-400 dark:text-zinc-650">
+                  SM-CARD-{metrics.wpm}
+                </span>
+              </div>
+
+              {/* Middle Title */}
+              <div className="my-auto space-y-2 md:space-y-3">
+                <div className="inline-flex px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[9px] font-bold uppercase tracking-wider">
+                  Session Verified
+                </div>
+                <h4 className="text-2xl md:text-4xl font-extrabold text-slate-800 dark:text-white leading-tight">
+                  {cleanName}
+                </h4>
+                <p className="text-[10px] md:text-xs font-light text-slate-500 dark:text-zinc-450 max-w-md leading-relaxed">
+                  Successfully completed a spontaneous speaking task with <span className="font-semibold text-slate-755 dark:text-zinc-350">{metrics.clarity}% Clarity</span> and an active pace of <span className="font-semibold text-slate-755 dark:text-zinc-350">{metrics.wpm} WPM</span>.
+                </p>
+              </div>
+
+              {/* Bottom Row */}
+              <div className="flex items-end justify-between pt-3 border-t border-dashed border-slate-200 dark:border-white/5">
+                <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
+                  <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider animate-pulse">
+                    Click Card to Flip & Reveal Metrics
+                  </span>
+                </div>
+                <div className="w-9 h-9 rounded-full border border-dashed border-slate-300 dark:border-zinc-700 flex items-center justify-center text-[8px] font-bold text-slate-450 dark:text-zinc-600 rotate-12 shrink-0">
+                  SM-VERIFIED
+                </div>
+              </div>
+            </div>
           </div>
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={imgUrl}
-            alt="SpeakMirror Fluency Card"
-            className="w-full h-full object-contain"
-          />
-        )}
+
+          {/* BACK FACE (Generated Image) */}
+          <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180 rounded-2xl bg-zinc-950 border border-slate-200/80 dark:border-white/5 shadow-[0_15px_35px_rgba(0,0,0,0.05),0_5px_15px_rgba(0,0,0,0.03)] dark:shadow-[0_20px_40px_rgba(0,0,0,0.6)] overflow-hidden flex items-center justify-center">
+            {isGenerating || !imgUrl ? (
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="w-7 h-7 text-indigo-500 animate-spin" />
+                <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-widest">Generating Card Graphic...</span>
+              </div>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={imgUrl}
+                alt="SpeakMirror Fluency Card"
+                className="w-full h-full object-contain"
+              />
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Share Actions - Premium Quote and Unified Share Button */}
