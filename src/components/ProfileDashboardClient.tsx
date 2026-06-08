@@ -18,7 +18,8 @@ import {
   Search,
   AlertTriangle,
   ChevronRight,
-  FileText
+  FileText,
+  Sparkles
 } from "lucide-react";
 import { FluencyCard } from "@/components/FluencyCard";
 import { useEffect, useState } from "react";
@@ -40,6 +41,8 @@ interface Recording {
   expression_score?: number | null;
   primary_emotion?: string | null;
   pause_duration?: number | null;
+  coach_comment?: string | null;
+  annotations?: any | null;
 }
 
 export default function ProfileDashboardClient({ user, initialRecordings }: { user: any; initialRecordings: Recording[] }) {
@@ -1240,12 +1243,61 @@ export default function ProfileDashboardClient({ user, initialRecordings }: { us
                 </div>
               </div>
 
+              {/* AI Coach Comment */}
+              {watchRecording.coach_comment && (
+                <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10 flex gap-3 items-start text-left relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-2 text-indigo-500/10 pointer-events-none">
+                    <Sparkles className="w-16 h-16 -mr-4 -mt-4 rotate-12" />
+                  </div>
+                  <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 shrink-0">
+                    <Sparkles className="w-4 h-4 animate-pulse" />
+                  </div>
+                  <div className="flex flex-col gap-0.5 relative z-10">
+                    <span className="text-[8px] font-bold uppercase tracking-wider text-indigo-400 font-mono">// ai_coach_feedback</span>
+                    <p className="text-slate-800 dark:text-zinc-200 text-xs italic font-light leading-relaxed">
+                      "{watchRecording.coach_comment}"
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Transcript */}
               {watchRecording.transcript && (
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[10px] text-slate-550 dark:text-zinc-400 uppercase tracking-widest font-semibold">Transcript</span>
                   <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-white/[0.01] border border-slate-200/50 dark:border-white/5 text-xs text-slate-700 dark:text-zinc-300 leading-relaxed max-h-[120px] overflow-y-auto font-light">
-                    {watchRecording.transcript}
+                    {(() => {
+                      const text = watchRecording.transcript;
+                      const annotations = watchRecording.annotations;
+                      if (!annotations || !Array.isArray(annotations) || annotations.length === 0) {
+                        return <span>{text}</span>;
+                      }
+                      const sortedAnnotations = [...annotations].sort((a, b) => b.text.length - a.text.length);
+                      const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                      const pattern = sortedAnnotations.map(a => `(${escapeRegExp(a.text)})`).join('|');
+                      if (!pattern) return <span>{text}</span>;
+                      const regex = new RegExp(pattern, 'gi');
+                      const parts = text.split(regex);
+                      return parts.map((part, index) => {
+                        if (!part) return null;
+                        const matched = sortedAnnotations.find(a => a.text.toLowerCase() === part.toLowerCase());
+                        if (matched) {
+                          const highlightColor = matched.type === 'filler' 
+                            ? 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30' 
+                            : 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30';
+                          return (
+                            <span 
+                              key={index} 
+                              className={`inline-block mx-0.5 px-0.5 rounded cursor-help font-semibold ${highlightColor}`}
+                              title={`${matched.type === 'filler' ? 'Filler Word' : 'Pacing Deviation'}: ${matched.comment}`}
+                            >
+                              {part}
+                            </span>
+                          );
+                        }
+                        return <span key={index}>{part}</span>;
+                      });
+                    })()}
                   </div>
                 </div>
               )}

@@ -555,7 +555,9 @@ function PracticeContent() {
             recording_type: task?.isChallenge ? 'warmup' : 'freeform',
             organization_id: currentOrgId,
             eye_contact: metricsList[0].eyeContact !== undefined ? metricsList[0].eyeContact : null,
-            expression_score: metricsList[0].expressionScore !== undefined ? metricsList[0].expressionScore : null
+            expression_score: metricsList[0].expressionScore !== undefined ? metricsList[0].expressionScore : null,
+            coach_comment: metricsList[0].coachComment || null,
+            annotations: metricsList[0].annotations || null
           });
         }
 
@@ -581,7 +583,9 @@ function PracticeContent() {
               recording_type: 'reading',
               organization_id: currentOrgId,
               eye_contact: metricsList[1].eyeContact !== undefined ? metricsList[1].eyeContact : null,
-              expression_score: metricsList[1].expressionScore !== undefined ? metricsList[1].expressionScore : null
+              expression_score: metricsList[1].expressionScore !== undefined ? metricsList[1].expressionScore : null,
+              coach_comment: metricsList[1].coachComment || null,
+              annotations: metricsList[1].annotations || null
             });
           }
         }

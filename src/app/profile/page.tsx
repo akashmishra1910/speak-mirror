@@ -17,6 +17,8 @@ interface Recording {
   expression_score?: number | null;
   primary_emotion?: string | null;
   pause_duration?: number | null;
+  coach_comment?: string | null;
+  annotations?: any | null;
 }
 
 export default async function ProfilePage() {

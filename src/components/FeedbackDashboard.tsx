@@ -16,6 +16,36 @@ export interface AnalysisMetrics {
   title?: string;
   eyeContact?: number;
   expressionScore?: number;
+  coachComment?: string | null;
+  annotations?: { text: string; type: "filler" | "pace"; comment: string }[] | null;
+}
+
+function AnimatedCounter({ value, duration = 1, suffix = "" }: { value: number; duration?: number; suffix?: string }) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let start = 0;
+    const end = Math.round(value);
+    if (isNaN(end) || end <= 0) {
+      setCount(0);
+      return;
+    }
+    
+    const totalMiliseconds = duration * 1000;
+    const stepTime = Math.max(16, Math.floor(totalMiliseconds / end)); // max 60fps
+    const increment = Math.ceil(end / (totalMiliseconds / stepTime));
+    
+    const timer = setInterval(() => {
+      start += increment;
+      if (start >= end) {
+        start = end;
+        clearInterval(timer);
+      }
+      setCount(start);
+    }, stepTime);
+    
+    return () => clearInterval(timer);
+  }, [value, duration]);
+  return <>{count}{suffix}</>;
 }
 
 interface DashboardProps {
@@ -362,6 +392,64 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
     }
   };
 
+  const renderAnnotatedTranscript = () => {
+    const text = metrics.transcript;
+    const annotations = metrics.annotations;
+    
+    if (!annotations || annotations.length === 0) {
+      return <span>{text}</span>;
+    }
+
+    // Sort by length descending to prevent substring mismatching
+    const sortedAnnotations = [...annotations].sort((a, b) => b.text.length - a.text.length);
+    
+    const escapeRegExp = (string: string) => {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    };
+
+    const pattern = sortedAnnotations.map(a => `(${escapeRegExp(a.text)})`).join('|');
+    if (!pattern) return <span>{text}</span>;
+
+    const regex = new RegExp(pattern, 'gi');
+    const parts = text.split(regex);
+    
+    return (
+      <>
+        {parts.map((part, index) => {
+          if (!part) return null;
+          
+          const matchedAnnotation = sortedAnnotations.find(
+            a => a.text.toLowerCase() === part.toLowerCase()
+          );
+          
+          if (matchedAnnotation) {
+            const highlightColor = matchedAnnotation.type === 'filler' 
+              ? 'bg-amber-500/15 text-amber-500 dark:text-amber-300 border border-amber-500/30' 
+              : 'bg-indigo-500/15 text-indigo-500 dark:text-indigo-300 border border-indigo-500/30';
+            
+            return (
+              <span 
+                key={index} 
+                className={`relative group inline-block mx-0.5 px-1 rounded cursor-help font-semibold transition-all duration-200 ${highlightColor} hover:scale-[1.02]`}
+              >
+                {part}
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-zinc-950 border border-white/10 text-white text-[10px] p-2.5 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 font-normal leading-normal font-sans text-center">
+                  <span className="font-extrabold uppercase block text-[8px] tracking-wider mb-1 text-zinc-400">
+                    {matchedAnnotation.type === 'filler' ? 'Filler Word Spike' : 'Pacing Deviation'}
+                  </span>
+                  {matchedAnnotation.comment}
+                  <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-950" />
+                </span>
+              </span>
+            );
+          }
+          
+          return <span key={index}>{part}</span>;
+        })}
+      </>
+    );
+  };
+
   return (
     <motion.div
       variants={containerVariants}
@@ -489,9 +577,16 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
           {/* Confidence */}
           <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-slow interactive-card relative overflow-hidden font-mono border-slate-200/50 bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-800/80 dark:bg-[#09090d]/60 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
             <span className="text-slate-500 dark:text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_confidence</span>
-            <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">{metrics.confidence}%</div>
+            <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">
+              <AnimatedCounter value={metrics.confidence} suffix="%" />
+            </div>
             <div className="w-full bg-slate-200 dark:bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-slate-300/30 dark:border-zinc-800">
-              <div className={`h-full rounded-full ${metrics.confidence >= 80 ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.confidence >= 60 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-rose-500 dark:bg-rose-400'}`} style={{ width: `${metrics.confidence}%` }} />
+              <motion.div 
+                className={`h-full rounded-full ${metrics.confidence >= 80 ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.confidence >= 60 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-rose-500 dark:bg-rose-400'}`} 
+                initial={{ width: 0 }}
+                animate={{ width: `${metrics.confidence}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+              />
             </div>
             <span className="text-[8px] text-slate-500 dark:text-zinc-500 mt-2 font-bold">
               DIAGNOSTIC: {metrics.confidence >= 80 ? 'SECURE' : metrics.confidence >= 60 ? 'STABLE' : 'LOW_INDEX'}
@@ -501,9 +596,16 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
           {/* Clarity */}
           <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-medium interactive-card relative overflow-hidden font-mono border-slate-200/50 bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-800/80 dark:bg-[#09090d]/60 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
             <span className="text-slate-500 dark:text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_clarity</span>
-            <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">{metrics.clarity}%</div>
+            <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">
+              <AnimatedCounter value={metrics.clarity} suffix="%" />
+            </div>
             <div className="w-full bg-slate-200 dark:bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-slate-300/30 dark:border-zinc-800">
-              <div className={`h-full rounded-full ${metrics.clarity >= 80 ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.clarity >= 60 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-rose-500 dark:bg-rose-400'}`} style={{ width: `${metrics.clarity}%` }} />
+              <motion.div 
+                className={`h-full rounded-full ${metrics.clarity >= 80 ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.clarity >= 60 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-rose-500 dark:bg-rose-400'}`} 
+                initial={{ width: 0 }}
+                animate={{ width: `${metrics.clarity}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+              />
             </div>
             <span className="text-[8px] text-slate-500 dark:text-zinc-500 mt-2 font-bold">
               EVALUATION: {metrics.clarity >= 80 ? 'OPTIMAL' : metrics.clarity >= 60 ? 'STABLE' : 'DEVIATED'}
@@ -513,9 +615,16 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
           {/* Filler Words */}
           <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-fast interactive-card relative overflow-hidden font-mono border-slate-200/50 bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-800/80 dark:bg-[#09090d]/60 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
             <span className="text-slate-500 dark:text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// counter_fillers</span>
-            <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">{metrics.fillerWords}</div>
+            <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">
+              <AnimatedCounter value={metrics.fillerWords} />
+            </div>
             <div className="w-full bg-slate-200 dark:bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-slate-300/30 dark:border-zinc-800">
-              <div className={`h-full rounded-full ${metrics.fillerWords <= 2 ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.fillerWords <= 5 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-rose-500 dark:bg-rose-400'}`} style={{ width: `${Math.max(0, 100 - (metrics.fillerWords * 10))}%` }} />
+              <motion.div 
+                className={`h-full rounded-full ${metrics.fillerWords <= 2 ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.fillerWords <= 5 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-rose-500 dark:bg-rose-400'}`} 
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.max(0, 100 - (metrics.fillerWords * 10))}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+              />
             </div>
             <span className="text-[8px] text-slate-500 dark:text-zinc-500 mt-2 font-bold">
               DIAGNOSTIC: {metrics.fillerWords <= 2 ? 'CLEAN' : metrics.fillerWords <= 5 ? 'MODERATE' : 'HIGH_FREQUENCY'}
@@ -525,9 +634,16 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
           {/* Pace */}
           <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-slow interactive-card relative overflow-hidden font-mono border-slate-200/50 bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-800/80 dark:bg-[#09090d]/60 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
             <span className="text-slate-500 dark:text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// rate_wpm</span>
-            <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">{metrics.wpm} <span className="text-[10px] text-slate-500 dark:text-zinc-500">WPM</span></div>
+            <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">
+              <AnimatedCounter value={metrics.wpm} /> <span className="text-[10px] text-slate-500 dark:text-zinc-500">WPM</span>
+            </div>
             <div className="w-full bg-slate-200 dark:bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-slate-300/30 dark:border-zinc-800">
-              <div className="h-full rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" style={{ width: `${Math.min(100, (metrics.wpm / 200) * 100)}%` }} />
+              <motion.div 
+                className="h-full rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" 
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, (metrics.wpm / 200) * 100)}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+              />
             </div>
             <span className="text-[8px] text-slate-500 dark:text-zinc-500 mt-2 font-bold">
               DIAGNOSTIC: {metrics.wpm >= 110 && metrics.wpm <= 170 ? 'BALANCED' : metrics.wpm > 170 ? 'COMPRESSED' : 'LACONIC'}
@@ -538,9 +654,16 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
           {metrics.eyeContact !== undefined && metrics.eyeContact !== null && (
             <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-slow interactive-card relative overflow-hidden font-mono border-slate-200/50 bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-800/80 dark:bg-[#09090d]/60 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
               <span className="text-slate-500 dark:text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_gaze</span>
-              <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">{metrics.eyeContact}%</div>
+              <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">
+                <AnimatedCounter value={metrics.eyeContact} suffix="%" />
+              </div>
               <div className="w-full bg-slate-200 dark:bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-slate-300/30 dark:border-zinc-800">
-                <div className={`h-full rounded-full ${metrics.eyeContact >= 80 ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.eyeContact >= 60 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-rose-500 dark:bg-rose-400'}`} style={{ width: `${metrics.eyeContact}%` }} />
+                <motion.div 
+                  className={`h-full rounded-full ${metrics.eyeContact >= 80 ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.eyeContact >= 60 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-rose-500 dark:bg-rose-400'}`} 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${metrics.eyeContact}%` }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                />
               </div>
               <span className="text-[8px] text-slate-500 dark:text-zinc-500 mt-2 font-bold">
                 DIAGNOSTIC: {metrics.eyeContact >= 80 ? 'OPTIMAL' : metrics.eyeContact >= 60 ? 'DEVIATING' : 'LOW_CONTACT'}
@@ -552,9 +675,16 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
           {metrics.expressionScore !== undefined && metrics.expressionScore !== null && (
             <motion.div variants={itemVariants} className="glass-panel p-5 rounded-2xl flex flex-col items-start text-left float-medium interactive-card relative overflow-hidden font-mono border-slate-200/50 bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-800/80 dark:bg-[#09090d]/60 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
               <span className="text-slate-500 dark:text-zinc-500 text-[9px] font-bold uppercase tracking-widest mb-1">// index_expression</span>
-              <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">{metrics.expressionScore}%</div>
+              <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:bg-none dark:text-white mt-1">
+                <AnimatedCounter value={metrics.expressionScore} suffix="%" />
+              </div>
               <div className="w-full bg-slate-200 dark:bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden border border-slate-300/30 dark:border-zinc-800">
-                <div className={`h-full rounded-full ${metrics.expressionScore >= 75 ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.expressionScore >= 40 ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-amber-500 dark:bg-amber-400'}`} style={{ width: `${metrics.expressionScore}%` }} />
+                <motion.div 
+                  className={`h-full rounded-full ${metrics.expressionScore >= 75 ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : metrics.expressionScore >= 40 ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-amber-500 dark:bg-amber-400'}`} 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${metrics.expressionScore}%` }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                />
               </div>
               <span className="text-[8px] text-slate-500 dark:text-zinc-500 mt-2 font-bold">
                 DIAGNOSTIC: {metrics.expressionScore >= 75 ? 'EXPRESSIVE' : metrics.expressionScore >= 40 ? 'BALANCED' : 'NEUTRAL'}
@@ -569,6 +699,28 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
             <Activity className="w-4 h-4 text-[#5B7C99] dark:text-indigo-400" />
             [ DIAGNOSTIC_ANALYSIS ]
           </h3>
+
+          {/* AI Coach Quote Card */}
+          {metrics.coachComment && (
+            <motion.div 
+              variants={itemVariants}
+              className="mb-6 p-5 rounded-2xl bg-indigo-500/5 border border-indigo-500/15 flex gap-4 items-start text-left relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 p-2 text-indigo-500/10 pointer-events-none">
+                <Sparkles className="w-16 h-16 -mr-4 -mt-4 rotate-12" />
+              </div>
+              <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 shrink-0">
+                <Sparkles className="w-4 h-4 animate-pulse" />
+              </div>
+              <div className="flex flex-col gap-1 relative z-10 font-sans">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-indigo-400 font-mono">// ai_coach_feedback</span>
+                <p className="text-slate-800 dark:text-zinc-150 text-xs md:text-sm italic font-light leading-relaxed">
+                  "{metrics.coachComment}"
+                </p>
+              </div>
+            </motion.div>
+          )}
+
           <ul className="space-y-4">
             {metrics.suggestions && metrics.suggestions.length > 0 ? (
               metrics.suggestions.map((suggestion, i) => (
@@ -600,7 +752,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
                 {metrics.transcript.length > 160 && <span>03</span>}
               </div>
               <p className="text-slate-650 dark:text-zinc-350 leading-relaxed font-light text-xs md:text-sm pl-8">
-                {metrics.transcript}
+                {renderAnnotatedTranscript()}
               </p>
             </div>
           </motion.div>

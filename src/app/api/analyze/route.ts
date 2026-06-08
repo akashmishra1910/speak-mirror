@@ -111,11 +111,15 @@ Return ONLY a JSON object with the following schema:
   "confidence": <integer 0-100 based on word choice and assertiveness>,
   "clarity": <integer 0-100 based on structure and coherence>,
   "fillerWords": <integer count of filler words like um, uh, like, you know>,
+  "coachComment": "A single personalized, encouraging, and actionable coaching sentence highlighting a key strength and area of improvement.",
   "suggestions": [
     { "type": "filler" | "pace" | "confidence" | "clarity" | "pronunciation" | "expression" | "gaze", "text": "Actionable feedback sentence" }
+  ],
+  "annotations": [
+    { "text": "specific exact word or phrase from the transcript", "type": "filler" | "pace", "comment": "coaching tip/explanation for this specific moment" }
   ]
 }
-Note: Provide 2-3 highly specific suggestions.`;
+Note: Provide 2-3 highly specific suggestions. Ensure annotations are exact substrings of the transcript.`;
 
     if (expectedText) {
       analysisPrompt = `You are an expert speech, pronunciation, and communication analyst. The speaker was tasked to read a specific text. Compare what they actually said (Transcript) against what they were supposed to say (Expected Text), and take camera telemetry into account.
@@ -130,11 +134,15 @@ Return ONLY a JSON object with the following schema:
   "confidence": <integer 0-100 based on pacing and assertiveness>,
   "clarity": <integer 0-100 representing their pronunciation/articulation accuracy compared to expected text>,
   "fillerWords": <integer count of filler words or stutters>,
+  "coachComment": "A single personalized, encouraging, and actionable coaching sentence highlighting a key strength and area of improvement.",
   "suggestions": [
     { "type": "pronunciation" | "pace" | "expression" | "gaze", "text": "Actionable feedback sentence" }
+  ],
+  "annotations": [
+    { "text": "specific exact word or phrase from the transcript", "type": "filler" | "pace", "comment": "coaching tip/explanation for this specific moment" }
   ]
 }
-Note: Provide 2-3 highly specific suggestions.`;
+Note: Provide 2-3 highly specific suggestions. Ensure annotations are exact substrings of the transcript.`;
     }
 
     const chatCompletion = await groq.chat.completions.create({
@@ -169,7 +177,9 @@ Note: Provide 2-3 highly specific suggestions.`;
       fillerWords: analysis.fillerWords,
       wpm: wpm || 0,
       transcript: transcriptText,
-      suggestions: analysis.suggestions || []
+      suggestions: analysis.suggestions || [],
+      coachComment: analysis.coachComment || "Great work on your practice session! Keep practicing to refine your delivery.",
+      annotations: analysis.annotations || []
     });
 
   } catch (error: any) {
