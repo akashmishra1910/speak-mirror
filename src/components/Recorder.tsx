@@ -257,8 +257,10 @@ export function Recorder({
     const pillWidth = textWidth + paddingX * 2;
     const pillHeight = textHeight + paddingY * 2;
     
-    const x = (width - pillWidth) / 2;
-    const y = height - pillHeight - Math.round(height * 0.05); // 5% margin from bottom
+    const marginRight = Math.max(16, Math.round(width * 0.04));
+    const marginBottom = Math.max(16, Math.round(height * 0.04));
+    const x = width - pillWidth - marginRight;
+    const y = height - pillHeight - marginBottom;
 
     // Draw pill background
     ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
@@ -294,8 +296,12 @@ export function Recorder({
             canvas.width = video.videoWidth || 640;
             canvas.height = video.videoHeight || 480;
           }
-          // Draw video frame
+          // Draw video frame mirrored (horizontally flipped)
+          ctx.save();
+          ctx.translate(canvas.width, 0);
+          ctx.scale(-1, 1);
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          ctx.restore();
           // Draw "SpeakMirror" watermark
           drawWatermark(ctx, canvas.width, canvas.height);
         }
@@ -840,7 +846,7 @@ export function Recorder({
             ref={canvasRef}
             className="absolute inset-0 w-full h-full object-cover z-0"
             style={{ 
-              transform: 'scaleX(-1) translateZ(0)', // Mirror effect + GPU acceleration
+              transform: 'translateZ(0)', // Mirror effect handled in 2D context drawing
               willChange: 'transform',
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',

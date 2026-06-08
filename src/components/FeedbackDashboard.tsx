@@ -457,7 +457,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
                 className="absolute inset-0 w-full h-full object-cover"
                 playsInline
                 style={{ 
-                  transform: 'scaleX(-1) translateZ(0)',
+                  transform: 'translateZ(0)',
                   willChange: 'transform',
                   backfaceVisibility: 'hidden',
                   WebkitBackfaceVisibility: 'hidden',
