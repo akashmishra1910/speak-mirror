@@ -133,13 +133,18 @@ export function Recorder({
   useEffect(() => {
     const initCamera = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          audio: true, 
-          video: { 
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
             facingMode: "user",
             width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          } 
+            height: { ideal: 1080 },
+            frameRate: { ideal: 30 },
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            sampleRate: 48000,
+          }
         });
         streamRef.current = stream;
         
@@ -390,15 +395,14 @@ export function Recorder({
     }
     
     try {
-      // 1. Setup Video Recorder with dynamic MIME type selection (prioritizing MP4)
+      // 1. Setup Video Recorder with dynamic MIME type selection (prioritizing VP9)
       const mimeTypes = [
-        "video/mp4;codecs=h264,aac",
-        "video/mp4;codecs=h264",
-        "video/mp4",
-        "video/webm;codecs=h264,opus",
         "video/webm;codecs=vp9,opus",
         "video/webm;codecs=vp8,opus",
-        "video/webm"
+        "video/webm",
+        "video/mp4;codecs=h264,aac",
+        "video/mp4;codecs=h264",
+        "video/mp4"
       ];
       
       let selectedMimeType = "video/webm";
@@ -411,7 +415,7 @@ export function Recorder({
 
       const mediaRecorder = new MediaRecorder(streamRef.current, {
         mimeType: selectedMimeType,
-        videoBitsPerSecond: 5000000, // 5 Mbps (high definition quality)
+        videoBitsPerSecond: 2500000, // 2.5 Mbps — high quality export
         audioBitsPerSecond: 128000   // 128 kbps (high quality audio)
       });
       mediaRecorderRef.current = mediaRecorder;

@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useEffect, Suspense, useRef, useCallback } from "react";
 import { dailyChallenges, getRandomChallenge, Challenge } from "@/lib/challenges";
 import { FluencyCard } from "@/components/FluencyCard";
+import { compressForStorage, triggerDownload } from "@/lib/videoUtils";
 
 function PracticeContent() {
   const { user, activeWorkspace } = useAuth();
@@ -61,6 +62,31 @@ function PracticeContent() {
   
   // Notification Permission State
   const [notificationPermission, setNotificationPermission] = useState<string>("default");
+
+  // Toast HUD State
+  interface Toast {
+    id: string;
+    message: string;
+    type?: 'info' | 'success' | 'warning' | 'error';
+  }
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const showToast = useCallback((message: string, type: Toast['type'] = 'info', duration = 4000) => {
+    const id = crypto.randomUUID();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, duration);
+    return id;
+  }, []);
+
+  // Compressed video blobs
+  const [freeformCompressedBlob, setFreeformCompressedBlob] = useState<Blob | null>(null);
+  const [readingCompressedBlob, setReadingCompressedBlob] = useState<Blob | null>(null);
+
+  // Background compression promises refs to handle quick save requests
+  const freeformCompPromiseRef = useRef<Promise<Blob> | null>(null);
+  const readingCompPromiseRef = useRef<Promise<Blob> | null>(null);
 
   // Initialize Daily Challenge & Notification Permission on Mount
   useEffect(() => {
@@ -378,6 +404,40 @@ function PracticeContent() {
     eyeContactAvg?: number, 
     expressionScoreAvg?: number
   ) => {
+    const isFreeform = (activeTaskId && phase === "freeform_recording") || !activeTaskId;
+    const isReading = activeTaskId && phase === "reading_recording";
+    const nameLabel = isReading ? "reading" : "freeform";
+
+    // 1. Trigger immediate download of high quality video
+    showToast("Preparing your download...", "info");
+    const extension = videoBlob.type.includes("mp4") ? "mp4" : "webm";
+    triggerDownload(videoBlob, `speakmirror-practice-${nameLabel}-${new Date().toISOString().split('T')[0]}.${extension}`);
+
+    // 2. Start background compression (non-blocking)
+    const toastId = crypto.randomUUID();
+    setToasts(prev => [...prev, { id: toastId, message: `Optimising for storage... 0%`, type: "info" }]);
+    
+    const compPromise = compressForStorage(videoBlob, (progress) => {
+      setToasts(prev => prev.map(t => t.id === toastId ? { ...t, message: `Optimising for storage... ${progress}%` } : t));
+    });
+
+    if (isReading) {
+      readingCompPromiseRef.current = compPromise;
+    } else {
+      freeformCompPromiseRef.current = compPromise;
+    }
+
+    compPromise.then(compressedBlob => {
+      setToasts(prev => prev.filter(t => t.id !== toastId));
+      showToast(`${isReading ? 'Reading' : 'Freeform'} video optimised for storage.`, "success");
+      
+      if (isReading) {
+        setReadingCompressedBlob(compressedBlob);
+      } else {
+        setFreeformCompressedBlob(compressedBlob);
+      }
+    });
+
     if (activeTaskId && phase === "freeform_recording") {
       setFreeformEyeContact(eyeContactAvg);
       setFreeformExpression(expressionScoreAvg);
@@ -534,10 +594,26 @@ function PracticeContent() {
           }
         }
 
+        const sessionId = crypto.randomUUID();
+        showToast("Saving to your history...", "info");
+
+        // Await background compression if it's still running
+        let finalFreeformBlob = freeformCompressedBlob;
+        if (!finalFreeformBlob && freeformCompPromiseRef.current) {
+          showToast("Finalising video optimisation...", "info");
+          finalFreeformBlob = await freeformCompPromiseRef.current;
+        }
+        if (!finalFreeformBlob) {
+          finalFreeformBlob = freeformBlob;
+        }
+
         // Upload Freeform
-        const freeformExt = freeformBlob.type.includes("mp4") ? "mp4" : "webm";
-        const freeformFileName = `video_${Date.now()}_freeform.${freeformExt}`;
-        const { data: upload1 } = await supabase.storage.from('videos').upload(freeformFileName, freeformBlob, { contentType: freeformBlob.type });
+        const freeformExt = finalFreeformBlob.type.includes("mp4") ? "mp4" : "webm";
+        const freeformFileName = `sessions/${user.id}/${sessionId}/recording.${freeformExt}`;
+        const { data: upload1 } = await supabase.storage.from('videos').upload(freeformFileName, finalFreeformBlob, { 
+          contentType: finalFreeformBlob.type,
+          metadata: { original_bitrate: '2.5Mbps', stored_bitrate: '400kbps' }
+        });
         const url1 = upload1 ? freeformFileName : null;
         
         if (url1 && metricsList[0]) {
@@ -563,9 +639,21 @@ function PracticeContent() {
 
         // Upload Reading
         if (readingBlob && metricsList[1]) {
-          const readingExt = readingBlob.type.includes("mp4") ? "mp4" : "webm";
-          const readingFileName = `video_${Date.now()}_reading.${readingExt}`;
-          const { data: upload2 } = await supabase.storage.from('videos').upload(readingFileName, readingBlob, { contentType: readingBlob.type });
+          let finalReadingBlob = readingCompressedBlob;
+          if (!finalReadingBlob && readingCompPromiseRef.current) {
+            showToast("Finalising reading video optimisation...", "info");
+            finalReadingBlob = await readingCompPromiseRef.current;
+          }
+          if (!finalReadingBlob) {
+            finalReadingBlob = readingBlob;
+          }
+
+          const readingExt = finalReadingBlob.type.includes("mp4") ? "mp4" : "webm";
+          const readingFileName = `sessions/${user.id}/${sessionId}/recording_reading.${readingExt}`;
+          const { data: upload2 } = await supabase.storage.from('videos').upload(readingFileName, finalReadingBlob, { 
+            contentType: finalReadingBlob.type,
+            metadata: { original_bitrate: '2.5Mbps', stored_bitrate: '400kbps' }
+          });
           const url2 = upload2 ? readingFileName : null;
           
           if (url2) {
@@ -591,6 +679,7 @@ function PracticeContent() {
         }
         
         setIsSaved(true);
+        showToast("Progress saved successfully!", "success");
         // Refresh assignments list so completed one gets removed
         await fetchTeamAssignments();
         if (isPersonal) {
@@ -599,7 +688,7 @@ function PracticeContent() {
       }
     } catch (error) {
       console.error("Error saving recording:", error);
-      alert("There was an error saving your progress. Please try again.");
+      showToast("There was an error saving your progress.", "error");
     } finally {
       setIsSaving(false);
     }
@@ -608,6 +697,10 @@ function PracticeContent() {
   const handleRetake = () => {
     videoUrls.forEach(url => URL.revokeObjectURL(url));
     setPhase("freeform_recording");
+    setFreeformCompressedBlob(null);
+    setReadingCompressedBlob(null);
+    freeformCompPromiseRef.current = null;
+    readingCompPromiseRef.current = null;
     setFreeformBlob(null);
     setReadingBlob(null);
     setFreeformAudioBlob(null);
@@ -1043,6 +1136,41 @@ function PracticeContent() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Toast Notification HUD */}
+      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none max-w-sm w-full">
+        <AnimatePresence>
+          {toasts.map(toast => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, y: 30, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9, y: -20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className={`p-4 rounded-2xl border backdrop-blur-md shadow-2xl flex items-start gap-3 pointer-events-auto transition-all ${
+                toast.type === 'success'
+                  ? 'bg-emerald-950/80 border-emerald-500/20 text-emerald-200'
+                  : toast.type === 'error'
+                  ? 'bg-rose-950/80 border-rose-500/20 text-rose-200'
+                  : 'bg-zinc-900/80 border-white/10 text-white'
+              }`}
+            >
+              <div className="mt-1 flex-shrink-0">
+                {toast.type === 'success' ? (
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
+                ) : toast.type === 'error' ? (
+                  <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
+                ) : (
+                  <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)] animate-pulse" />
+                )}
+              </div>
+              <div className="flex-1 text-xs font-semibold leading-normal tracking-wide">
+                {toast.message}
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
