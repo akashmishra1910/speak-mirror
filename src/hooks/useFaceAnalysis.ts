@@ -133,16 +133,18 @@ export function useFaceAnalysis(videoRef: React.RefObject<HTMLVideoElement | nul
             const gazeX = ((eyeLookInLeft - eyeLookOutLeft) + (eyeLookOutRight - eyeLookInRight)) / 2;
             const gazeY = ((eyeLookUpLeft - eyeLookDownLeft) + (eyeLookUpRight - eyeLookDownRight)) / 2;
 
-            const deviation = Math.sqrt(gazeX * gazeX + gazeY * gazeY);
+            // Offset the vertical gaze slightly downwards (-0.08) to calibrate for looking at the screen relative to a top-mounted camera
+            const gazeYAdjusted = gazeY - (-0.08);
+            const deviation = Math.sqrt(gazeX * gazeX + gazeYAdjusted * gazeYAdjusted);
 
-            // Natural dead-zone limits (0.08 is straight looking, 0.28 is extreme tilt/looking away)
+            // Relaxed dead-zone limits to accommodate screen scanning (0.15 is standard screen scan, 0.35 is looking away)
             let eyeContactVal = 100;
-            if (deviation <= 0.08) {
+            if (deviation <= 0.15) {
               eyeContactVal = 100;
-            } else if (deviation >= 0.28) {
+            } else if (deviation >= 0.35) {
               eyeContactVal = 0;
             } else {
-              eyeContactVal = 100 * (1 - (deviation - 0.08) / (0.28 - 0.08));
+              eyeContactVal = 100 * (1 - (deviation - 0.15) / (0.35 - 0.15));
             }
 
             // Aggregate metrics if tracking is active
