@@ -121,6 +121,8 @@ export function Recorder({
     isModelReady: isFaceReady,
     liveEyeContact,
     liveExpression,
+    liveIsBlinking,
+    liveGazeWarning,
     startAnalysis,
     stopAnalysis,
   } = useFaceAnalysis(videoRef, !!userId);
@@ -610,12 +612,14 @@ export function Recorder({
                   <div className="flex flex-col gap-1.5">
                     <div className="flex justify-between items-center text-xs text-white">
                       <span className="text-[10px] font-semibold text-zinc-300 tracking-wider">GAZE // EYE_CONTACT</span>
-                      <span className="text-cyan-400 font-extrabold text-right drop-shadow-[0_0_6px_rgba(34,211,238,0.4)]">{liveEyeContact}%</span>
+                      <span className={`${liveGazeWarning ? 'text-red-400' : 'text-cyan-400'} font-extrabold text-right drop-shadow-[0_0_6px_rgba(34,211,238,0.4)]`}>
+                        {liveIsBlinking ? 'BLINKING...' : `${liveEyeContact}%`}
+                      </span>
                     </div>
                     <div className="w-full bg-zinc-900/80 h-1.5 rounded-full overflow-hidden border border-white/5">
                       <div 
-                        className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.6)] transition-all duration-150 ease-out" 
-                        style={{ width: `${liveEyeContact}%` }} 
+                        className={`h-full rounded-full transition-all duration-150 ease-out ${liveGazeWarning ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)]' : 'bg-gradient-to-r from-cyan-500 to-blue-500 shadow-[0_0_10px_rgba(34,211,238,0.6)]'}`} 
+                        style={{ width: `${liveIsBlinking ? 0 : liveEyeContact}%` }} 
                       />
                     </div>
                   </div>
@@ -648,6 +652,23 @@ export function Recorder({
               <span className="text-[8px] text-white/50 tracking-widest uppercase bg-black/35 px-1.5 py-0.5 rounded-md">"um" "uh" "like"</span>
             </div>
           )}
+
+          {/* Debounced Gaze Warning (Look at Camera) */}
+          <AnimatePresence>
+            {liveGazeWarning && !liveIsBlinking && isRecording && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                className="absolute inset-x-4 top-24 z-30 mx-auto max-w-[200px] bg-red-950/90 border border-red-500/30 backdrop-blur-md px-3.5 py-2 rounded-xl text-center shadow-[0_0_20px_rgba(239,68,68,0.25)] flex items-center justify-center gap-2"
+              >
+                <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping" />
+                <span className="text-[10px] font-extrabold text-red-400 uppercase tracking-widest font-mono">
+                  Look at camera
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Pre-session Warm-up Breathing Overlay */}
           <AnimatePresence>
