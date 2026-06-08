@@ -410,11 +410,24 @@ export default function ProfileDashboardClient({ user, initialRecordings }: { us
 
   const handleDownloadVideo = async (videoUrl: string, recordingId: string) => {
     try {
-      const response = await fetch(videoUrl);
-      const blob = await response.blob();
-      const ext = blob.type.includes("mp4") ? "mp4" : "webm";
-      const { triggerDownload } = await import("@/lib/videoUtils");
-      triggerDownload(blob, `speakmirror-recording-${recordingId}.${ext}`);
+      const ext = videoUrl.includes(".mp4") ? "mp4" : "webm";
+      const filename = `speakmirror-recording-${recordingId}.${ext}`;
+
+      if (videoUrl.startsWith("/api/video")) {
+        const downloadUrl = `${videoUrl}&download=${encodeURIComponent(filename)}`;
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        // Fallback for direct absolute URLs
+        const response = await fetch(videoUrl);
+        const blob = await response.blob();
+        const { triggerDownload } = await import("@/lib/videoUtils");
+        triggerDownload(blob, filename);
+      }
     } catch (err) {
       console.error("Failed to download video:", err);
       alert("Failed to download video: " + (err instanceof Error ? err.message : String(err)));

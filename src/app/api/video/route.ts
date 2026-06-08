@@ -22,6 +22,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const file = searchParams.get('file');
+    const download = searchParams.get('download');
 
     if (!file) {
       try {
@@ -37,10 +38,25 @@ export async function GET(request: Request) {
     }
 
     // Generate a very short-lived signed URL (15 seconds)
-    const { data } = await supabaseAdmin.storage.from('videos').createSignedUrl(file, 15);
+    const options = download ? { download: download === 'true' ? true : download } : undefined;
+    const { data } = await supabaseAdmin.storage.from('videos').createSignedUrl(file, 15, options);
     
     if (!data?.signedUrl) {
       return NextResponse.json({ error: "Failed to generate access to video" }, { status: 500 });
+    }
+
+    // If download is requested, redirect directly to the signed URL to trigger native download
+    if (download) {
+      try {
+        await supabaseAdmin.from('api_usage_logs').insert({
+          route: '/api/video',
+          user_id: userId,
+          status: 'success'
+        });
+      } catch (logErr) {
+        console.error("Failed to log API success:", logErr);
+      }
+      return NextResponse.redirect(data.signedUrl, 307);
     }
 
     // Proxy the video stream directly from Supabase so the client never sees the Supabase URL
