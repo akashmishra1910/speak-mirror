@@ -432,7 +432,7 @@ export default function ProfileDashboardClient({ user, initialRecordings }: { us
       }
     } catch (err) {
       console.error("Failed to convert/download video:", err);
-      alert("Failed to download video as MP4: " + (err as Error).message);
+      alert("Failed to download video as MP4: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsConvertingVideo(false);
       setVideoConversionProgress(0);

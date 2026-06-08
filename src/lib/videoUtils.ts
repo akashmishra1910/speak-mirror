@@ -1,6 +1,29 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
+async function loadFFmpeg(ffmpeg: FFmpeg) {
+  const cdns = [
+    'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm',
+    'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm'
+  ];
+
+  for (const baseURL of cdns) {
+    try {
+      console.log(`Attempting to load FFmpeg core from ${baseURL}...`);
+      await ffmpeg.load({
+        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+      });
+      console.log(`Successfully loaded FFmpeg core from ${baseURL}`);
+      return;
+    } catch (err) {
+      console.warn(`Failed to load FFmpeg from ${baseURL}:`, err);
+    }
+  }
+
+  throw new Error("Failed to load FFmpeg from all available CDNs. Please check your network connection.");
+}
+
 export async function compressForStorage(
   blob: Blob, 
   onProgress?: (progress: number) => void
@@ -14,11 +37,7 @@ export async function compressForStorage(
       });
     }
 
-    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-    await ffmpeg.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-    });
+    await loadFFmpeg(ffmpeg);
 
     const inputName = 'input.webm';
     const outputName = 'output.webm';
@@ -67,11 +86,7 @@ export async function convertToMp4(
       });
     }
 
-    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-    await ffmpeg.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-    });
+    await loadFFmpeg(ffmpeg);
 
     const inputName = 'input.webm';
     const outputName = 'output.mp4';

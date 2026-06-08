@@ -372,7 +372,7 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
       }
     } catch (err) {
       console.error("Failed to convert/download video:", err);
-      alert("Failed to export video as MP4: " + (err as Error).message);
+      alert("Failed to export video as MP4: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsConverting(false);
       setConversionProgress(0);
