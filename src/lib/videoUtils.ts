@@ -1,12 +1,11 @@
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
+
 export async function compressForStorage(
   blob: Blob, 
   onProgress?: (progress: number) => void
 ): Promise<Blob> {
   try {
-    // Lazily load FFmpeg and utility modules only when called
-    const { FFmpeg } = await import('@ffmpeg/ffmpeg');
-    const { fetchFile, toBlobURL } = await import('@ffmpeg/util');
-
     const ffmpeg = new FFmpeg();
     
     if (onProgress) {
@@ -60,9 +59,6 @@ export async function convertToMp4(
   onProgress?: (progress: number) => void
 ): Promise<Blob> {
   try {
-    const { FFmpeg } = await import('@ffmpeg/ffmpeg');
-    const { fetchFile, toBlobURL } = await import('@ffmpeg/util');
-
     const ffmpeg = new FFmpeg();
     
     if (onProgress) {

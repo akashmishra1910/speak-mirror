@@ -12,7 +12,6 @@ import Link from "next/link";
 import { useEffect, Suspense, useRef, useCallback } from "react";
 import { dailyChallenges, getRandomChallenge, Challenge } from "@/lib/challenges";
 import { FluencyCard } from "@/components/FluencyCard";
-import { compressForStorage, triggerDownload } from "@/lib/videoUtils";
 
 function PracticeContent() {
   const { user, activeWorkspace } = useAuth();
@@ -412,8 +411,10 @@ function PracticeContent() {
     const toastId = crypto.randomUUID();
     setToasts(prev => [...prev, { id: toastId, message: `Optimising for storage... 0%`, type: "info" }]);
     
-    const compPromise = compressForStorage(videoBlob, (progress) => {
-      setToasts(prev => prev.map(t => t.id === toastId ? { ...t, message: `Optimising for storage... ${progress}%` } : t));
+    const compPromise = import("@/lib/videoUtils").then(async ({ compressForStorage }) => {
+      return compressForStorage(videoBlob, (progress) => {
+        setToasts(prev => prev.map(t => t.id === toastId ? { ...t, message: `Optimising for storage... ${progress}%` } : t));
+      });
     });
 
     if (isReading) {
