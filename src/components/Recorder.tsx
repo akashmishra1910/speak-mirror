@@ -181,6 +181,8 @@ export function Recorder({
   const streamRef = useRef<MediaStream | null>(null);
   const downscaleIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const storageStreamRef = useRef<MediaStream | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const exportStreamRef = useRef<MediaStream | null>(null);
   
   // Warmup and speech recognition refs
   const warmupTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -237,6 +239,93 @@ export function Recorder({
       }
     };
   }, []);
+
+  const drawWatermark = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+    const text = "SpeakMirror";
+    
+    // Scale font size proportionally to canvas width
+    const fontSize = Math.max(14, Math.round(width * 0.015)); 
+    ctx.font = `bold ${fontSize}px "Plus Jakarta Sans", "Inter", sans-serif`;
+    
+    // Measure text to size background pill
+    const textMetrics = ctx.measureText(text);
+    const textWidth = textMetrics.width;
+    const textHeight = fontSize;
+
+    const paddingX = Math.round(fontSize * 0.8);
+    const paddingY = Math.round(fontSize * 0.4);
+    const pillWidth = textWidth + paddingX * 2;
+    const pillHeight = textHeight + paddingY * 2;
+    
+    const x = (width - pillWidth) / 2;
+    const y = height - pillHeight - Math.round(height * 0.05); // 5% margin from bottom
+
+    // Draw pill background
+    ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+    const radius = pillHeight / 2;
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(x, y, pillWidth, pillHeight, radius);
+    } else {
+      ctx.rect(x, y, pillWidth, pillHeight);
+    }
+    ctx.fill();
+
+    // Draw text
+    ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, x + pillWidth / 2, y + pillHeight / 2 + 1);
+  };
+
+  // Web camera watermark rendering loop
+  useEffect(() => {
+    if (hasPermission !== true || !videoRef.current) return;
+    
+    const video = videoRef.current;
+    let animationFrameId: number;
+
+    const renderLoop = () => {
+      const canvas = canvasRef.current;
+      if (canvas && video.readyState >= 2) {
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+          }
+          // Draw video frame
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          // Draw "SpeakMirror" watermark
+          drawWatermark(ctx, canvas.width, canvas.height);
+        }
+      }
+      animationFrameId = requestAnimationFrame(renderLoop);
+    };
+
+    const startLoop = () => {
+      animationFrameId = requestAnimationFrame(renderLoop);
+    };
+
+    const stopLoop = () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+
+    video.addEventListener("play", startLoop);
+    video.addEventListener("pause", stopLoop);
+    video.addEventListener("ended", stopLoop);
+
+    if (!video.paused && video.readyState >= 2) {
+      startLoop();
+    }
+
+    return () => {
+      video.removeEventListener("play", startLoop);
+      video.removeEventListener("pause", stopLoop);
+      video.removeEventListener("ended", stopLoop);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [hasPermission]);
 
   // Sync timeLeft when timeLimit or mode changes
   useEffect(() => {
@@ -487,6 +576,11 @@ export function Recorder({
         }
       }
 
+      // Verify preview canvas is ready
+      if (!canvasRef.current) {
+        throw new Error("Preview canvas not ready");
+      }
+
       // Create a downscaled 640x360 15fps canvas stream for the storage recorder
       const canvas = document.createElement("canvas");
       canvas.width = 640;
@@ -494,8 +588,9 @@ export function Recorder({
       const ctx = canvas.getContext("2d");
       
       const drawFrame = () => {
-        if (videoRef.current && ctx) {
-          ctx.drawImage(videoRef.current, 0, 0, 640, 360);
+        if (canvasRef.current && ctx) {
+          // Draw from watermarked canvasRef instead of raw videoRef
+          ctx.drawImage(canvasRef.current, 0, 0, 640, 360);
         }
       };
 
@@ -527,8 +622,16 @@ export function Recorder({
         }
       };
 
-      // Export Recorder (high quality: 2.5 Mbps video, 128 Kbps audio, full 1080p stream)
-      const exportRecorder = new MediaRecorder(streamRef.current!, {
+      // Capture high-res watermarked canvas stream at 30fps
+      const canvasExportStream = canvasRef.current.captureStream(30);
+      const canvasExportVideoTrack = canvasExportStream.getVideoTracks()[0];
+      
+      // Combine canvas video track and original audio track
+      const exportStream = new MediaStream(audioTrack ? [canvasExportVideoTrack, audioTrack] : [canvasExportVideoTrack]);
+      exportStreamRef.current = exportStream;
+
+      // Export Recorder (high quality: 2.5 Mbps video, 128 Kbps audio, watermarked 1080p stream)
+      const exportRecorder = new MediaRecorder(exportStream, {
         mimeType: selectedMimeType,
         videoBitsPerSecond: 2500000,
         audioBitsPerSecond: 128000
@@ -661,6 +764,10 @@ export function Recorder({
       storageStreamRef.current.getVideoTracks().forEach(track => track.stop());
       storageStreamRef.current = null;
     }
+    if (exportStreamRef.current) {
+      exportStreamRef.current.getVideoTracks().forEach(track => track.stop());
+      exportStreamRef.current = null;
+    }
 
     // Stop Speech Recognition
     if (recognitionRef.current) {
@@ -718,20 +825,27 @@ export function Recorder({
         {/* Main Video Card */}
         <div className="glass-panel rounded-[2rem] flex flex-col items-center justify-center w-full max-w-sm relative overflow-hidden aspect-[9/16] max-h-[calc(100vh-120px)] shadow-2xl border border-white/5 group bg-black float-slow interactive-card">
           
-          {/* Live Video Feed with Mirror Effect & Beautify Filter */}
+          {/* Live Video Feed (Hidden, used as frame source) */}
           <video 
             ref={videoRef}
             autoPlay 
             playsInline 
             muted 
+            className="hidden"
+            style={{ display: "none" }}
+          />
+          
+          {/* Live Video Feed Canvas with Watermark */}
+          <canvas 
+            ref={canvasRef}
             className="absolute inset-0 w-full h-full object-cover z-0"
-             style={{ 
-               transform: 'scaleX(-1) translateZ(0)', // Mirror effect + GPU acceleration
-               willChange: 'transform',
-               backfaceVisibility: 'hidden',
-               WebkitBackfaceVisibility: 'hidden',
-               filter: BEAUTIFY_FILTERS[activeFilter] || BEAUTIFY_FILTERS.none
-             }}
+            style={{ 
+              transform: 'scaleX(-1) translateZ(0)', // Mirror effect + GPU acceleration
+              willChange: 'transform',
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
+              filter: BEAUTIFY_FILTERS[activeFilter] || BEAUTIFY_FILTERS.none
+            }}
           />
           
           {/* Subtle Overlay gradient for readability */}
