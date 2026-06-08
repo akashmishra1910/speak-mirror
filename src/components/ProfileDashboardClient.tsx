@@ -1171,7 +1171,7 @@ export default function ProfileDashboardClient({ user, initialRecordings }: { us
                           if (!confirm) return;
                           localStorage.removeItem("speak_mirror_beautify_filter");
                           await supabase.auth.signOut();
-                          router.push("/auth");
+                          window.location.href = "/";
                         }}
                         className="w-full sm:w-auto px-5 py-2.5 border border-red-500/30 bg-white/40 hover:bg-red-500/10 text-red-500 dark:bg-white/5 dark:hover:bg-red-950/20 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >

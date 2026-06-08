@@ -18,6 +18,7 @@ export function Navbar() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsMobileMenuOpen(false);
+    window.location.href = "/";
   };
 
   return (

@@ -294,6 +294,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setActiveWorkspaceState({ id: "personal", name: "Personal Space" });
           localStorage.removeItem("speak_mirror_active_workspace");
           localStorage.removeItem("speak_mirror_last_activity");
+          if (typeof window !== "undefined" && window.location.pathname !== "/") {
+            window.location.href = "/";
+          }
         } else if (session?.user) {
           fetchWorkspaces(session.user.id);
           trackLoginSession(session.user);
