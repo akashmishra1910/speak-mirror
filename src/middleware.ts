@@ -37,6 +37,35 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const { data: { user } } = await supabase.auth.getUser();
 
+  // If user is logged in, check if onboarding is completed
+  if (user) {
+    const isExcludedFromOnboarding =
+      pathname.startsWith("/_next") ||
+      pathname.startsWith("/api") ||
+      pathname.startsWith("/auth") ||
+      pathname.startsWith("/onboarding") ||
+      pathname.startsWith("/terms") ||
+      pathname.startsWith("/privacy") ||
+      pathname === "/favicon.ico";
+
+    if (!isExcludedFromOnboarding) {
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("onboarding_completed")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!profile || !profile.onboarding_completed) {
+          const onboardingUrl = new URL("/onboarding", request.url);
+          return NextResponse.redirect(onboardingUrl);
+        }
+      } catch (err) {
+        console.error("Middleware onboarding check error:", err);
+      }
+    }
+  }
+
   // Protect paths: /profile, /rooms, /admin
   const isProtectedPath =
     pathname.startsWith("/profile") ||
