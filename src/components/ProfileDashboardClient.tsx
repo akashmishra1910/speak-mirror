@@ -1231,6 +1231,10 @@ export default function ProfileDashboardClient({ user, initialRecordings }: { us
                   playsInline
                   autoPlay
                   style={{ 
+                    transform: 'translateZ(0)',
+                    willChange: 'transform',
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
                     filter: BEAUTIFY_FILTERS[activeFilter] || BEAUTIFY_FILTERS.none
                   }}
                 />

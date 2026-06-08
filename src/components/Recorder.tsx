@@ -20,6 +20,73 @@ interface RecorderProps {
   tips?: string[] | null;
 }
 
+// IndexedDB helpers for zero-copy streaming
+const openDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    if (typeof indexedDB === "undefined") {
+      reject(new Error("IndexedDB not supported"));
+      return;
+    }
+    const request = indexedDB.open("speakMirrorDB", 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains("storageChunks")) {
+        db.createObjectStore("storageChunks", { autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains("exportChunks")) {
+        db.createObjectStore("exportChunks", { autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains("audioChunks")) {
+        db.createObjectStore("audioChunks", { autoIncrement: true });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const clearDB = async () => {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(["storageChunks", "exportChunks", "audioChunks"], "readwrite");
+    tx.objectStore("storageChunks").clear();
+    tx.objectStore("exportChunks").clear();
+    tx.objectStore("audioChunks").clear();
+  } catch (err) {
+    console.warn("Failed to clear IndexedDB:", err);
+  }
+};
+
+const writeChunk = (storeName: string, chunk: Blob): Promise<void> => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const db = await openDB();
+      const tx = db.transaction(storeName, "readwrite");
+      const store = tx.objectStore(storeName);
+      store.add(chunk);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    } catch (err) {
+      reject(err);
+    }
+  });
+};
+
+const getChunks = (storeName: string): Promise<Blob[]> => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const db = await openDB();
+      const tx = db.transaction(storeName, "readonly");
+      const store = tx.objectStore(storeName);
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    } catch (err) {
+      reject(err);
+    }
+  });
+};
+
 export function Recorder({ 
   onRecordingComplete, 
   isProcessing, 
@@ -112,6 +179,8 @@ export function Recorder({
   const audioChunksRef = useRef<BlobPart[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const downscaleIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const storageStreamRef = useRef<MediaStream | null>(null);
   
   // Warmup and speech recognition refs
   const warmupTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -376,7 +445,7 @@ export function Recorder({
     startRecordingActual();
   };
 
-  const startRecordingActual = () => {
+  const startRecordingActual = async () => {
     if (!streamRef.current) return;
     hasTriggeredBellRef.current = false;
     setShowConcludePrompt(false);
@@ -397,6 +466,9 @@ export function Recorder({
     }
     
     try {
+      // Clear IndexedDB before starting new recording
+      await clearDB().catch(() => {});
+
       // 1. Setup Video Recorders with dynamic MIME type selection (prioritizing VP9)
       const mimeTypes = [
         "video/webm;codecs=vp9,opus",
@@ -415,8 +487,33 @@ export function Recorder({
         }
       }
 
-      // Storage Recorder (low bitrate: 400 Kbps video, 64 Kbps audio)
-      const mediaRecorder = new MediaRecorder(streamRef.current, {
+      // Create a downscaled 640x360 15fps canvas stream for the storage recorder
+      const canvas = document.createElement("canvas");
+      canvas.width = 640;
+      canvas.height = 360;
+      const ctx = canvas.getContext("2d");
+      
+      const drawFrame = () => {
+        if (videoRef.current && ctx) {
+          ctx.drawImage(videoRef.current, 0, 0, 640, 360);
+        }
+      };
+
+      // Draw frames on a 15fps interval (~66.7ms)
+      const downscaleInterval = setInterval(drawFrame, 1000 / 15);
+      downscaleIntervalRef.current = downscaleInterval;
+
+      // Extract low resolution video track
+      const lowResVideoStream = canvas.captureStream(15);
+      const lowResVideoTrack = lowResVideoStream.getVideoTracks()[0];
+      const audioTrack = streamRef.current?.getAudioTracks()[0];
+
+      // Combine video track and audio track
+      const storageStream = new MediaStream(audioTrack ? [lowResVideoTrack, audioTrack] : [lowResVideoTrack]);
+      storageStreamRef.current = storageStream;
+
+      // Storage Recorder (low bitrate: 400 Kbps video, 64 Kbps audio, downscaled 360p stream)
+      const mediaRecorder = new MediaRecorder(storageStream, {
         mimeType: selectedMimeType,
         videoBitsPerSecond: 400000,
         audioBitsPerSecond: 64000
@@ -424,14 +521,14 @@ export function Recorder({
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (e) => {
+      mediaRecorder.ondataavailable = async (e) => {
         if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
+          await writeChunk("storageChunks", e.data).catch(console.error);
         }
       };
 
-      // Export Recorder (high quality: 2.5 Mbps video, 128 Kbps audio)
-      const exportRecorder = new MediaRecorder(streamRef.current, {
+      // Export Recorder (high quality: 2.5 Mbps video, 128 Kbps audio, full 1080p stream)
+      const exportRecorder = new MediaRecorder(streamRef.current!, {
         mimeType: selectedMimeType,
         videoBitsPerSecond: 2500000,
         audioBitsPerSecond: 128000
@@ -439,9 +536,9 @@ export function Recorder({
       exportRecorderRef.current = exportRecorder;
       exportChunksRef.current = [];
 
-      exportRecorder.ondataavailable = (e) => {
+      exportRecorder.ondataavailable = async (e) => {
         if (e.data.size > 0) {
-          exportChunksRef.current.push(e.data);
+          await writeChunk("exportChunks", e.data).catch(console.error);
         }
       };
 
@@ -450,7 +547,7 @@ export function Recorder({
       audioChunksRef.current = [];
       
       try {
-        const audioTracks = streamRef.current.getAudioTracks();
+        const audioTracks = streamRef.current!.getAudioTracks();
         if (audioTracks.length > 0) {
           const audioStream = new MediaStream(audioTracks);
           let audioMime = 'audio/webm';
@@ -468,9 +565,9 @@ export function Recorder({
           });
           audioRecorderRef.current = audioRecorder;
 
-          audioRecorder.ondataavailable = (e) => {
+          audioRecorder.ondataavailable = async (e) => {
             if (e.data.size > 0) {
-              audioChunksRef.current.push(e.data);
+              await writeChunk("audioChunks", e.data).catch(console.error);
             }
           };
         }
@@ -494,31 +591,52 @@ export function Recorder({
             expressionScoreAvg,
             exportBlob
           );
+          // Clear IndexedDB records asynchronously
+          clearDB().catch(console.error);
         }
       };
 
-      mediaRecorder.onstop = () => {
-        storageBlob = new Blob(chunksRef.current, { type: selectedMimeType });
+      mediaRecorder.onstop = async () => {
+        try {
+          const dbChunks = await getChunks("storageChunks");
+          storageBlob = new Blob(dbChunks, { type: selectedMimeType });
+        } catch (err) {
+          console.error("Failed to read storage chunks from IndexedDB:", err);
+          storageBlob = new Blob([], { type: selectedMimeType });
+        }
         checkComplete();
       };
 
-      exportRecorder.onstop = () => {
-        exportBlob = new Blob(exportChunksRef.current, { type: selectedMimeType });
+      exportRecorder.onstop = async () => {
+        try {
+          const dbChunks = await getChunks("exportChunks");
+          exportBlob = new Blob(dbChunks, { type: selectedMimeType });
+        } catch (err) {
+          console.error("Failed to read export chunks from IndexedDB:", err);
+          exportBlob = new Blob([], { type: selectedMimeType });
+        }
         checkComplete();
       };
 
       if (audioRecorder) {
-        audioRecorder.onstop = () => {
+        audioRecorder.onstop = async () => {
           const audioMimeType = audioRecorder?.mimeType || "audio/webm";
-          audioBlob = new Blob(audioChunksRef.current as any, { type: audioMimeType });
+          try {
+            const dbChunks = await getChunks("audioChunks");
+            audioBlob = new Blob(dbChunks, { type: audioMimeType });
+          } catch (err) {
+            console.error("Failed to read audio chunks from IndexedDB:", err);
+            audioBlob = new Blob([], { type: audioMimeType });
+          }
           checkComplete();
         };
       }
 
-      mediaRecorder.start(1000);   // collect chunks every 1s
-      exportRecorder.start(1000);
+      // Collect chunks every 5s (reduces callback frequency overhead by 5x)
+      mediaRecorder.start(5000);
+      exportRecorder.start(5000);
       if (audioRecorder) {
-        audioRecorder.start(1000);
+        audioRecorder.start(5000);
       }
       
       setIsRecording(true);
@@ -532,6 +650,16 @@ export function Recorder({
   const stopRecording = () => {
     if (isRecording && userId) {
       faceAnalysisResultsRef.current = stopAnalysis();
+    }
+
+    // Stop downscaled loop interval and canvas track
+    if (downscaleIntervalRef.current) {
+      clearInterval(downscaleIntervalRef.current);
+      downscaleIntervalRef.current = null;
+    }
+    if (storageStreamRef.current) {
+      storageStreamRef.current.getVideoTracks().forEach(track => track.stop());
+      storageStreamRef.current = null;
     }
 
     // Stop Speech Recognition
@@ -597,10 +725,13 @@ export function Recorder({
             playsInline 
             muted 
             className="absolute inset-0 w-full h-full object-cover z-0"
-            style={{ 
-              transform: 'scaleX(-1)', // Mirror effect
-              filter: BEAUTIFY_FILTERS[activeFilter] || BEAUTIFY_FILTERS.none
-            }}
+             style={{ 
+               transform: 'scaleX(-1) translateZ(0)', // Mirror effect + GPU acceleration
+               willChange: 'transform',
+               backfaceVisibility: 'hidden',
+               WebkitBackfaceVisibility: 'hidden',
+               filter: BEAUTIFY_FILTERS[activeFilter] || BEAUTIFY_FILTERS.none
+             }}
           />
           
           {/* Subtle Overlay gradient for readability */}

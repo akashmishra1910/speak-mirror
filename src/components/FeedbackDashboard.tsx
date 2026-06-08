@@ -457,7 +457,10 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
                 className="absolute inset-0 w-full h-full object-cover"
                 playsInline
                 style={{ 
-                  transform: 'scaleX(-1)',
+                  transform: 'scaleX(-1) translateZ(0)',
+                  willChange: 'transform',
+                  backfaceVisibility: 'hidden',
+                  WebkitBackfaceVisibility: 'hidden',
                   filter: BEAUTIFY_FILTERS[activeFilter] || BEAUTIFY_FILTERS.none
                 }}
                 onEnded={() => setIsPlaying(false)}
