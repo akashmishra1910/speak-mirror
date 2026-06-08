@@ -135,7 +135,11 @@ export function Recorder({
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
           audio: true, 
-          video: { facingMode: "user" } 
+          video: { 
+            facingMode: "user",
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          } 
         });
         streamRef.current = stream;
         
@@ -407,8 +411,8 @@ export function Recorder({
 
       const mediaRecorder = new MediaRecorder(streamRef.current, {
         mimeType: selectedMimeType,
-        videoBitsPerSecond: 250000, // 250 kbps (keeps a 90s recording ~2.8MB in total)
-        audioBitsPerSecond: 48000   // 48 kbps
+        videoBitsPerSecond: 5000000, // 5 Mbps (high definition quality)
+        audioBitsPerSecond: 128000   // 128 kbps (high quality audio)
       });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
