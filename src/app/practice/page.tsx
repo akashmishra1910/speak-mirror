@@ -408,12 +408,7 @@ function PracticeContent() {
     const isReading = activeTaskId && phase === "reading_recording";
     const nameLabel = isReading ? "reading" : "freeform";
 
-    // 1. Trigger immediate download of high quality video
-    showToast("Preparing your download...", "info");
-    const extension = videoBlob.type.includes("mp4") ? "mp4" : "webm";
-    triggerDownload(videoBlob, `speakmirror-practice-${nameLabel}-${new Date().toISOString().split('T')[0]}.${extension}`);
-
-    // 2. Start background compression (non-blocking)
+    // 1. Start background compression (non-blocking)
     const toastId = crypto.randomUUID();
     setToasts(prev => [...prev, { id: toastId, message: `Optimising for storage... 0%`, type: "info" }]);
     

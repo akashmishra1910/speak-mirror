@@ -69,6 +69,8 @@ export default function ProfileDashboardClient({ user, initialRecordings }: { us
   // Danger Zone States
   const [isClearingHistory, setIsClearingHistory] = useState(false);
   const [exportingId, setExportingId] = useState<string | null>(null);
+  const [isConvertingVideo, setIsConvertingVideo] = useState(false);
+  const [videoConversionProgress, setVideoConversionProgress] = useState(0);
 
   useEffect(() => {
     const saved = localStorage.getItem("speak_mirror_beautify_filter");
@@ -405,6 +407,35 @@ export default function ProfileDashboardClient({ user, initialRecordings }: { us
       alert("Failed to export PDF: " + (err as Error).message);
     } finally {
       setExportingId(null);
+    }
+  };
+
+  const handleDownloadVideo = async (videoUrl: string, recordingId: string) => {
+    if (isConvertingVideo) return;
+    setIsConvertingVideo(true);
+    setVideoConversionProgress(0);
+
+    try {
+      const response = await fetch(videoUrl);
+      const blob = await response.blob();
+
+      // Check if already an MP4 blob
+      if (blob.type.includes("mp4")) {
+        const { triggerDownload } = await import("@/lib/videoUtils");
+        triggerDownload(blob, `speakmirror-recording-${recordingId}.mp4`);
+      } else {
+        const { convertToMp4, triggerDownload } = await import("@/lib/videoUtils");
+        const mp4Blob = await convertToMp4(blob, (progress) => {
+          setVideoConversionProgress(progress);
+        });
+        triggerDownload(mp4Blob, `speakmirror-recording-${recordingId}.mp4`);
+      }
+    } catch (err) {
+      console.error("Failed to convert/download video:", err);
+      alert("Failed to download video as MP4: " + (err as Error).message);
+    } finally {
+      setIsConvertingVideo(false);
+      setVideoConversionProgress(0);
     }
   };
 
@@ -1303,14 +1334,23 @@ export default function ProfileDashboardClient({ user, initialRecordings }: { us
               )}
 
               {/* Save Video Action */}
-              <a
-                href={watchRecording.video_url}
-                download={`speakmirror-recording-${watchRecording.id}.webm`}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white transition-all rounded-xl font-bold text-xs shadow-[0_4px_15px_rgba(14,165,233,0.15)] hover:shadow-[0_4px_20px_rgba(14,165,233,0.25)] active:scale-98 mt-2 cursor-pointer"
+              <button
+                onClick={() => handleDownloadVideo(watchRecording.video_url, watchRecording.id)}
+                disabled={isConvertingVideo}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white transition-all rounded-xl font-bold text-xs shadow-[0_4px_15px_rgba(14,165,233,0.15)] hover:shadow-[0_4px_20px_rgba(14,165,233,0.25)] active:scale-98 mt-2 cursor-pointer w-full disabled:opacity-50"
               >
-                <Download className="w-4 h-4" />
-                Download Video File
-              </a>
+                {isConvertingVideo ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Converting to MP4... {videoConversionProgress}%
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    Download Video File (MP4)
+                  </>
+                )}
+              </button>
             </motion.div>
           </motion.div>
         )}

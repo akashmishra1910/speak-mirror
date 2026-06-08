@@ -54,3 +54,47 @@ export function triggerDownload(blob: Blob, filename: string) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+export async function convertToMp4(
+  webmBlob: Blob,
+  onProgress?: (progress: number) => void
+): Promise<Blob> {
+  try {
+    const { FFmpeg } = await import('@ffmpeg/ffmpeg');
+    const { fetchFile, toBlobURL } = await import('@ffmpeg/util');
+
+    const ffmpeg = new FFmpeg();
+    
+    if (onProgress) {
+      ffmpeg.on('progress', ({ progress }) => {
+        onProgress(Math.round(progress * 100));
+      });
+    }
+
+    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+    await ffmpeg.load({
+      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+    });
+
+    const inputName = 'input.webm';
+    const outputName = 'output.mp4';
+
+    await ffmpeg.writeFile(inputName, await fetchFile(webmBlob));
+    
+    // Transcode WebM (VP9/Opus) to MP4 (H.264/AAC) using ultrafast preset for browser speed
+    await ffmpeg.exec([
+      '-i', inputName,
+      '-vcodec', 'libx264',
+      '-preset', 'ultrafast',
+      '-acodec', 'aac',
+      outputName
+    ]);
+
+    const data = await ffmpeg.readFile(outputName);
+    return new Blob([data as any], { type: 'video/mp4' });
+  } catch (error) {
+    console.error("FFmpeg MP4 conversion failed:", error);
+    throw error;
+  }
+}

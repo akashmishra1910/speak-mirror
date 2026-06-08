@@ -63,6 +63,8 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
   const videoRef = useRef<HTMLVideoElement>(null);
   const [activeFilter, setActiveFilter] = useState("studio");
   const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
+  const [conversionProgress, setConversionProgress] = useState(0);
 
   const handleExportPDF = async () => {
     if (!metrics) return;
@@ -349,28 +351,31 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
   };
 
   const handleDownload = async () => {
-    if (videoUrl) {
-      let extension = "webm";
-      if (videoUrl.startsWith("blob:")) {
-        try {
-          const response = await fetch(videoUrl);
-          const blob = await response.blob();
-          if (blob.type.includes("mp4")) {
-            extension = "mp4";
-          }
-        } catch (err) {
-          console.warn("Failed to detect blob mime type:", err);
-        }
-      } else if (videoUrl.includes(".mp4") || videoUrl.includes("mp4")) {
-        extension = "mp4";
-      }
+    if (!videoUrl || isConverting) return;
+    setIsConverting(true);
+    setConversionProgress(0);
 
-      const a = document.createElement('a');
-      a.href = videoUrl;
-      a.download = `speakmirror-practice-${new Date().toISOString().split('T')[0]}.${extension}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+    try {
+      const response = await fetch(videoUrl);
+      const blob = await response.blob();
+
+      // Check if already an MP4 blob
+      if (blob.type.includes("mp4")) {
+        const { triggerDownload } = await import("@/lib/videoUtils");
+        triggerDownload(blob, `speakmirror-practice-${new Date().toISOString().split('T')[0]}.mp4`);
+      } else {
+        const { convertToMp4, triggerDownload } = await import("@/lib/videoUtils");
+        const mp4Blob = await convertToMp4(blob, (progress) => {
+          setConversionProgress(progress);
+        });
+        triggerDownload(mp4Blob, `speakmirror-practice-${new Date().toISOString().split('T')[0]}.mp4`);
+      }
+    } catch (err) {
+      console.error("Failed to convert/download video:", err);
+      alert("Failed to export video as MP4: " + (err as Error).message);
+    } finally {
+      setIsConverting(false);
+      setConversionProgress(0);
     }
   };
 
@@ -543,11 +548,20 @@ export function FeedbackDashboard({ metrics, videoUrl, onSave, isSaving, isSaved
           )}
           <button 
             onClick={handleDownload}
-            disabled={!videoUrl}
+            disabled={!videoUrl || isConverting}
             className="flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 hover:border-slate-300 dark:bg-white/[0.03] dark:border-white/10 dark:hover:bg-white/[0.08] dark:hover:border-white/20 dark:text-white transition-all rounded-xl font-bold disabled:opacity-50 text-xs cursor-pointer shadow-sm dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] backdrop-blur-md border"
           >
-            <Download className="w-3.5 h-3.5" />
-            EXPORT_MP4
+            {isConverting ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                CONVERTING... {conversionProgress}%
+              </>
+            ) : (
+              <>
+                <Download className="w-3.5 h-3.5" />
+                EXPORT_MP4
+              </>
+            )}
           </button>
           <button 
             onClick={handleExportPDF}
