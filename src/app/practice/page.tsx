@@ -79,13 +79,9 @@ function PracticeContent() {
     return id;
   }, []);
 
-  // Compressed video blobs
-  const [freeformCompressedBlob, setFreeformCompressedBlob] = useState<Blob | null>(null);
-  const [readingCompressedBlob, setReadingCompressedBlob] = useState<Blob | null>(null);
-
-  // Background compression promises refs to handle quick save requests
-  const freeformCompPromiseRef = useRef<Promise<Blob> | null>(null);
-  const readingCompPromiseRef = useRef<Promise<Blob> | null>(null);
+  // Export high-quality video blobs
+  const [freeformExportBlob, setFreeformExportBlob] = useState<Blob | null>(null);
+  const [readingExportBlob, setReadingExportBlob] = useState<Blob | null>(null);
 
   // Initialize Daily Challenge & Notification Permission on Mount
   useEffect(() => {
@@ -398,62 +394,49 @@ function PracticeContent() {
   };
 
   const handleRecordingComplete = async (
-    videoBlob: Blob, 
+    videoBlob: Blob, // Storage blob (low quality)
     audioBlob: Blob, 
     eyeContactAvg?: number, 
-    expressionScoreAvg?: number
+    expressionScoreAvg?: number,
+    exportVideoBlob?: Blob // Export blob (high quality)
   ) => {
     const isFreeform = (activeTaskId && phase === "freeform_recording") || !activeTaskId;
     const isReading = activeTaskId && phase === "reading_recording";
-    const nameLabel = isReading ? "reading" : "freeform";
-
-    // 1. Start background compression (non-blocking)
-    const toastId = crypto.randomUUID();
-    setToasts(prev => [...prev, { id: toastId, message: `Optimising for storage... 0%`, type: "info" }]);
-    
-    const compPromise = import("@/lib/videoUtils").then(async ({ compressForStorage }) => {
-      return compressForStorage(videoBlob, (progress) => {
-        setToasts(prev => prev.map(t => t.id === toastId ? { ...t, message: `Optimising for storage... ${progress}%` } : t));
-      });
-    });
 
     if (isReading) {
-      readingCompPromiseRef.current = compPromise;
+      setReadingBlob(videoBlob);
+      setReadingAudioBlob(audioBlob);
+      setReadingExportBlob(exportVideoBlob || null);
     } else {
-      freeformCompPromiseRef.current = compPromise;
+      setFreeformBlob(videoBlob);
+      setFreeformAudioBlob(audioBlob);
+      setFreeformExportBlob(exportVideoBlob || null);
     }
-
-    compPromise.then(compressedBlob => {
-      setToasts(prev => prev.filter(t => t.id !== toastId));
-      showToast(`${isReading ? 'Reading' : 'Freeform'} video optimised for storage.`, "success");
-      
-      if (isReading) {
-        setReadingCompressedBlob(compressedBlob);
-      } else {
-        setFreeformCompressedBlob(compressedBlob);
-      }
-    });
 
     if (activeTaskId && phase === "freeform_recording") {
       setFreeformEyeContact(eyeContactAvg);
       setFreeformExpression(expressionScoreAvg);
       
       if (task?.isChallenge) {
-        setFreeformBlob(videoBlob);
-        setFreeformAudioBlob(audioBlob);
         setPhase("analyzing");
-        processRecordings(videoBlob, audioBlob, null, null, eyeContactAvg, expressionScoreAvg);
+        processRecordings(
+          videoBlob, 
+          audioBlob, 
+          null, 
+          null, 
+          eyeContactAvg, 
+          expressionScoreAvg,
+          undefined,
+          undefined,
+          exportVideoBlob
+        );
         return;
       }
-      setFreeformBlob(videoBlob);
-      setFreeformAudioBlob(audioBlob);
       setPhase("reading_recording");
       return;
     }
 
     if (activeTaskId && phase === "reading_recording") {
-      setReadingBlob(videoBlob);
-      setReadingAudioBlob(audioBlob);
       setReadingEyeContact(eyeContactAvg);
       setReadingExpression(expressionScoreAvg);
       setPhase("analyzing");
@@ -465,18 +448,28 @@ function PracticeContent() {
         freeformEyeContact, 
         freeformExpression, 
         eyeContactAvg, 
-        expressionScoreAvg
+        expressionScoreAvg,
+        freeformExportBlob || undefined,
+        exportVideoBlob
       );
       return;
     }
 
     if (!activeTaskId) {
-      setFreeformBlob(videoBlob);
-      setFreeformAudioBlob(audioBlob);
       setFreeformEyeContact(eyeContactAvg);
       setFreeformExpression(expressionScoreAvg);
       setPhase("analyzing");
-      processRecordings(videoBlob, audioBlob, null, null, eyeContactAvg, expressionScoreAvg);
+      processRecordings(
+        videoBlob, 
+        audioBlob, 
+        null, 
+        null, 
+        eyeContactAvg, 
+        expressionScoreAvg,
+        undefined,
+        undefined,
+        exportVideoBlob
+      );
     }
   };
 
@@ -488,7 +481,9 @@ function PracticeContent() {
     ffEyeContact?: number,
     ffExpression?: number,
     rdEyeContact?: number,
-    rdExpression?: number
+    rdExpression?: number,
+    freeformExportVideo?: Blob,
+    readingExportVideo?: Blob
   ) => {
     setIsProcessing(true);
     setMetricsList([]);
@@ -497,8 +492,8 @@ function PracticeContent() {
       const newMetrics: AnalysisMetrics[] = [];
       const newUrls: string[] = [];
 
-      // Use the video Blob for preview playback in FeedbackDashboard
-      const freeformUrl = URL.createObjectURL(freeformVideo);
+      // Use the high-quality export Blob for preview playback in FeedbackDashboard
+      const freeformUrl = URL.createObjectURL(freeformExportVideo || freeformVideo);
       newUrls.push(freeformUrl);
 
       const formData1 = new FormData();
@@ -526,7 +521,7 @@ function PracticeContent() {
       newMetrics.push(analysis1);
 
       if (readingAudio && readingVideo && task?.reading_text) {
-        const readingUrl = URL.createObjectURL(readingVideo);
+        const readingUrl = URL.createObjectURL(readingExportVideo || readingVideo);
         newUrls.push(readingUrl);
 
         const formData2 = new FormData();
@@ -593,21 +588,11 @@ function PracticeContent() {
         const sessionId = crypto.randomUUID();
         showToast("Saving to your history...", "info");
 
-        // Await background compression if it's still running
-        let finalFreeformBlob = freeformCompressedBlob;
-        if (!finalFreeformBlob && freeformCompPromiseRef.current) {
-          showToast("Finalising video optimisation...", "info");
-          finalFreeformBlob = await freeformCompPromiseRef.current;
-        }
-        if (!finalFreeformBlob) {
-          finalFreeformBlob = freeformBlob;
-        }
-
         // Upload Freeform
-        const freeformExt = finalFreeformBlob.type.includes("mp4") ? "mp4" : "webm";
+        const freeformExt = freeformBlob.type.includes("mp4") ? "mp4" : "webm";
         const freeformFileName = `sessions/${user.id}/${sessionId}/recording.${freeformExt}`;
-        const { data: upload1 } = await supabase.storage.from('videos').upload(freeformFileName, finalFreeformBlob, { 
-          contentType: finalFreeformBlob.type,
+        const { data: upload1 } = await supabase.storage.from('videos').upload(freeformFileName, freeformBlob, { 
+          contentType: freeformBlob.type,
           metadata: { original_bitrate: '2.5Mbps', stored_bitrate: '400kbps' }
         });
         const url1 = upload1 ? freeformFileName : null;
@@ -635,19 +620,10 @@ function PracticeContent() {
 
         // Upload Reading
         if (readingBlob && metricsList[1]) {
-          let finalReadingBlob = readingCompressedBlob;
-          if (!finalReadingBlob && readingCompPromiseRef.current) {
-            showToast("Finalising reading video optimisation...", "info");
-            finalReadingBlob = await readingCompPromiseRef.current;
-          }
-          if (!finalReadingBlob) {
-            finalReadingBlob = readingBlob;
-          }
-
-          const readingExt = finalReadingBlob.type.includes("mp4") ? "mp4" : "webm";
+          const readingExt = readingBlob.type.includes("mp4") ? "mp4" : "webm";
           const readingFileName = `sessions/${user.id}/${sessionId}/recording_reading.${readingExt}`;
-          const { data: upload2 } = await supabase.storage.from('videos').upload(readingFileName, finalReadingBlob, { 
-            contentType: finalReadingBlob.type,
+          const { data: upload2 } = await supabase.storage.from('videos').upload(readingFileName, readingBlob, { 
+            contentType: readingBlob.type,
             metadata: { original_bitrate: '2.5Mbps', stored_bitrate: '400kbps' }
           });
           const url2 = upload2 ? readingFileName : null;
@@ -693,10 +669,8 @@ function PracticeContent() {
   const handleRetake = () => {
     videoUrls.forEach(url => URL.revokeObjectURL(url));
     setPhase("freeform_recording");
-    setFreeformCompressedBlob(null);
-    setReadingCompressedBlob(null);
-    freeformCompPromiseRef.current = null;
-    readingCompPromiseRef.current = null;
+    setFreeformExportBlob(null);
+    setReadingExportBlob(null);
     setFreeformBlob(null);
     setReadingBlob(null);
     setFreeformAudioBlob(null);

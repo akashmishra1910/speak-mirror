@@ -7,7 +7,7 @@ import { BEAUTIFY_FILTERS } from "@/lib/filters";
 import { useFaceAnalysis } from "@/hooks/useFaceAnalysis";
 
 interface RecorderProps {
-  onRecordingComplete: (videoBlob: Blob, audioBlob: Blob, eyeContactAvg?: number, expressionScoreAvg?: number) => void;
+  onRecordingComplete: (videoBlob: Blob, audioBlob: Blob, eyeContactAvg?: number, expressionScoreAvg?: number, exportVideoBlob?: Blob) => void;
   isProcessing: boolean;
   readingText?: string | null;
   taskTopic?: string | null;
@@ -106,6 +106,8 @@ export function Recorder({
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+  const exportRecorderRef = useRef<MediaRecorder | null>(null);
+  const exportChunksRef = useRef<BlobPart[]>([]);
   const audioRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -395,7 +397,7 @@ export function Recorder({
     }
     
     try {
-      // 1. Setup Video Recorder with dynamic MIME type selection (prioritizing VP9)
+      // 1. Setup Video Recorders with dynamic MIME type selection (prioritizing VP9)
       const mimeTypes = [
         "video/webm;codecs=vp9,opus",
         "video/webm;codecs=vp8,opus",
@@ -413,10 +415,11 @@ export function Recorder({
         }
       }
 
+      // Storage Recorder (low bitrate: 400 Kbps video, 64 Kbps audio)
       const mediaRecorder = new MediaRecorder(streamRef.current, {
         mimeType: selectedMimeType,
-        videoBitsPerSecond: 2500000, // 2.5 Mbps — high quality export
-        audioBitsPerSecond: 128000   // 128 kbps (high quality audio)
+        videoBitsPerSecond: 400000,
+        audioBitsPerSecond: 64000
       });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
@@ -424,6 +427,21 @@ export function Recorder({
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           chunksRef.current.push(e.data);
+        }
+      };
+
+      // Export Recorder (high quality: 2.5 Mbps video, 128 Kbps audio)
+      const exportRecorder = new MediaRecorder(streamRef.current, {
+        mimeType: selectedMimeType,
+        videoBitsPerSecond: 2500000,
+        audioBitsPerSecond: 128000
+      });
+      exportRecorderRef.current = exportRecorder;
+      exportChunksRef.current = [];
+
+      exportRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          exportChunksRef.current.push(e.data);
         }
       };
 
@@ -460,26 +478,32 @@ export function Recorder({
         console.warn("Failed to initialize separate audio recorder:", audioErr);
       }
 
-      // Synchronize both recorder stops to prevent race conditions
-      let videoBlob: Blob | null = null;
+      // Synchronize all recorder stops
+      let storageBlob: Blob | null = null;
+      let exportBlob: Blob | null = null;
       let audioBlob: Blob | null = null;
 
       const checkComplete = () => {
-        // If we have the video blob, and either we have the audio blob OR the audio recorder failed to start
-        if (videoBlob && (audioBlob || !audioRecorder)) {
+        if (storageBlob && exportBlob && (audioBlob || !audioRecorder)) {
           const eyeContactAvg = faceAnalysisResultsRef.current?.eyeContactAvg;
           const expressionScoreAvg = faceAnalysisResultsRef.current?.expressionScoreAvg;
           onRecordingComplete(
-            videoBlob, 
-            audioBlob || videoBlob, 
+            storageBlob, 
+            audioBlob || storageBlob, 
             eyeContactAvg, 
-            expressionScoreAvg
+            expressionScoreAvg,
+            exportBlob
           );
         }
       };
 
       mediaRecorder.onstop = () => {
-        videoBlob = new Blob(chunksRef.current, { type: "video/webm" });
+        storageBlob = new Blob(chunksRef.current, { type: selectedMimeType });
+        checkComplete();
+      };
+
+      exportRecorder.onstop = () => {
+        exportBlob = new Blob(exportChunksRef.current, { type: selectedMimeType });
         checkComplete();
       };
 
@@ -491,9 +515,10 @@ export function Recorder({
         };
       }
 
-      mediaRecorder.start();
+      mediaRecorder.start(1000);   // collect chunks every 1s
+      exportRecorder.start(1000);
       if (audioRecorder) {
-        audioRecorder.start();
+        audioRecorder.start(1000);
       }
       
       setIsRecording(true);
@@ -522,7 +547,14 @@ export function Recorder({
       try {
         mediaRecorderRef.current.stop();
       } catch (err) {
-        console.error("Error stopping video recorder:", err);
+        console.error("Error stopping storage video recorder:", err);
+      }
+    }
+    if (exportRecorderRef.current && isRecording) {
+      try {
+        exportRecorderRef.current.stop();
+      } catch (err) {
+        console.error("Error stopping export video recorder:", err);
       }
     }
     if (audioRecorderRef.current && isRecording) {
