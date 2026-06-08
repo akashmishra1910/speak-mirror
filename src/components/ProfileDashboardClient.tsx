@@ -1231,7 +1231,6 @@ export default function ProfileDashboardClient({ user, initialRecordings }: { us
                   playsInline
                   autoPlay
                   style={{ 
-                    transform: 'scaleX(-1)',
                     filter: BEAUTIFY_FILTERS[activeFilter] || BEAUTIFY_FILTERS.none
                   }}
                 />
