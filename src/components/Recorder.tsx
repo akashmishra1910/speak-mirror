@@ -5,7 +5,6 @@ import { Mic, Square, Loader2, Video, Lightbulb, HelpCircle, Shuffle, Bell, Spar
 import { motion, AnimatePresence } from "framer-motion";
 import { BEAUTIFY_FILTERS } from "@/lib/filters";
 import { useFaceAnalysis } from "@/hooks/useFaceAnalysis";
-import { CountdownOverlay } from "./session/CountdownOverlay";
 import { FocusPill } from "./session/FocusPill";
 
 interface RecorderProps {
@@ -121,7 +120,6 @@ export function Recorder({
   
   // Camera & Countdown states
   const [cameraLoaded, setCameraLoaded] = useState(false);
-  const [isCountingDown, setIsCountingDown] = useState(false);
   const [hasStartedCountdown, setHasStartedCountdown] = useState(false);
   
   // Live speech analysis states
@@ -368,11 +366,11 @@ export function Recorder({
     setTimeLeft(timeLimit);
   }, [timeLimit, mode]);
 
-  // Trigger countdown automatically if autoStart is true and camera is loaded
+  // Trigger recording automatically if autoStart is true and camera is loaded
   useEffect(() => {
     if (autoStart && cameraLoaded && !hasStartedCountdown && !isRecording && !isProcessing) {
       setHasStartedCountdown(true);
-      setIsCountingDown(true);
+      startRecordingActual();
     }
   }, [autoStart, cameraLoaded, hasStartedCountdown, isRecording, isProcessing]);
 
@@ -578,12 +576,7 @@ export function Recorder({
   };
 
   const startRecording = () => {
-    // Trigger countdown before recording starts
-    setIsCountingDown(true);
-  };
-
-  const handleCountdownComplete = () => {
-    setIsCountingDown(false);
+    // Start recording directly without countdown
     startRecordingActual();
   };
 
@@ -1068,10 +1061,7 @@ export function Recorder({
             )}
           </AnimatePresence>
 
-          {/* Countdown Overlay */}
-          {isCountingDown && (
-            <CountdownOverlay onComplete={handleCountdownComplete} />
-          )}
+          {/* Countdown Overlay removed */}
 
           {/* Persistent Focus Pill during active recording */}
           {isRecording && !isProcessing && (
@@ -1196,7 +1186,7 @@ export function Recorder({
 
           {/* Bottom Controls */}
           <div className="absolute bottom-6 left-0 right-0 z-20 flex flex-col items-center">
-            {!isProcessing && !isCountingDown && (
+            {!isProcessing && (
               isRecording ? (
                 <button
                   onClick={stopRecording}
