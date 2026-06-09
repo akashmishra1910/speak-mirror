@@ -756,7 +756,7 @@ export function Recorder({
     }
   };
 
-  const stopRecording = () => {
+  function stopRecording() {
     if (isRecording && userId) {
       faceAnalysisResultsRef.current = stopAnalysis();
     }
