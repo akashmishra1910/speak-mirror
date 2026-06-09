@@ -2,16 +2,21 @@
 
 import { useState } from "react";
 import { Recorder } from "@/components/Recorder";
-import { FeedbackDashboard, AnalysisMetrics } from "@/components/FeedbackDashboard";
-import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ArrowLeft, Loader2, Flame, Clock, AlertCircle, BookOpen, ChevronRight, Calendar, Bell, X } from "lucide-react";
+import { AnalysisMetrics } from "@/components/FeedbackDashboard";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import Link from "next/link";
 import { useEffect, Suspense, useRef, useCallback } from "react";
 import { dailyChallenges, getRandomChallenge, Challenge } from "@/lib/challenges";
-import { FluencyCard } from "@/components/FluencyCard";
+
+// Modular Subcomponents
+import { PromptSelector } from "@/components/practice/PromptSelector";
+import { AnalysisLoader } from "@/components/practice/AnalysisLoader";
+import { AnalysisResults } from "@/components/practice/AnalysisResults";
+import { PendingAssignments } from "@/components/practice/PendingAssignments";
+import { ChallengeModal } from "@/components/practice/ChallengeModal";
+import { ToastNotification, Toast } from "@/components/practice/ToastNotification";
 
 function PracticeContent() {
   const { user, activeWorkspace } = useAuth();
@@ -63,11 +68,6 @@ function PracticeContent() {
   const [notificationPermission, setNotificationPermission] = useState<string>("default");
 
   // Toast HUD State
-  interface Toast {
-    id: string;
-    message: string;
-    type?: 'info' | 'success' | 'warning' | 'error';
-  }
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'info', duration = 4000) => {
@@ -85,11 +85,9 @@ function PracticeContent() {
 
   // Initialize Daily Challenge & Notification Permission on Mount
   useEffect(() => {
-    // Select deterministic challenge based on current date
     const dayIndex = Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % dailyChallenges.length;
     setSelectedChallenge(dailyChallenges[dayIndex]);
 
-    // Check Notification Permission
     if (typeof window !== "undefined") {
       if (!("Notification" in window)) {
         setNotificationPermission("unsupported");
@@ -181,7 +179,6 @@ function PracticeContent() {
         });
         const uniqueTimestamps = Array.from(new Set(dates)).sort((a, b) => b - a);
         
-        // Also check if completed warmup today
         const todayStr = new Date().toDateString();
         const hasCompletedWarmupToday = data.some(r => 
           r.recording_type === 'warmup' && new Date(r.created_at).toDateString() === todayStr
@@ -235,7 +232,6 @@ function PracticeContent() {
     
     if (active) setIsLoadingAssignments(true);
     try {
-      // 1. Fetch rooms under current team workspace
       const { data: rooms, error: roomsError } = await supabase
         .from("rooms")
         .select("id, name")
@@ -251,7 +247,6 @@ function PracticeContent() {
       
       const roomIds = rooms.map(r => r.id);
       
-      // 2. Fetch tasks under those rooms
       const { data: tasks, error: tasksError } = await supabase
         .from("room_tasks")
         .select("*")
@@ -266,8 +261,7 @@ function PracticeContent() {
         return;
       }
       
-      // 3. Filter out completed tasks
-      const { data: userRecordings, error: recError } = await supabase
+      const { data: userRecordings } = await supabase
         .from("recordings")
         .select("task_id")
         .eq("user_id", user.id)
@@ -280,7 +274,7 @@ function PracticeContent() {
         .map(t => {
           const room = rooms.find(r => r.id === t.room_id);
           const createdDate = new Date(t.created_at || Date.now());
-          const deadlineDate = new Date(createdDate.getTime() + 24 * 60 * 60 * 1000); // 24h deadline
+          const deadlineDate = new Date(createdDate.getTime() + 24 * 60 * 60 * 1000);
           
           const diffMs = deadlineDate.getTime() - Date.now();
           let deadlineText = "Overdue";
@@ -334,7 +328,6 @@ function PracticeContent() {
     setVideoUrls([]);
     setIsSaved(false);
     
-    // Update URL query parameters without reloading
     const url = new URL(window.location.href);
     url.searchParams.set("roomId", assignment.room_id);
     url.searchParams.set("taskId", assignment.id);
@@ -394,13 +387,12 @@ function PracticeContent() {
   };
 
   const handleRecordingComplete = async (
-    videoBlob: Blob, // Storage blob (low quality)
+    videoBlob: Blob,
     audioBlob: Blob, 
     eyeContactAvg?: number, 
     expressionScoreAvg?: number,
-    exportVideoBlob?: Blob // Export blob (high quality)
+    exportVideoBlob?: Blob
   ) => {
-    const isFreeform = (activeTaskId && phase === "freeform_recording") || !activeTaskId;
     const isReading = activeTaskId && phase === "reading_recording";
 
     if (isReading) {
@@ -492,7 +484,6 @@ function PracticeContent() {
       const newMetrics: AnalysisMetrics[] = [];
       const newUrls: string[] = [];
 
-      // Use the high-quality export Blob for preview playback in FeedbackDashboard
       const freeformUrl = URL.createObjectURL(freeformExportVideo || freeformVideo);
       newUrls.push(freeformUrl);
 
@@ -515,10 +506,12 @@ function PracticeContent() {
       }
 
       if (!res1.ok) throw new Error(analysis1.error || "Failed to analyze freeform speech");
-      analysis1.title = "Freeform Speech";
-      analysis1.eyeContact = ffEyeContact;
-      analysis1.expressionScore = ffExpression;
-      newMetrics.push(analysis1);
+      // Unwrap response to matches feed format
+      const realData1 = analysis1.success && analysis1.data ? analysis1.data : analysis1;
+      realData1.title = "Freeform Speech";
+      realData1.eyeContact = ffEyeContact;
+      realData1.expressionScore = ffExpression;
+      newMetrics.push(realData1);
 
       if (readingAudio && readingVideo && task?.reading_text) {
         const readingUrl = URL.createObjectURL(readingExportVideo || readingVideo);
@@ -544,10 +537,11 @@ function PracticeContent() {
         }
 
         if (!res2.ok) throw new Error(analysis2.error || "Failed to analyze reading speech");
-        analysis2.title = "Reading Aloud";
-        analysis2.eyeContact = rdEyeContact;
-        analysis2.expressionScore = rdExpression;
-        newMetrics.push(analysis2);
+        const realData2 = analysis2.success && analysis2.data ? analysis2.data : analysis2;
+        realData2.title = "Reading Aloud";
+        realData2.eyeContact = rdEyeContact;
+        realData2.expressionScore = rdExpression;
+        newMetrics.push(realData2);
       }
 
       setMetricsList(newMetrics);
@@ -568,7 +562,6 @@ function PracticeContent() {
     
     try {
       if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        // Resolve target organization_id for strict RLS constraint
         let currentOrgId = activeWorkspace.id;
         if (currentOrgId === "personal") {
           const { data: personalOrg } = await supabase
@@ -652,7 +645,6 @@ function PracticeContent() {
         
         setIsSaved(true);
         showToast("Progress saved successfully!", "success");
-        // Refresh assignments list so completed one gets removed
         await fetchTeamAssignments();
         if (isPersonal) {
           await fetchPersonalStreak();
@@ -688,162 +680,53 @@ function PracticeContent() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col items-center relative">
-      {activeRoomId && (
-        <Link 
-          href={`/rooms/${activeRoomId}`} 
-          className="absolute top-12 left-4 sm:left-8 flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-themeText dark:text-white/60 dark:hover:text-white transition-all z-10 cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Room
-        </Link>
-      )}
-
-      {/* Top Left Controls Row */}
-      {user && isPersonal && (phase === "freeform_recording" || phase === "reading_recording") && (
-        <div className="w-full flex justify-start items-center gap-2.5 mb-6 flex-wrap z-20">
-          {/* Streak Pill */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 font-extrabold text-xs shadow-[0_0_15px_rgba(249,115,22,0.05)]">
-            <Flame className="w-3.5 h-3.5 fill-orange-400 text-orange-400" />
-            <span>{isLoadingStreak ? "..." : `${streak} ${streak === 1 ? 'day' : 'days'}`}</span>
-          </div>
-
-          {/* Daily Challenge Pill Button */}
-          <button
-            onClick={() => setShowChallengeModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 dark:hover:border-white/20 dark:text-white transition-all shadow-sm dark:shadow-[0_0_10px_rgba(255,255,255,0.02)] cursor-pointer"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-orange-400 animate-pulse" />
-            <span>Daily Challenge</span>
-            {completedWarmupToday ? (
-              <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 border border-emerald-500/30">
-                Done
-              </span>
-            ) : activeTaskId?.startsWith("challenge-") ? (
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-            ) : null}
-          </button>
-
-          {/* PWA Reminders Pill Button */}
-          {notificationPermission !== "unsupported" && (
-            <button
-              onClick={notificationPermission !== "granted" ? handleRequestNotificationPermission : undefined}
-              disabled={notificationPermission === "granted" || notificationPermission === "denied"}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all text-xs font-semibold shadow-[0_0_10px_rgba(0,0,0,0.1)] ${
-                notificationPermission === "granted"
-                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                  : notificationPermission === "denied"
-                    ? "bg-rose-500/10 border-rose-500/20 text-rose-400 opacity-60 cursor-not-allowed"
-                    : "bg-indigo-500/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20"
-              }`}
-            >
-              <Bell className={`w-3.5 h-3.5 ${notificationPermission === "granted" ? "fill-emerald-400/20" : ""}`} />
-              <span>
-                {notificationPermission === "granted"
-                  ? "Reminders Active"
-                  : notificationPermission === "denied"
-                    ? "Reminders Blocked"
-                    : "Enable Reminders"}
-              </span>
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Dynamic Header */}
-      <AnimatePresence mode="wait">
-        {!isProcessing && phase !== "results" && phase !== "analyzing" && (
-          <motion.div
-            key="header"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-            className="text-center mb-12 overflow-hidden float-slow w-full"
-          >
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/45 text-black text-xs md:text-sm font-semibold border border-slate-200/50 mb-4 shadow-sm dark:bg-white/5 dark:text-zinc-300 dark:border-white/5 dark:shadow-[0_0_15px_rgba(255,255,255,0.02)]">
-              <Sparkles className="w-4 h-4 text-[#5B7C99] dark:text-zinc-400 animate-pulse" />
-              {isPersonal ? "Daily Practice Arena" : `Team practice: ${activeWorkspace.name}`}
-            </span>
-            <h1 className="text-3xl md:text-5xl font-extrabold mb-4 text-black dark:text-white tracking-tight">
-              {activeTaskId 
-                ? (phase === "freeform_recording" ? "Part 1: Speak Freely" : "Part 2: Read Aloud")
-                : "Free Speech Sandbox"
-              }
-            </h1>
-            <p className="text-slate-650 dark:text-foreground/60 max-w-xl mx-auto font-light leading-relaxed text-sm md:text-base">
-              {activeTaskId 
-                ? (phase === "freeform_recording" 
-                    ? "Speak naturally about the assignment topic for 90 seconds. We will analyze your pacing, clarity, and metrics."
-                    : "Now, read the provided text using the teleprompter. We will analyze your pronunciation and articulation.")
-                : "Record speech on any topic you like. You'll receive full instant diagnostics, transcripts, and AI suggestions."
-              }
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* 1. Prompt Selector & Header Area */}
+      <PromptSelector
+        activeRoomId={activeRoomId}
+        activeTaskId={activeTaskId}
+        isPersonal={isPersonal}
+        phase={phase}
+        streak={streak}
+        isLoadingStreak={isLoadingStreak}
+        completedWarmupToday={completedWarmupToday}
+        notificationPermission={notificationPermission}
+        onRequestNotificationPermission={handleRequestNotificationPermission}
+        onShowChallengeModal={() => setShowChallengeModal(true)}
+        taskTopic={task?.topic_of_the_day}
+        activeWorkspaceName={activeWorkspace.name}
+      />
 
       <div className="w-full">
-        {/* If viewing results, show full width dashboard for optimal readability */}
-        {phase === "results" ? (
-          <motion.div 
-            key="dashboard"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full"
-          >
-            {metricsList.map((m, idx) => (
-              <div key={idx} className="mb-12 border-b border-white/5 pb-8 last:border-0">
-                <h3 className="text-2xl font-bold mb-6 text-zinc-300">{m.title}</h3>
-                <FeedbackDashboard 
-                  metrics={m} 
-                  videoUrl={videoUrls[idx]} 
-                  onSave={saveToProgress}
-                  isSaving={isSaving}
-                  isSaved={isSaved}
-                  onRetake={handleRetake}
-                />
-                <FluencyCard 
-                  userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || "A Speaker"}
-                  confidenceScore={m.confidence}
-                  clarityScore={m.clarity}
-                  paceWpm={m.wpm}
-                  fillerWordsCount={m.fillerWords}
-                />
-              </div>
-            ))}
-            
-            <div className="mt-8 text-center flex flex-col items-center gap-4">
-              {isSaved ? (
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.05)]">
-                  <Sparkles className="w-4 h-4 animate-pulse" />
-                  Progress Saved
-                </div>
-              ) : null}
-              
-              <Link 
-                href={activeRoomId ? `/rooms/${activeRoomId}` : "/profile"}
-                className="px-8 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 dark:text-white transition-all font-semibold shadow-sm dark:shadow-[0_0_15px_rgba(255,255,255,0.02)] cursor-pointer"
-              >
-                {activeRoomId ? "Return to Room" : "View Profile"}
-              </Link>
-            </div>
-          </motion.div>
-        ) : (        /* Main Layout Split Logic */
+        {/* 2. Analysis Results View */}
+        <AnalysisResults
+          phase={phase}
+          metricsList={metricsList}
+          videoUrls={videoUrls}
+          onSave={saveToProgress}
+          isSaving={isSaving}
+          isSaved={isSaved}
+          onRetake={handleRetake}
+          activeRoomId={activeRoomId}
+          user={user}
+        />
+
+        {/* 3. Recording Phase View */}
+        {phase !== "results" && (
           <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             
-            {/* Left side/Centered Recorder Column */}
+            {/* Left Column: Recording Sandbox */}
             <div className={user && !isPersonal ? "lg:col-span-2 flex flex-col items-center w-full" : "lg:col-span-3 flex flex-col items-center w-full"}>
+              
+              {/* Loader overlay during Llama 3 analysis */}
+              <AnalysisLoader phase={phase} />
+
               {isLoadingTask ? (
                 <div className="flex flex-col items-center justify-center p-24 w-full glass-panel rounded-3xl dark:border-white/5">
                   <Loader2 className="w-8 h-8 animate-spin text-themeText dark:text-white mb-4" />
                   <span className="text-xs font-semibold text-slate-500 dark:text-foreground/50 uppercase tracking-widest">Loading Task Details...</span>
                 </div>
-              ) : phase === "freeform_recording" || phase === "reading_recording" ? (
-                <motion.div 
-                  key="recorder"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="w-full max-w-md"
-                >
+              ) : (phase === "freeform_recording" || phase === "reading_recording") && (
+                <div className="w-full max-w-md">
                   <Recorder 
                     onRecordingComplete={handleRecordingComplete} 
                     isProcessing={isProcessing} 
@@ -857,290 +740,37 @@ function PracticeContent() {
                     wordDefinition={task?.definition}
                     tips={task?.tips}
                   />
-                </motion.div>
-              ) : (
-                <div className="flex flex-col items-center justify-center p-24 w-full glass-panel rounded-3xl dark:border-white/5">
-                  <Loader2 className="w-12 h-12 animate-spin text-themeText dark:text-white mb-6" />
-                  <span className="text-lg font-bold text-themeText dark:text-white">Analyzing your speeches...</span>
-                  <span className="text-sm text-foreground/40 mt-2 font-light">This usually takes about 10 seconds.</span>
                 </div>
               )}
             </div>
 
-            {/* Right side Column (Team Assignments only) */}
-            {user && !isPersonal && (
-              <motion.div 
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="lg:col-span-1 glass-panel p-6 rounded-3xl dark:border-white/10 dark:bg-[#09090d]/90 dark:shadow-[0_10px_30px_rgba(0,0,0,0.5)] shadow-[0_10px_30px_rgba(0,0,0,0.04)] w-full"
-              >
-                <div className="flex items-center justify-between mb-5">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400 flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                    Pending Assignments
-                  </h3>
-                  {pendingAssignments.length > 0 && (
-                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-500/10 text-indigo-650 dark:text-indigo-400 border border-indigo-500/20">
-                      {pendingAssignments.length} Left
-                    </span>
-                  )}
-                </div>
-
-                {isLoadingAssignments ? (
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <Loader2 className="w-6 h-6 animate-spin text-indigo-600 dark:text-indigo-400 mb-2" />
-                    <span className="text-[10px] font-medium text-slate-500 dark:text-zinc-500 uppercase tracking-widest">Fetching assignments...</span>
-                  </div>
-                ) : pendingAssignments.length === 0 ? (
-                  <div className="text-center py-10 px-4 border border-dashed border-slate-200 dark:border-white/5 rounded-2xl">
-                    <Sparkles className="w-8 h-8 text-slate-500 dark:text-zinc-600 mx-auto mb-3 animate-pulse" />
-                    <h4 className="text-xs font-bold text-themeText dark:text-white mb-1">All Caught Up!</h4>
-                    <p className="text-[10px] text-slate-500 dark:text-zinc-500 font-light leading-relaxed">
-                      No pending mentor assignments in this team. You can continue practicing in sandbox mode.
-                    </p>
-                    {activeTaskId && (
-                      <button
-                        onClick={clearAssignment}
-                        className="mt-4 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10 dark:text-white text-[10px] font-medium transition-all cursor-pointer"
-                      >
-                        Enter Sandbox Mode
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {/* Sandbox practice toggle */}
-                    {activeTaskId && (
-                      <button
-                        onClick={clearAssignment}
-                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-semibold text-slate-555 hover:text-themeText bg-slate-100/50 hover:bg-slate-100 border border-slate-200 dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10 dark:hover:border-white/10 dark:text-zinc-400 dark:hover:text-white transition-all text-left cursor-pointer"
-                      >
-                        <span>Switch to Sandbox Mode</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-
-                    {/* Pending Assignments List */}
-                    <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
-                      {pendingAssignments.map((assignment) => {
-                        const isActive = activeTaskId === assignment.id;
-                        return (
-                          <div
-                            key={assignment.id}
-                            onClick={() => selectAssignment(assignment)}
-                            className={`p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer ${
-                              isActive
-                                ? "bg-indigo-500/5 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.08)]"
-                                : "bg-slate-100/30 border-slate-200/50 hover:bg-slate-100/80 hover:border-slate-300 dark:bg-white/[0.01] dark:border-white/5 dark:hover:bg-white/[0.04] dark:hover:border-white/10"
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <span className="text-[10px] font-semibold text-indigo-650 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-400/10">
-                                {assignment.roomName}
-                              </span>
-                              <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider ${
-                                assignment.isUrgent ? "text-rose-550 animate-pulse" : "text-slate-500 dark:text-zinc-500"
-                              }`}>
-                                <Clock className="w-3 h-3" />
-                                {assignment.deadlineText}
-                              </span>
-                            </div>
-                            <h4 className={`text-xs font-bold leading-snug mb-1 truncate ${isActive ? "text-white dark:text-white" : "text-slate-800 dark:text-zinc-300"}`}>
-                              {assignment.topic_of_the_day}
-                            </h4>
-                            {assignment.word_of_the_day && (
-                              <p className="text-[10px] text-slate-500 dark:text-zinc-500 font-light truncate">
-                                Word of the day: <strong className="text-slate-700 dark:text-zinc-455">{assignment.word_of_the_day}</strong>
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Daily Challenge Modal */}
-      <AnimatePresence>
-        {showChallengeModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowChallengeModal(false)}
-              className="fixed inset-0 bg-[#09090d]/80 backdrop-blur-sm"
+            {/* Right Column: Pending Team Assignments list */}
+            <PendingAssignments
+              isPersonal={isPersonal}
+              activeTaskId={activeTaskId}
+              isLoadingAssignments={isLoadingAssignments}
+              pendingAssignments={pendingAssignments}
+              onClearAssignment={clearAssignment}
+              onSelectAssignment={selectAssignment}
             />
-            
-            {/* Modal Card */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ type: "spring", duration: 0.4 }}
-              className="relative w-full max-w-md glass-panel p-6 rounded-3xl dark:border-white/10 dark:bg-[#09090d]/95 dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] shadow-[0_20px_50px_rgba(0,0,0,0.06)] text-left overflow-hidden z-55"
-            >
-              {/* Top Close Button */}
-              <button
-                onClick={() => setShowChallengeModal(false)}
-                className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200/50 text-slate-500 hover:text-slate-800 dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10 dark:text-zinc-400 dark:hover:text-white transition-all z-10 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              {/* Header */}
-              <div className="flex items-center gap-2 mb-5">
-                <Sparkles className="w-5 h-5 text-orange-400 animate-pulse" />
-                <h3 className="text-sm font-bold uppercase tracking-wider text-themeText dark:text-zinc-300">
-                  Daily Warm-up Challenge
-                </h3>
-              </div>
-
-              {completedWarmupToday ? (
-                <div className="space-y-4">
-                  <div className="p-6 text-center border border-emerald-500/20 bg-emerald-500/5 rounded-2xl">
-                    <Sparkles className="w-10 h-10 text-emerald-400 mx-auto mb-3 animate-bounce" />
-                    <h4 className="text-base font-extrabold text-themeText dark:text-white mb-1.5">Streak Safe! 🔥</h4>
-                    <p className="text-xs text-slate-650 dark:text-zinc-400 font-light leading-relaxed">
-                      You've completed today's warm-up challenge. Keep up the consistency to improve your speaking fluency!
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setShowChallengeModal(false)}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white font-bold text-xs transition-all shadow-[0_4px_12px_rgba(2,132,199,0.15)] cursor-pointer"
-                  >
-                    Awesome, thanks!
-                  </button>
-                </div>
-              ) : activeTaskId?.startsWith("challenge-") ? (
-                <div className="space-y-4">
-                  <div className="p-4 border border-indigo-500/20 bg-indigo-500/5 rounded-2xl">
-                    <div className="flex justify-between items-start gap-2 mb-2">
-                      <span className="text-[10px] font-semibold text-indigo-400 bg-indigo-400/5 px-2 py-0.5 rounded-md border border-indigo-400/10 uppercase">
-                        Active Challenge
-                      </span>
-                    </div>
-                    <h4 className="text-sm font-bold leading-snug text-themeText dark:text-white mb-2">
-                      {selectedChallenge?.prompt}
-                    </h4>
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-[11px] mb-4 text-left leading-relaxed text-slate-700 dark:text-zinc-300">
-                      <span className="font-bold text-indigo-650 dark:text-indigo-400">Word of the Day:</span>{" "}
-                      <strong className="text-slate-800 dark:text-white">{selectedChallenge?.word_of_the_day}</strong>
-                      <p className="text-slate-500 dark:text-zinc-400 font-light mt-0.5 text-[10px]">
-                        {selectedChallenge?.definition}
-                      </p>
-                    </div>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => {
-                          clearAssignment();
-                          setShowChallengeModal(false);
-                        }}
-                        className="flex-1 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-xs font-semibold text-rose-500 dark:text-rose-455 transition-all cursor-pointer"
-                      >
-                        Exit Challenge
-                      </button>
-                      <button
-                        onClick={() => setShowChallengeModal(false)}
-                        className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 transition-all font-bold text-xs cursor-pointer"
-                      >
-                        Close View
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.01] border border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 transition-all">
-                    <div className="flex justify-between items-start gap-2 mb-2.5">
-                      <span className="text-[10px] font-semibold text-slate-650 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 uppercase dark:text-zinc-400 dark:bg-white/5 dark:border-white/10">
-                        Today's Prompt
-                      </span>
-                      <span className="text-[10px] font-bold text-slate-500 dark:text-zinc-500">
-                        {selectedChallenge?.suggestedDuration}s limit
-                      </span>
-                    </div>
-                    <h4 className="text-sm font-extrabold text-themeText dark:text-white leading-relaxed mb-3">
-                      {selectedChallenge?.prompt}
-                    </h4>
-                    <div className="p-3 rounded-xl bg-slate-100/50 border border-slate-200 text-[11px] mb-4 text-left leading-relaxed text-slate-750 dark:bg-white/5 dark:border-white/5 dark:text-zinc-300 dark:border-transparent">
-                      <span className="font-bold text-indigo-650 dark:text-indigo-400">Word of the Day:</span>{" "}
-                      <strong className="text-slate-800 dark:text-white">{selectedChallenge?.word_of_the_day}</strong>
-                      <p className="text-slate-500 dark:text-zinc-400 font-light mt-0.5 text-[10px]">
-                        {selectedChallenge?.definition}
-                      </p>
-                    </div>
-                    
-                    <div className="flex gap-3">
-                      <button
-                        onClick={handleShuffleChallenge}
-                        className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-750 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 dark:text-white transition-all font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        Shuffle
-                      </button>
-                      <button
-                        onClick={startChallenge}
-                        className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white font-bold text-xs transition-all shadow-[0_4px_12px_rgba(2,132,199,0.15)] flex items-center justify-center gap-1 cursor-pointer"
-                      >
-                        Start Warm-up
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-2xl border border-dashed border-slate-200 dark:border-white/5 text-center">
-                    <Sparkles className="w-5 h-5 text-zinc-500 mx-auto mb-2 animate-pulse" />
-                    <h5 className="text-[11px] font-bold text-themeText dark:text-white mb-1">Consistency pays off!</h5>
-                    <p className="text-[10px] text-slate-500 dark:text-zinc-500 font-light leading-relaxed">
-                      Explaining a random topic for 30s daily is a proven way to eliminate pacing issues and filter out filler words.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </motion.div>
           </div>
         )}
-      </AnimatePresence>
-
-      {/* Toast Notification HUD */}
-      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none max-w-sm w-full">
-        <AnimatePresence>
-          {toasts.map(toast => (
-            <motion.div
-              key={toast.id}
-              initial={{ opacity: 0, y: 30, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9, y: -20 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className={`p-4 rounded-2xl border backdrop-blur-md shadow-2xl flex items-start gap-3 pointer-events-auto transition-all ${
-                toast.type === 'success'
-                  ? 'bg-emerald-950/80 border-emerald-500/20 text-emerald-200'
-                  : toast.type === 'error'
-                  ? 'bg-rose-950/80 border-rose-500/20 text-rose-200'
-                  : 'bg-zinc-900/80 border-white/10 text-white'
-              }`}
-            >
-              <div className="mt-1 flex-shrink-0">
-                {toast.type === 'success' ? (
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
-                ) : toast.type === 'error' ? (
-                  <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
-                ) : (
-                  <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)] animate-pulse" />
-                )}
-              </div>
-              <div className="flex-1 text-xs font-semibold leading-normal tracking-wide">
-                {toast.message}
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
       </div>
+
+      {/* 4. Challenge Selector Modal */}
+      <ChallengeModal
+        showChallengeModal={showChallengeModal}
+        onClose={() => setShowChallengeModal(false)}
+        completedWarmupToday={completedWarmupToday}
+        activeTaskId={activeTaskId}
+        selectedChallenge={selectedChallenge}
+        onClearAssignment={clearAssignment}
+        onShuffleChallenge={handleShuffleChallenge}
+        onStartChallenge={startChallenge}
+      />
+
+      {/* 5. Custom Toast HUD */}
+      <ToastNotification toasts={toasts} />
     </div>
   );
 }

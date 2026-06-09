@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { requireAdmin } from "@/lib/auth";
+import { successResponse, errorResponse } from "@/lib/api-response";
 import Groq from "groq-sdk";
+import { z } from "zod";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'dummy' });
 
@@ -11,66 +13,93 @@ const supabaseAdmin = {
   from(table: string) { return getSupabaseAdmin().from(table); }
 } as unknown as SupabaseClient;
 
-// Helper to authenticate admin
-async function checkAdminAuth(request: Request) {
-  const cookieHeader = request.headers.get("cookie") || "";
-  const token = cookieHeader
-    .split("; ")
-    .find(c => c.trim().startsWith("sb-access-token="))
-    ?.split("=")[1];
+// Zod validation schemas for requests
+const GETParamsSchema = z.object({
+  action: z.enum(["stats", "users", "feedback", "tasks", "tickets"]),
+});
 
-  if (!token) return null;
-
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !user || user.user_metadata?.role !== "admin") {
-    return null;
-  }
-  return user;
-}
+const PostActionSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("generate-topics"),
+    count: z.number().int().positive().optional().default(10),
+  }),
+  z.object({
+    action: z.literal("bulk-import"),
+    tasks: z.array(z.object({
+      topic: z.string().min(1),
+      word_of_the_day: z.string().optional().nullable(),
+      definition: z.string().optional().nullable(),
+      reading_text: z.string().optional().nullable(),
+      bullets: z.array(z.object({ label: z.string(), text: z.string() })).optional().nullable(),
+      difficulty_level: z.string().optional().nullable(),
+    })),
+  }),
+  z.object({
+    action: z.literal("cleanup-storage"),
+    olderThanDays: z.number().int().positive().optional().default(30),
+  }),
+  z.object({
+    action: z.literal("create-task"),
+    topic: z.string().min(1),
+    word: z.string().optional().nullable(),
+    definition: z.string().optional().nullable(),
+    readingText: z.string().optional().nullable(),
+    difficulty: z.string().optional().nullable(),
+    bullets: z.array(z.object({ label: z.string(), text: z.string() })).optional().nullable(),
+  }),
+  z.object({
+    action: z.literal("update-ticket"),
+    ticketId: z.string().uuid("Invalid ticketId format"),
+    status: z.string().min(1),
+  })
+]);
 
 export async function GET(request: Request) {
   try {
-    const admin = await checkAdminAuth(request);
-    if (!admin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // 1. Centralized admin authorization guard
+    try {
+      await requireAdmin(request);
+    } catch (authErr: any) {
+      return errorResponse(authErr.message || "Unauthorized", 401);
     }
 
     const { searchParams } = new URL(request.url);
-    const action = searchParams.get("action");
+    const parsedParams = GETParamsSchema.safeParse({
+      action: searchParams.get("action"),
+    });
+
+    if (!parsedParams.success) {
+      return errorResponse(parsedParams.error.issues[0].message, 400);
+    }
+
+    const { action } = parsedParams.data;
 
     // Fetch general system stats
     if (action === "stats") {
-      // 1. Storage Health
       const { data: storageData } = await supabaseAdmin.storage.from("videos").list();
       
       let totalStorageBytes = 0;
       try {
-        // Fallback size estimation: recordings * 1.5MB average if objects metadata isn't directly queryable
         totalStorageBytes = (storageData?.reduce((acc, curr) => acc + (curr.metadata?.size || 0), 0)) || 0;
       } catch (err) {
         console.warn("Storage counting err:", err);
       }
 
-      // 2. Aggregate counts from admin_stats or tables
       const { data: dailyStats, error: statsError } = await supabaseAdmin
         .from("admin_stats")
         .select("*")
         .limit(30);
 
-      // If view is not yet created, fallback to normal queries to avoid erroring out
       const viewOk = !statsError && dailyStats && dailyStats.length > 0;
       let finalDailyStats = dailyStats || [];
 
       if (!viewOk) {
         console.warn("admin_stats view missing or empty, using fallbacks");
-        // Fallback dummy daily stats if the view fails to compile
         finalDailyStats = [
           { stat_date: new Date().toISOString().split('T')[0], recordings_count: 5, analyze_calls_count: 8, video_calls_count: 12, active_users_count: 3, current_total_storage_bytes: totalStorageBytes }
         ];
       }
 
-      // 3. Growth & Retention Metrics
-      // Completion rate = total recordings / total analyze calls
       const { count: totalRecordings } = await supabaseAdmin
         .from("recordings")
         .select("*", { count: "exact", head: true });
@@ -84,7 +113,6 @@ export async function GET(request: Request) {
         ? Math.round(((totalRecordings || 0) / totalAnalyzeCalls) * 100)
         : 100;
 
-      // DAU & MAU
       const past24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const past30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -106,8 +134,6 @@ export async function GET(request: Request) {
 
       const dauMauRatio = mau > 0 ? Math.round((dau / mau) * 1000) / 10 : 0;
 
-      // Active Streaks (users with 3+ days active in recordings)
-      // JS Calculation for safety and quick implementation
       const { data: allRecsForStreaks } = await supabaseAdmin
         .from("recordings")
         .select("user_id, created_at")
@@ -130,7 +156,7 @@ export async function GET(request: Request) {
         }
       });
 
-      return NextResponse.json({
+      return successResponse({
         totalRecordings: totalRecordings || 0,
         totalAnalyzeCalls: totalAnalyzeCalls || 0,
         sessionCompletionRate,
@@ -150,14 +176,12 @@ export async function GET(request: Request) {
         .from("recordings")
         .select("user_id, created_at");
 
-      // Count recordings per user
       const userRecordingCounts: Record<string, number> = {};
       recordings?.forEach(r => {
         if (!r.user_id) return;
         userRecordingCounts[r.user_id] = (userRecordingCounts[r.user_id] || 0) + 1;
       });
 
-      // Get user profiles from Auth
       const { data: authUsers, error: usersErr } = await supabaseAdmin.auth.admin.listUsers();
       if (usersErr) throw usersErr;
 
@@ -170,12 +194,11 @@ export async function GET(request: Request) {
         recordings_count: userRecordingCounts[u.id] || 0
       }));
 
-      // Sort by recordings count for abuse detection
       const sortedByActivity = [...usersList].sort((a, b) => b.recordings_count - a.recordings_count);
 
-      return NextResponse.json({
+      return successResponse({
         users: usersList,
-        abuseList: sortedByActivity.slice(0, 10) // top 10 active users
+        abuseList: sortedByActivity.slice(0, 10)
       });
     }
 
@@ -187,7 +210,6 @@ export async function GET(request: Request) {
         .order("created_at", { ascending: false })
         .limit(20);
 
-      // Map users
       const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
       const enrichedFeedback = recentRecordings?.map(r => {
         const u = authUsers?.users.find(user => user.id === r.user_id);
@@ -198,7 +220,7 @@ export async function GET(request: Request) {
         };
       }) || [];
 
-      return NextResponse.json({ feedbacks: enrichedFeedback });
+      return successResponse({ feedbacks: enrichedFeedback });
     }
 
     // List practice tasks
@@ -207,7 +229,7 @@ export async function GET(request: Request) {
         .from("practice_tasks")
         .select("*")
         .order("created_at", { ascending: false });
-      return NextResponse.json({ tasks: tasks || [] });
+      return successResponse({ tasks: tasks || [] });
     }
 
     // Fetch customer support tickets
@@ -218,44 +240,51 @@ export async function GET(request: Request) {
         .order("created_at", { ascending: false });
 
       if (ticketsError) {
-        console.warn("support_tickets table missing or query failed. Returning empty list.", ticketsError.message);
-        return NextResponse.json({
+        console.warn("support_tickets table missing or query failed.", ticketsError.message);
+        return successResponse({
           tickets: [],
           databaseStatus: "missing_migration"
         });
       }
 
-      return NextResponse.json({
+      return successResponse({
         tickets: tickets || [],
         databaseStatus: "active"
       });
     }
 
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    return errorResponse("Invalid action", 400);
 
-  } catch (err: unknown) {
-    const error = err as Error;
-    console.error("Admin API Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (err: any) {
+    console.error("Admin API Error:", err);
+    return errorResponse(err.message || "Internal Server Error", 500);
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const admin = await checkAdminAuth(request);
-    if (!admin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // 1. Centralized admin authorization guard
+    try {
+      await requireAdmin(request);
+    } catch (authErr: any) {
+      return errorResponse(authErr.message || "Unauthorized", 401);
     }
 
     const body = await request.json();
-    const { action } = body;
+    const parsed = PostActionSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return errorResponse(parsed.error.issues[0].message, 400);
+    }
+
+    const payload = parsed.data;
 
     // AI pre-generation using Llama 3
-    if (action === "generate-topics") {
-      const { count = 10 } = body;
+    if (payload.action === "generate-topics") {
+      const { count } = payload;
 
       if (!process.env.GROQ_API_KEY) {
-        return NextResponse.json({ error: "GROQ_API_KEY is not configured" }, { status: 500 });
+        return errorResponse("GROQ_API_KEY is not configured", 500);
       }
 
       const prompt = `You are an expert communication coach. Generate exactly ${count} unique, highly engaging speaking prompts/topics for a public speaking practice app. 
@@ -302,10 +331,9 @@ Return ONLY a JSON object with this schema:
       const content = chatCompletion.choices[0]?.message?.content;
       if (!content) throw new Error("No topics generated");
 
-      const parsed = JSON.parse(content);
-      const tasks = parsed.tasks || [];
+      const parsedJson = JSON.parse(content);
+      const tasks = parsedJson.tasks || [];
 
-      // Insert into database
       const insertedTasks = [];
       for (const t of tasks) {
         const { data, error } = await supabaseAdmin
@@ -325,16 +353,12 @@ Return ONLY a JSON object with this schema:
         }
       }
 
-      return NextResponse.json({ success: true, count: insertedTasks.length, tasks: insertedTasks });
+      return successResponse({ count: insertedTasks.length, tasks: insertedTasks });
     }
 
     // Bulk Importer from manual JSON input
-    if (action === "bulk-import") {
-      const { tasks } = body;
-      if (!Array.isArray(tasks)) {
-        return NextResponse.json({ error: "Invalid tasks format, must be an array" }, { status: 400 });
-      }
-
+    if (payload.action === "bulk-import") {
+      const { tasks } = payload;
       const insertedTasks = [];
       for (const t of tasks) {
         if (!t.topic) continue;
@@ -361,22 +385,21 @@ Return ONLY a JSON object with this schema:
         }
       }
 
-      return NextResponse.json({ success: true, count: insertedTasks.length, tasks: insertedTasks });
+      return successResponse({ count: insertedTasks.length, tasks: insertedTasks });
     }
 
     // Storage cleanup utility
-    if (action === "cleanup-storage") {
-      const { olderThanDays = 30 } = body;
+    if (payload.action === "cleanup-storage") {
+      const { olderThanDays } = payload;
       const cutoffDate = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000).toISOString();
 
-      // Find old recordings in DB
       const { data: oldRecordings } = await supabaseAdmin
         .from("recordings")
         .select("id, video_url")
         .lt("created_at", cutoffDate);
 
       if (!oldRecordings || oldRecordings.length === 0) {
-        return NextResponse.json({ success: true, message: "No old recordings to clean up" });
+        return successResponse({ message: "No old recordings to clean up" });
       }
 
       const videoFileNames = oldRecordings
@@ -395,14 +418,12 @@ Return ONLY a JSON object with this schema:
         }
       }
 
-      // Option to clean up recording metadata from db or keep metadata but nullify video URL
       const { error: dbUpdateErr } = await supabaseAdmin
         .from("recordings")
         .update({ video_url: null })
         .lt("created_at", cutoffDate);
 
-      return NextResponse.json({
-        success: true,
+      return successResponse({
         recordingsCleaned: oldRecordings.length,
         filesDeleted,
         dbUpdateSuccess: !dbUpdateErr
@@ -410,8 +431,8 @@ Return ONLY a JSON object with this schema:
     }
 
     // Single Task creation
-    if (action === "create-task") {
-      const { topic, word, definition, readingText, difficulty, bullets } = body;
+    if (payload.action === "create-task") {
+      const { topic, word, definition, readingText, difficulty, bullets } = payload;
       const { data, error } = await supabaseAdmin
         .from("practice_tasks")
         .insert({
@@ -431,12 +452,12 @@ Return ONLY a JSON object with this schema:
         .select();
 
       if (error) throw error;
-      return NextResponse.json({ success: true, task: data[0] });
+      return successResponse({ task: data[0] });
     }
 
     // Update support ticket status
-    if (action === "update-ticket") {
-      const { ticketId, status } = body;
+    if (payload.action === "update-ticket") {
+      const { ticketId, status } = payload;
       const { data, error } = await supabaseAdmin
         .from("support_tickets")
         .update({ status })
@@ -444,14 +465,13 @@ Return ONLY a JSON object with this schema:
         .select();
 
       if (error) throw error;
-      return NextResponse.json({ success: true, ticket: data?.[0] });
+      return successResponse({ ticket: data?.[0] });
     }
 
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    return errorResponse("Invalid action", 400);
 
-  } catch (err: unknown) {
-    const error = err as Error;
-    console.error("Admin POST Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (err: any) {
+    console.error("Admin POST Error:", err);
+    return errorResponse(err.message || "Internal Server Error", 500);
   }
 }

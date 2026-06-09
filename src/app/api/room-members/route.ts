@@ -1,17 +1,35 @@
-import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
+import { requireAuth } from '@/lib/auth';
+import { successResponse, errorResponse } from '@/lib/api-response';
+import { z } from 'zod';
+
+const RequestSchema = z.object({
+  roomId: z.string().uuid("Invalid roomId format"),
+});
 
 export async function GET(request: Request) {
   const supabaseAdmin = getSupabaseAdmin();
   try {
     const { searchParams } = new URL(request.url);
-    const roomId = searchParams.get('roomId');
+    const parsedParams = RequestSchema.safeParse({
+      roomId: searchParams.get('roomId'),
+    });
 
-    if (!roomId) {
-      return NextResponse.json({ error: "Missing roomId" }, { status: 400 });
+    if (!parsedParams.success) {
+      return errorResponse(parsedParams.error.issues[0].message, 400);
     }
 
-    // 1. Fetch room details to check if it's organization-scoped
+    const { roomId } = parsedParams.data;
+
+    // 1. Authenticate requesting user
+    let user;
+    try {
+      user = await requireAuth(request);
+    } catch (authErr: any) {
+      return errorResponse(authErr.message || "Unauthorized", 401);
+    }
+
+    // 2. Fetch room details to check if it's organization-scoped
     const { data: roomData, error: roomError } = await supabaseAdmin
       .from('rooms')
       .select('organization_id')
@@ -19,20 +37,20 @@ export async function GET(request: Request) {
       .single();
 
     if (roomError || !roomData) {
-      return NextResponse.json({ error: 'Failed to fetch room details' }, { status: 500 });
+      return errorResponse("Room not found", 404);
     }
 
     let members: { user_id: string; joined_at: string }[] = [];
 
     if (roomData.organization_id) {
-      // Fetch members from organization_users mapping table instead
+      // Fetch members from organization_users mapping table
       const { data: orgUsers, error: orgUsersError } = await supabaseAdmin
         .from('organization_users')
         .select('user_id, created_at')
         .eq('organization_id', roomData.organization_id);
 
       if (orgUsersError || !orgUsers) {
-        return NextResponse.json({ error: 'Failed to fetch organization members' }, { status: 500 });
+        return errorResponse("Failed to fetch organization members", 500);
       }
 
       members = orgUsers.map(ou => ({
@@ -47,27 +65,33 @@ export async function GET(request: Request) {
         .eq('room_id', roomId);
 
       if (membersError || !dbMembers) {
-        return NextResponse.json({ error: 'Failed to fetch room members' }, { status: 500 });
+        return errorResponse("Failed to fetch room members", 500);
       }
 
       members = dbMembers;
     }
 
+    // 3. Authorization check: Is the authenticated user a member of this room/org?
+    const isMember = members.some(m => m.user_id === user.id);
+    if (!isMember) {
+      return errorResponse("Forbidden: You are not a member of this room", 403);
+    }
+
     if (members.length === 0) {
-      return NextResponse.json({ members: [] });
+      return successResponse({ members: [] });
     }
 
     const memberIds = members.map(m => m.user_id);
 
-    // 2. Fetch emails/names for members from auth.users (requires service_role)
+    // 4. Fetch emails/names for members from auth.users (requires service_role)
     const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (authError || !authUsers) {
        console.error("Failed to list users:", authError);
-       return NextResponse.json({ error: "Failed to fetch user details" }, { status: 500 });
+       return errorResponse("Failed to fetch user details", 500);
     }
 
-    // 3. Map auth data to the room_members data
+    // 5. Map auth data to the room_members data
     const enrichedMembers = members.map(m => {
       const authUser = authUsers.users.find(u => u.id === m.user_id);
       return {
@@ -78,10 +102,10 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json({ members: enrichedMembers });
+    return successResponse({ members: enrichedMembers });
 
   } catch (err: any) {
     console.error('API Error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return errorResponse(err.message || "Internal Server Error", 500);
   }
 }

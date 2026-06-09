@@ -1,6 +1,21 @@
-import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
+import { requireAuth } from '@/lib/auth';
+import { successResponse, errorResponse } from '@/lib/api-response';
 import nodemailer from 'nodemailer';
+import { z } from 'zod';
+
+const TaskSchema = z.object({
+  topic_of_the_day: z.string().min(1, "Topic of the day is required"),
+  word_of_the_day: z.string().min(1, "Word of the day is required"),
+  word_meaning: z.string().optional().nullable(),
+  idiom_of_the_day: z.string().optional().nullable(),
+});
+
+const RequestBodySchema = z.object({
+  roomId: z.string().uuid("Invalid roomId format"),
+  roomName: z.string().min(1, "Room name is required").optional().nullable(),
+  task: TaskSchema,
+});
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -14,13 +29,23 @@ export async function POST(request: Request) {
   const supabaseAdmin = getSupabaseAdmin();
   try {
     const body = await request.json();
-    const { roomId, roomName, task } = body;
+    const parsed = RequestBodySchema.safeParse(body);
 
-    if (!roomId || !task) {
-      return NextResponse.json({ error: "Missing roomId or task details" }, { status: 400 });
+    if (!parsed.success) {
+      return errorResponse(parsed.error.issues[0].message, 400);
     }
 
-    // 1. Fetch room details to check if it's organization-scoped
+    const { roomId, roomName, task } = parsed.data;
+
+    // 1. Authenticate user
+    let user;
+    try {
+      user = await requireAuth(request);
+    } catch (authErr: any) {
+      return errorResponse(authErr.message || "Unauthorized", 401);
+    }
+
+    // 2. Fetch room details to check if it's organization-scoped
     const { data: roomData, error: roomError } = await supabaseAdmin
       .from('rooms')
       .select('organization_id')
@@ -28,7 +53,7 @@ export async function POST(request: Request) {
       .single();
 
     if (roomError || !roomData) {
-      return NextResponse.json({ error: 'Failed to fetch room details' }, { status: 500 });
+      return errorResponse("Room not found", 404);
     }
 
     let memberIds: string[] = [];
@@ -41,7 +66,7 @@ export async function POST(request: Request) {
         .eq('organization_id', roomData.organization_id);
 
       if (orgUsersError || !orgUsers) {
-        return NextResponse.json({ error: 'Failed to fetch organization members' }, { status: 500 });
+        return errorResponse("Failed to fetch organization members", 500);
       }
 
       memberIds = orgUsers.map(ou => ou.user_id);
@@ -53,37 +78,43 @@ export async function POST(request: Request) {
         .eq('room_id', roomId);
 
       if (membersError || !dbMembers) {
-        return NextResponse.json({ error: 'Failed to fetch room members' }, { status: 500 });
+        return errorResponse("Failed to fetch room members", 500);
       }
 
       memberIds = dbMembers.map(m => m.user_id);
     }
 
-    if (memberIds.length === 0) {
-      return NextResponse.json({ message: 'No members found in this room.' });
+    // 3. Authorization check: is the requesting user member of the room?
+    const isMember = memberIds.includes(user.id);
+    if (!isMember) {
+      return errorResponse("Forbidden: You are not a member of this room", 403);
     }
 
-    // 2. Fetch emails for members from auth.users (requires service_role)
+    if (memberIds.length === 0) {
+      return successResponse({ message: 'No members found in this room.' });
+    }
+
+    // 4. Fetch emails for members from auth.users (requires service_role)
     const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (authError || !authUsers) {
        console.error("Failed to list users:", authError);
-       return NextResponse.json({ error: "Failed to fetch user emails" }, { status: 500 });
+       return errorResponse("Failed to fetch user emails", 500);
     }
 
     const targetUsers = authUsers.users.filter(u => memberIds.includes(u.id));
 
     let emailsSent = 0;
 
-    // 3. Send emails to all members
-    for (const user of targetUsers) {
-      if (!user.email) continue;
+    // 5. Send emails to all members
+    for (const member of targetUsers) {
+      if (!member.email) continue;
       
       try {
         if (process.env.GMAIL_APP_PASSWORD) {
           await transporter.sendMail({
             from: `"SpeakMirror" <${process.env.GMAIL_USER}>`,
-            to: user.email,
+            to: member.email,
             subject: `New SpeakMirror Task assigned for ${roomName || 'your team'}!`,
             html: `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
@@ -117,15 +148,15 @@ export async function POST(request: Request) {
           });
           emailsSent++;
         } else {
-          console.log(`[Mock Email] Would send task assignment to ${user.email} for room ${roomId}`);
+          console.log(`[Mock Email] Would send task assignment to ${member.email} for room ${roomId}`);
+          emailsSent++;
         }
       } catch (emailErr) {
-        console.error("Failed to send email to", user.email, emailErr);
+        console.error("Failed to send email to", member.email, emailErr);
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return successResponse({
       message: process.env.GMAIL_APP_PASSWORD 
         ? `Sent ${emailsSent} assignment emails.` 
         : `Mocked ${emailsSent} assignment emails. Set GMAIL_APP_PASSWORD to actually send.`
@@ -133,6 +164,6 @@ export async function POST(request: Request) {
 
   } catch (err: any) {
     console.error('API Error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return errorResponse(err.message || "Internal Server Error", 500);
   }
 }

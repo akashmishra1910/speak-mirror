@@ -1,20 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
+import { getCurrentUser } from '@/lib/auth';
+import { errorResponse } from '@/lib/api-response';
 
 export async function GET(request: Request) {
   const supabaseAdmin = getSupabaseAdmin();
   let userId: string | null = null;
+  
   try {
-    const cookieHeader = request.headers.get("cookie") || "";
-    const token = cookieHeader
-      .split("; ")
-      .find(c => c.trim().startsWith("sb-access-token="))
-      ?.split("=")[1];
-      
-    if (token) {
-      const { data: { user } } = await supabaseAdmin.auth.getUser(token);
-      if (user) userId = user.id;
-    }
+    const user = await getCurrentUser(request);
+    if (user) userId = user.id;
   } catch (e) {
     // Ignore auth error during logging
   }
@@ -34,7 +29,7 @@ export async function GET(request: Request) {
       } catch (logErr) {
         console.error("Failed to log API error:", logErr);
       }
-      return NextResponse.json({ error: "Missing file parameter" }, { status: 400 });
+      return errorResponse("Missing file parameter", 400);
     }
 
     // Generate a very short-lived signed URL (15 seconds)
@@ -42,7 +37,7 @@ export async function GET(request: Request) {
     const { data } = await supabaseAdmin.storage.from('videos').createSignedUrl(file, 15, options);
     
     if (!data?.signedUrl) {
-      return NextResponse.json({ error: "Failed to generate access to video" }, { status: 500 });
+      return errorResponse("Failed to generate access to video", 500);
     }
 
     // If download is requested, redirect directly to the signed URL to trigger native download
@@ -63,7 +58,7 @@ export async function GET(request: Request) {
     const response = await fetch(data.signedUrl);
     
     if (!response.ok) {
-      return NextResponse.json({ error: "Failed to fetch video stream" }, { status: response.status });
+      return errorResponse("Failed to fetch video stream", response.status);
     }
 
     // Return the stream with appropriate headers
@@ -95,6 +90,6 @@ export async function GET(request: Request) {
     } catch (logErr) {
       console.error("Failed to log API error:", logErr);
     }
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return errorResponse("Internal Server Error", 500);
   }
 }

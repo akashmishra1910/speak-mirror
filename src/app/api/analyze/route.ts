@@ -1,25 +1,21 @@
 import { NextResponse } from "next/server";
 import Groq, { toFile } from "groq-sdk";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { requireAuth } from "@/lib/auth";
+import { successResponse, errorResponse } from "@/lib/api-response";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'dummy' });
 
 export async function POST(request: Request) {
   const supabaseAdmin = getSupabaseAdmin();
   let userId: string | null = null;
+  
+  // Authenticate to safeguard AI processing credits
   try {
-    const cookieHeader = request.headers.get("cookie") || "";
-    const token = cookieHeader
-      .split("; ")
-      .find(c => c.trim().startsWith("sb-access-token="))
-      ?.split("=")[1];
-      
-    if (token) {
-      const { data: { user } } = await supabaseAdmin.auth.getUser(token);
-      if (user) userId = user.id;
-    }
-  } catch (e) {
-    console.warn("Auth extraction warning:", e);
+    const user = await requireAuth(request);
+    userId = user.id;
+  } catch (authErr: any) {
+    return errorResponse(authErr.message || "Unauthorized", 401);
   }
 
   try {
@@ -39,13 +35,22 @@ export async function POST(request: Request) {
       } catch (logErr) {
         console.error("Failed to log API error:", logErr);
       }
-      return NextResponse.json({ error: "No audio file provided" }, { status: 400 });
+      return errorResponse("No audio file provided", 400);
     }
 
     if (!process.env.GROQ_API_KEY) {
       // Fallback for missing API key
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      return NextResponse.json({
+      try {
+        await supabaseAdmin.from('api_usage_logs').insert({
+          route: '/api/analyze',
+          user_id: userId,
+          status: 'success'
+        });
+      } catch (logErr) {
+        console.error("Failed to log API success:", logErr);
+      }
+      return successResponse({
         confidence: 72,
         clarity: 80,
         energy: 65,
@@ -170,7 +175,7 @@ Note: Provide 2-3 highly specific suggestions. Ensure annotations are exact subs
       console.error("Failed to log API success:", logErr);
     }
 
-    return NextResponse.json({
+    return successResponse({
       confidence: analysis.confidence,
       clarity: analysis.clarity,
       energy: Math.round((analysis.confidence + analysis.clarity) / 2),
@@ -193,6 +198,6 @@ Note: Provide 2-3 highly specific suggestions. Ensure annotations are exact subs
     } catch (logErr) {
       console.error("Failed to log API error:", logErr);
     }
-    return NextResponse.json({ error: error.message || "Failed to analyze speech" }, { status: 500 });
+    return errorResponse(error.message || "Failed to analyze speech", 500);
   }
 }

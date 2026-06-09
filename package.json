@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint",
+    "test": "jest",
+    "test:e2e": "playwright test",
+    "prepare": "husky"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
@@ -21,10 +24,16 @@
     "nodemailer": "^8.0.5",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "resend": "^6.12.0"
+    "resend": "^6.12.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.0",
     "@types/react": "^19",
@@ -32,7 +41,22 @@
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
+    "husky": "^9.1.7",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
+    "lint-staged": "^17.0.7",
+    "prettier": "^3.8.4",
     "tailwindcss": "^4",
+    "ts-jest": "^29.4.11",
     "typescript": "^5"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
   }
 }

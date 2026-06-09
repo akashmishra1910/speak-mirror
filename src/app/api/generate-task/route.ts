@@ -1,13 +1,22 @@
-import { NextResponse } from "next/server";
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
+import { requireAuth } from '@/lib/auth';
+import { successResponse, errorResponse } from '@/lib/api-response';
 import Groq from "groq-sdk";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'dummy' });
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    // Authenticate user to protect API credits and abuse
+    try {
+      await requireAuth(request);
+    } catch (authErr: any) {
+      return errorResponse(authErr.message || "Unauthorized", 401);
+    }
+
     if (!process.env.GROQ_API_KEY) {
       // Fallback
-      return NextResponse.json({
+      return successResponse({
         topic: "The Importance of Adaptability",
         word: "Resilient",
         meaning: "Able to withstand or recover quickly from difficult conditions.",
@@ -45,10 +54,10 @@ Return ONLY a JSON object with the following schema:
 
     const taskData = JSON.parse(content);
 
-    return NextResponse.json(taskData);
+    return successResponse(taskData);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Task generation error:", error);
-    return NextResponse.json({ error: "Failed to generate task" }, { status: 500 });
+    return errorResponse("Failed to generate task", 500);
   }
 }

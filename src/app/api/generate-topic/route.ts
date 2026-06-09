@@ -1,14 +1,31 @@
-import { NextResponse } from "next/server";
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
+import { requireAuth } from '@/lib/auth';
+import { successResponse, errorResponse } from '@/lib/api-response';
 import Groq from "groq-sdk";
-import { createClient } from "@supabase/supabase-js";
+import { z } from 'zod';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'dummy' });
 
+const RequestParamsSchema = z.object({
+  level: z.enum(["beginner", "intermediate", "advanced", "Beginner", "Intermediate", "Advanced"]).optional().nullable(),
+});
+
 export async function GET(request: Request) {
+  const supabaseAdmin = getSupabaseAdmin();
   try {
+    // 1. Secure Authentication: get user details from token securely
+    let user;
+    try {
+      user = await requireAuth(request);
+    } catch (authErr: any) {
+      return errorResponse(authErr.message || "Unauthorized", 401);
+    }
+
+    const userId = user.id;
+
     if (!process.env.GROQ_API_KEY) {
       // Fallback for missing API key
-      return NextResponse.json({
+      return successResponse({
         topic: "What is the most important lesson you've learned?",
         bullets: [
           { label: "Who", text: "The main people involved were..." },
@@ -20,20 +37,20 @@ export async function GET(request: Request) {
       });
     }
 
-    const url = new URL(request.url);
-    const userId = url.searchParams.get('userId');
-    const levelParam = url.searchParams.get('level');
+    const { searchParams } = new URL(request.url);
+    const parsed = RequestParamsSchema.safeParse({
+      level: searchParams.get('level'),
+    });
 
+    if (!parsed.success) {
+      return errorResponse(parsed.error.issues[0].message, 400);
+    }
+
+    const levelParam = parsed.data.level;
     let difficultyLevel = "Beginner";
     let pastTopics: string[] = [];
 
-    // Set up Supabase Admin client if configuration is present
-    const hasSupabaseEnv = !!(process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_PUBLIC_SUPABASE_URL);
-    const supabaseAdmin = hasSupabaseEnv
-      ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-      : null;
-
-    if (userId && supabaseAdmin) {
+    if (userId) {
       try {
         // Fetch past recording topics for this user to avoid duplication
         const { data: recordingsData } = await supabaseAdmin
@@ -57,29 +74,27 @@ export async function GET(request: Request) {
     }
 
     // Try to load from pre-generated pool first for cost control
-    if (supabaseAdmin) {
-      try {
-        const { data: poolTasks } = await supabaseAdmin
-          .from("practice_tasks")
-          .select("*");
+    try {
+      const { data: poolTasks } = await supabaseAdmin
+        .from("practice_tasks")
+        .select("*");
+        
+      if (poolTasks && poolTasks.length > 0) {
+        // Filter out past topics
+        const availableTasks = poolTasks.filter(t => !pastTopics.includes(t.topic_of_the_day));
+        const selectedTask = availableTasks.length > 0
+          ? availableTasks[Math.floor(Math.random() * availableTasks.length)]
+          : poolTasks[Math.floor(Math.random() * poolTasks.length)];
           
-        if (poolTasks && poolTasks.length > 0) {
-          // Filter out past topics
-          const availableTasks = poolTasks.filter(t => !pastTopics.includes(t.topic_of_the_day));
-          const selectedTask = availableTasks.length > 0
-            ? availableTasks[Math.floor(Math.random() * availableTasks.length)]
-            : poolTasks[Math.floor(Math.random() * poolTasks.length)];
-            
-          if (selectedTask) {
-            return NextResponse.json({
-              topic: selectedTask.topic_of_the_day,
-              bullets: selectedTask.bullets || []
-            });
-          }
+        if (selectedTask) {
+          return successResponse({
+            topic: selectedTask.topic_of_the_day,
+            bullets: selectedTask.bullets || []
+          });
         }
-      } catch (poolErr) {
-        console.warn("Failed to fetch from practice_tasks pool, falling back to live AI:", poolErr);
       }
+    } catch (poolErr) {
+      console.warn("Failed to fetch from practice_tasks pool, falling back to live AI:", poolErr);
     }
 
     if (levelParam) {
@@ -89,17 +104,16 @@ export async function GET(request: Request) {
       else difficultyLevel = "Beginner";
     } else {
       let recordingCount = 0;
-      if (userId && supabaseAdmin) {
-        try {
-          const { count } = await supabaseAdmin
-            .from('recordings')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', userId);
-          recordingCount = count || 0;
-        } catch (err) {
-          console.warn("Failed to count recordings:", err);
-        }
+      try {
+        const { count } = await supabaseAdmin
+          .from('recordings')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+        recordingCount = count || 0;
+      } catch (err) {
+        console.warn("Failed to count recordings:", err);
       }
+      
       if (recordingCount >= 15) {
         difficultyLevel = "Advanced";
       } else if (recordingCount >= 5) {
@@ -155,12 +169,12 @@ export async function GET(request: Request) {
     const content = chatCompletion.choices[0]?.message?.content;
     if (!content) throw new Error("No content generated");
 
-    const parsed = JSON.parse(content);
-    return NextResponse.json(parsed);
+    const parsedData = JSON.parse(content);
+    return successResponse(parsedData);
 
-  } catch (error) {
+  } catch (error: any) {
     console.warn("Topic generation error, falling back to default:", error);
-    return NextResponse.json({
+    return successResponse({
       topic: "What is the most important lesson you've learned?",
       bullets: [
         { label: "Who", text: "The main people involved were..." },

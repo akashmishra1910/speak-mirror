@@ -1,17 +1,70 @@
-import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
+import { requireAuth } from '@/lib/auth';
+import { successResponse, errorResponse } from '@/lib/api-response';
+import { z } from 'zod';
+
+const RequestSchema = z.object({
+  roomId: z.string().uuid("Invalid roomId format"),
+});
 
 export async function GET(request: Request) {
   const supabaseAdmin = getSupabaseAdmin();
   try {
     const { searchParams } = new URL(request.url);
-    const roomId = searchParams.get('roomId');
+    const parsed = RequestSchema.safeParse({
+      roomId: searchParams.get('roomId'),
+    });
 
-    if (!roomId) {
-      return NextResponse.json({ error: "Missing roomId" }, { status: 400 });
+    if (!parsed.success) {
+      return errorResponse(parsed.error.issues[0].message, 400);
     }
 
-    // 1. Get recordings for the room
+    const { roomId } = parsed.data;
+
+    // 1. Authenticate user
+    let user;
+    try {
+      user = await requireAuth(request);
+    } catch (authErr: any) {
+      return errorResponse(authErr.message || "Unauthorized", 401);
+    }
+
+    // 2. Fetch room details to check organization-scoped access
+    const { data: roomData, error: roomError } = await supabaseAdmin
+      .from('rooms')
+      .select('organization_id')
+      .eq('id', roomId)
+      .single();
+
+    if (roomError || !roomData) {
+      return errorResponse("Room not found", 404);
+    }
+
+    // 3. Verify membership of the requesting user
+    let isAuthorized = false;
+    if (roomData.organization_id) {
+      const { data: membership } = await supabaseAdmin
+        .from('organization_users')
+        .select('role')
+        .eq('organization_id', roomData.organization_id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (membership) isAuthorized = true;
+    } else {
+      const { data: member } = await supabaseAdmin
+        .from('room_members')
+        .select('joined_at')
+        .eq('room_id', roomId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (member) isAuthorized = true;
+    }
+
+    if (!isAuthorized) {
+      return errorResponse("Forbidden: You are not authorized to access this room's recordings", 403);
+    }
+
+    // 4. Get recordings for the room
     const { data: recordings, error: recError } = await supabaseAdmin
       .from('recordings')
       .select('*')
@@ -19,24 +72,22 @@ export async function GET(request: Request) {
       .order('created_at', { ascending: false });
 
     if (recError || !recordings) {
-      return NextResponse.json({ error: 'Failed to fetch recordings' }, { status: 500 });
+      return errorResponse("Failed to fetch recordings", 500);
     }
 
     if (recordings.length === 0) {
-      return NextResponse.json({ recordings: [] });
+      return successResponse({ recordings: [] });
     }
 
-    const userIds = [...new Set(recordings.map(r => r.user_id).filter(Boolean))];
-
-    // 2. Fetch names for these users
+    // 5. Fetch names for these users
     const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (authError || !authUsers) {
        console.error("Failed to list users:", authError);
-       return NextResponse.json({ recordings }); // Return without names if auth fails
+       return successResponse({ recordings }); // Return without names if auth fails
     }
 
-    // 3. Map auth data and set proxy URLs for the recordings
+    // 6. Map auth data and set proxy URLs for the recordings
     const enrichedRecordings = recordings.map(rec => {
       const authUser = authUsers.users.find(u => u.id === rec.user_id);
       
@@ -55,10 +106,10 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json({ recordings: enrichedRecordings });
+    return successResponse({ recordings: enrichedRecordings });
 
   } catch (err: any) {
     console.error('API Error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return errorResponse(err.message || "Internal Server Error", 500);
   }
 }

@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
+import { successResponse, errorResponse } from '@/lib/api-response';
 import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     // 1. Verify Vercel CRON secret if deployed
     const authHeader = request.headers.get('authorization');
     if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return errorResponse('Unauthorized', 401);
     }
 
     // 2. Fetch all active tasks from today
@@ -78,8 +78,8 @@ export async function GET(request: Request) {
         const pendingUsers = authUsers?.users.filter(u => pendingUserIds.includes(u.id)) || [];
 
         // 4. Send emails to pending users
-        for (const user of pendingUsers) {
-          if (!user.email) continue;
+        for (const member of pendingUsers) {
+          if (!member.email) continue;
           
           const roomName = (task.rooms as any)?.name || 'your team';
           
@@ -87,7 +87,7 @@ export async function GET(request: Request) {
             if (process.env.GMAIL_APP_PASSWORD) {
               await transporter.sendMail({
                 from: `"SpeakMirror" <${process.env.GMAIL_USER}>`,
-                to: user.email,
+                to: member.email,
                 subject: `Reminder: Daily SpeakMirror Task for ${roomName}`,
                 html: `
                   <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -106,10 +106,11 @@ export async function GET(request: Request) {
               });
               emailsSent++;
             } else {
-              console.log(`[Mock Email] Would send reminder to ${user.email} for task ${task.id}`);
+              console.log(`[Mock Email] Would send reminder to ${member.email} for task ${task.id}`);
+              emailsSent++;
             }
           } catch (emailErr) {
-            console.error("Failed to send email to", user.email, emailErr);
+            console.error("Failed to send email to", member.email, emailErr);
           }
         }
       }
@@ -127,11 +128,11 @@ export async function GET(request: Request) {
       todayMidnight.setUTCHours(0, 0, 0, 0);
       const yesterdayMidnight = todayMidnight.getTime() - 86400000;
 
-      for (const user of authUsers.users) {
-        if (!user.email) continue;
+      for (const authUser of authUsers.users) {
+        if (!authUser.email) continue;
         
         // Filter recordings for this user
-        const userRecs = allRecordings.filter(r => r.user_id === user.id);
+        const userRecs = allRecordings.filter(r => r.user_id === authUser.id);
         
         // Check if practiced today
         const practicedToday = userRecs.some(r => new Date(r.created_at).toDateString() === todayStr);
@@ -166,7 +167,7 @@ export async function GET(request: Request) {
             if (process.env.GMAIL_APP_PASSWORD) {
               await transporter.sendMail({
                 from: `"SpeakMirror" <${process.env.GMAIL_USER}>`,
-                to: user.email,
+                to: authUser.email,
                 subject: `Don't lose your ${currentStreak}-day speaking streak! ⏳`,
                 html: `
                   <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #fafafa;">
@@ -187,18 +188,17 @@ export async function GET(request: Request) {
               });
               emailsSent++;
             } else {
-              console.log(`[Mock Streak Saver] Would send streak saver nudge to ${user.email} for ${currentStreak}-day streak`);
+              console.log(`[Mock Streak Saver] Would send streak saver nudge to ${authUser.email} for ${currentStreak}-day streak`);
               emailsSent++;
             }
           } catch (emailErr) {
-            console.error("Failed to send streak saver email to", user.email, emailErr);
+            console.error("Failed to send streak saver email to", authUser.email, emailErr);
           }
         }
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return successResponse({
       message: process.env.GMAIL_APP_PASSWORD 
         ? `Sent ${emailsSent} reminder emails.` 
         : `Mocked ${emailsSent} reminder emails. Set GMAIL_APP_PASSWORD to actually send.`
@@ -206,6 +206,6 @@ export async function GET(request: Request) {
 
   } catch (err: any) {
     console.error('CRON Error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return errorResponse(err.message || "Failed to process CRON reminders", 500);
   }
 }
