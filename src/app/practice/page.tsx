@@ -17,7 +17,6 @@ import { AnalysisResults } from "@/components/practice/AnalysisResults";
 import { PendingAssignments } from "@/components/practice/PendingAssignments";
 import { ChallengeModal } from "@/components/practice/ChallengeModal";
 import { ToastNotification, Toast } from "@/components/practice/ToastNotification";
-import { PreSessionModal } from "@/components/session/PreSessionModal";
 
 function PracticeContent() {
   const { user, activeWorkspace } = useAuth();
@@ -964,37 +963,28 @@ function PracticeContent() {
                   <span className="text-xs font-semibold text-slate-500 dark:text-foreground/50 uppercase tracking-widest">Loading Task Details...</span>
                 </div>
               ) : (phase === "freeform_recording" || phase === "reading_recording") && (
-                showWarmup && !hasWarmedUp ? (
-                  <PreSessionModal
-                    focusMetric={profileFocusMetric}
-                    goal={profileGoal}
-                    experienceLevel={profileExperience}
-                    practiceDuration={profileDuration}
-                    streak={streak}
+                <div className="w-full max-w-md">
+                  <Recorder 
+                    onRecordingComplete={handleRecordingComplete} 
+                    isProcessing={isProcessing} 
+                    readingText={phase === "reading_recording" ? task?.reading_text : undefined}
                     taskTopic={task?.topic_of_the_day || "Free Practice"}
+                    userId={user?.id}
+                    userLevel={profileExperience}
+                    mode={phase === "reading_recording" ? "reading" : (task?.isChallenge ? "warmup" : "freeform")}
+                    timeLimit={task?.timeLimit || 90}
+                    wordOfTheDay={task?.word_of_the_day}
+                    wordDefinition={task?.definition}
+                    tips={task?.tips}
+                    autoStart={false}
+                    focusMetric={profileFocusMetric}
+                    showWarmup={showWarmup}
+                    streak={streak}
                     isFirstSession={isFirstSession}
-                    onStartRecording={() => setHasWarmedUp(true)}
-                    onClose={() => clearAssignment()}
+                    profileGoal={profileGoal}
+                    profileDuration={profileDuration}
                   />
-                ) : (
-                  <div className="w-full max-w-md">
-                    <Recorder 
-                      onRecordingComplete={handleRecordingComplete} 
-                      isProcessing={isProcessing} 
-                      readingText={phase === "reading_recording" ? task?.reading_text : undefined}
-                      taskTopic={task?.topic_of_the_day}
-                      userId={user?.id}
-                      userLevel={user?.user_metadata?.difficulty_level}
-                      mode={phase === "reading_recording" ? "reading" : (task?.isChallenge ? "warmup" : "freeform")}
-                      timeLimit={task?.timeLimit || 90}
-                      wordOfTheDay={task?.word_of_the_day}
-                      wordDefinition={task?.definition}
-                      tips={task?.tips}
-                      autoStart={showWarmup}
-                      focusMetric={profileFocusMetric}
-                    />
-                  </div>
-                )
+                </div>
               )}
             </div>
 

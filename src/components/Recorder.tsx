@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BEAUTIFY_FILTERS } from "@/lib/filters";
 import { useFaceAnalysis } from "@/hooks/useFaceAnalysis";
 import { FocusPill } from "./session/FocusPill";
+import { PreSessionModal } from "./session/PreSessionModal";
 
 interface RecorderProps {
   onRecordingComplete: (
@@ -30,6 +31,11 @@ interface RecorderProps {
   tips?: string[] | null;
   autoStart?: boolean;
   focusMetric?: string | null;
+  showWarmup?: boolean;
+  streak?: number;
+  isFirstSession?: boolean;
+  profileGoal?: string | null;
+  profileDuration?: number;
 }
 
 // IndexedDB helpers for zero-copy streaming
@@ -112,7 +118,12 @@ export function Recorder({
   wordDefinition,
   tips,
   autoStart = false,
-  focusMetric
+  focusMetric,
+  showWarmup = false,
+  streak = 0,
+  isFirstSession = false,
+  profileGoal = null,
+  profileDuration = 1
 }: RecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [timeLeft, setTimeLeft] = useState(timeLimit);
@@ -121,6 +132,10 @@ export function Recorder({
   // Camera & Countdown states
   const [cameraLoaded, setCameraLoaded] = useState(false);
   const [hasStartedCountdown, setHasStartedCountdown] = useState(false);
+  
+  // Warmup state
+  const [showWarmupModal, setShowWarmupModal] = useState(false);
+  const [hasWarmedUpState, setHasWarmedUpState] = useState(false);
   
   // Live speech analysis states
   const [liveFillerCount, setLiveFillerCount] = useState(0);
@@ -579,8 +594,11 @@ export function Recorder({
   };
 
   const startRecording = () => {
-    // Start recording directly without countdown
-    startRecordingActual();
+    if (showWarmup && !hasWarmedUpState) {
+      setShowWarmupModal(true);
+    } else {
+      startRecordingActual();
+    }
   };
 
   const startRecordingActual = async () => {
@@ -1077,6 +1095,27 @@ export function Recorder({
           </AnimatePresence>
 
           {/* Countdown Overlay removed */}
+
+          {/* Warmup Modal overlay */}
+          {showWarmupModal && (
+            <PreSessionModal
+              focusMetric={focusMetric || null}
+              goal={profileGoal || null}
+              experienceLevel={userLevel || null}
+              practiceDuration={profileDuration || 1}
+              streak={streak || 0}
+              taskTopic={taskTopic || "Free Practice"}
+              isFirstSession={isFirstSession || false}
+              onStartRecording={() => {
+                setShowWarmupModal(false);
+                setHasWarmedUpState(true);
+                startRecordingActual();
+              }}
+              onClose={() => {
+                setShowWarmupModal(false);
+              }}
+            />
+          )}
 
           {/* Persistent Focus Pill during active recording */}
           {isRecording && !isProcessing && (
