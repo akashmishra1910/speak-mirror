@@ -189,6 +189,9 @@ export function Recorder({
   const exportChunksRef = useRef<BlobPart[]>([]);
   const audioRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
+  const storageWritePromisesRef = useRef<Promise<void>[]>([]);
+  const exportWritePromisesRef = useRef<Promise<void>[]>([]);
+  const audioWritePromisesRef = useRef<Promise<void>[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const downscaleIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -685,10 +688,12 @@ export function Recorder({
       });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
+      storageWritePromisesRef.current = [];
 
-      mediaRecorder.ondataavailable = async (e) => {
+      mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
-          await writeChunk("storageChunks", e.data).catch(console.error);
+          const p = writeChunk("storageChunks", e.data).catch(console.error) as Promise<void>;
+          storageWritePromisesRef.current.push(p);
         }
       };
 
@@ -708,16 +713,19 @@ export function Recorder({
       });
       exportRecorderRef.current = exportRecorder;
       exportChunksRef.current = [];
+      exportWritePromisesRef.current = [];
 
-      exportRecorder.ondataavailable = async (e) => {
+      exportRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
-          await writeChunk("exportChunks", e.data).catch(console.error);
+          const p = writeChunk("exportChunks", e.data).catch(console.error) as Promise<void>;
+          exportWritePromisesRef.current.push(p);
         }
       };
 
       // 2. Setup Audio-Only Recorder for lightweight API analysis
       let audioRecorder: MediaRecorder | null = null;
       audioChunksRef.current = [];
+      audioWritePromisesRef.current = [];
       
       try {
         const audioTracks = streamRef.current!.getAudioTracks();
@@ -738,9 +746,10 @@ export function Recorder({
           });
           audioRecorderRef.current = audioRecorder;
 
-          audioRecorder.ondataavailable = async (e) => {
+          audioRecorder.ondataavailable = (e) => {
             if (e.data.size > 0) {
-              await writeChunk("audioChunks", e.data).catch(console.error);
+              const p = writeChunk("audioChunks", e.data).catch(console.error) as Promise<void>;
+              audioWritePromisesRef.current.push(p);
             }
           };
         }
@@ -774,6 +783,8 @@ export function Recorder({
 
       mediaRecorder.onstop = async () => {
         try {
+          // Wait for all chunk writing promises to complete to resolve the race condition
+          await Promise.all(storageWritePromisesRef.current);
           const dbChunks = await getChunks("storageChunks");
           storageBlob = new Blob(dbChunks, { type: selectedMimeType });
         } catch (err) {
@@ -785,6 +796,8 @@ export function Recorder({
 
       exportRecorder.onstop = async () => {
         try {
+          // Wait for all chunk writing promises to complete to resolve the race condition
+          await Promise.all(exportWritePromisesRef.current);
           const dbChunks = await getChunks("exportChunks");
           exportBlob = new Blob(dbChunks, { type: selectedMimeType });
         } catch (err) {
@@ -798,6 +811,8 @@ export function Recorder({
         audioRecorder.onstop = async () => {
           const audioMimeType = audioRecorder?.mimeType || "audio/webm";
           try {
+            // Wait for all chunk writing promises to complete to resolve the race condition
+            await Promise.all(audioWritePromisesRef.current);
             const dbChunks = await getChunks("audioChunks");
             audioBlob = new Blob(dbChunks, { type: audioMimeType });
           } catch (err) {
