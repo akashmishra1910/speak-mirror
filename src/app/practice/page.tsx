@@ -24,6 +24,7 @@ function PracticeContent() {
   const router = useRouter();
   const roomId = searchParams.get("roomId");
   const taskId = searchParams.get("taskId");
+  const customPrompt = searchParams.get("prompt");
 
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
@@ -121,8 +122,20 @@ function PracticeContent() {
     setActiveTaskId(taskId);
   }, [roomId, taskId]);
 
-  // Fetch Task Details based on Active Task ID
+  // Fetch Task Details based on Active Task ID or Custom Prompt
   useEffect(() => {
+    if (customPrompt) {
+      setTask({
+        id: "custom-prompt",
+        topic_of_the_day: customPrompt,
+        reading_text: null,
+        isChallenge: false,
+        isCustom: true
+      });
+      setIsLoadingTask(false);
+      return;
+    }
+
     async function fetchTask() {
       if (!activeTaskId) {
         setTask(null);
@@ -158,7 +171,7 @@ function PracticeContent() {
       }
     }
     fetchTask();
-  }, [activeTaskId]);
+  }, [activeTaskId, customPrompt]);
 
   // Fetch Personal Daily Streak
   const fetchPersonalStreak = useCallback(async () => {
@@ -712,6 +725,58 @@ function PracticeContent() {
               fetchCoachComment(rec2.id, 1);
             }
           }
+        }
+        
+        // Update User Streak
+        try {
+          const todayDateStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+          
+          const { data: currentStreakInfo } = await supabase
+            .from("streaks")
+            .select("*")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (!currentStreakInfo) {
+            await supabase.from("streaks").insert({
+              user_id: user.id,
+              current_streak: 1,
+              longest_streak: 1,
+              last_active_date: todayDateStr,
+              freeze_available: true
+            });
+          } else {
+            const lastActiveDate = currentStreakInfo.last_active_date;
+            let nextStreak = currentStreakInfo.current_streak;
+
+            if (lastActiveDate) {
+              const lastActive = new Date(lastActiveDate);
+              const today = new Date(todayDateStr);
+              const diffTime = Math.abs(today.getTime() - lastActive.getTime());
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+              if (diffDays === 1) {
+                nextStreak += 1;
+              } else if (diffDays > 1) {
+                nextStreak = 1;
+              }
+            } else {
+              nextStreak = 1;
+            }
+
+            const nextLongestStreak = Math.max(nextStreak, currentStreakInfo.longest_streak);
+
+            await supabase
+              .from("streaks")
+              .update({
+                current_streak: nextStreak,
+                longest_streak: nextLongestStreak,
+                last_active_date: todayDateStr
+              })
+              .eq("user_id", user.id);
+          }
+        } catch (streakErr) {
+          console.error("Failed to update streak:", streakErr);
         }
         
         setIsSaved(true);
