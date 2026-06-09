@@ -13,18 +13,17 @@ const RequestParamsSchema = z.object({
 export async function GET(request: Request) {
   const supabaseAdmin = getSupabaseAdmin();
   try {
-    // 1. Secure Authentication: get user details from token securely
     let user;
+    let userId: string | null = null;
     try {
       user = await requireAuth(request);
+      userId = user?.id || null;
     } catch (authErr: any) {
-      return errorResponse(authErr.message || "Unauthorized", 401);
+      // Allow unauthenticated requests to read from pool without personalization
     }
 
-    const userId = user.id;
-
-    if (!process.env.GROQ_API_KEY) {
-      // Fallback for missing API key
+    if (!process.env.GROQ_API_KEY && !userId) {
+      // Quick fallback if unauthenticated and no API key
       return successResponse({
         topic: "What is the most important lesson you've learned?",
         bullets: [
@@ -47,12 +46,26 @@ export async function GET(request: Request) {
     }
 
     const levelParam = parsed.data.level;
-    let difficultyLevel = "Beginner";
+    let userGoal: string | null = null;
+    let userFocusMetric: string | null = null;
+    let userExpLevel: string | null = null;
     let pastTopics: string[] = [];
 
+    // Fetch user profile and past topics for personalization
     if (userId) {
       try {
-        // Fetch past recording topics for this user to avoid duplication
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('goal, experience_level, focus_metric')
+          .eq('id', userId)
+          .single();
+        
+        if (profile) {
+          userGoal = profile.goal;
+          userFocusMetric = profile.focus_metric;
+          userExpLevel = profile.experience_level;
+        }
+
         const { data: recordingsData } = await supabaseAdmin
           .from('recordings')
           .select('topic')
@@ -69,15 +82,43 @@ export async function GET(request: Request) {
             .filter(t => t && t.trim() !== "" && !t.startsWith("Reading:"));
         }
       } catch (err) {
-        console.warn("Failed to fetch past topics:", err);
+        console.warn("Failed to fetch personalization info:", err);
+      }
+    }
+
+    // Determine target difficulty level
+    let difficultyLevel = "Beginner";
+    const activeLevel = userExpLevel || levelParam;
+    if (activeLevel) {
+      const lower = activeLevel.toLowerCase();
+      if (lower === "intermediate") difficultyLevel = "Intermediate";
+      else if (lower === "advanced") difficultyLevel = "Advanced";
+    } else if (userId) {
+      let recordingCount = 0;
+      try {
+        const { count } = await supabaseAdmin
+          .from('recordings')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+        recordingCount = count || 0;
+      } catch (err) {
+        console.warn("Failed to count recordings:", err);
+      }
+      if (recordingCount >= 15) {
+        difficultyLevel = "Advanced";
+      } else if (recordingCount >= 5) {
+        difficultyLevel = "Intermediate";
       }
     }
 
     // Try to load from pre-generated pool first for cost control
     try {
-      const { data: poolTasks } = await supabaseAdmin
-        .from("practice_tasks")
-        .select("*");
+      let query = supabaseAdmin.from("practice_tasks").select("*");
+      if (difficultyLevel) {
+        query = query.ilike("difficulty_level", difficultyLevel);
+      }
+      
+      const { data: poolTasks } = await query;
         
       if (poolTasks && poolTasks.length > 0) {
         // Filter out past topics
@@ -97,30 +138,18 @@ export async function GET(request: Request) {
       console.warn("Failed to fetch from practice_tasks pool, falling back to live AI:", poolErr);
     }
 
-    if (levelParam) {
-      const lower = levelParam.toLowerCase();
-      if (lower === "intermediate") difficultyLevel = "Intermediate";
-      else if (lower === "advanced") difficultyLevel = "Advanced";
-      else difficultyLevel = "Beginner";
-    } else {
-      let recordingCount = 0;
-      try {
-        const { count } = await supabaseAdmin
-          .from('recordings')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId);
-        recordingCount = count || 0;
-      } catch (err) {
-        console.warn("Failed to count recordings:", err);
-      }
-      
-      if (recordingCount >= 15) {
-        difficultyLevel = "Advanced";
-      } else if (recordingCount >= 5) {
-        difficultyLevel = "Intermediate";
-      } else {
-        difficultyLevel = "Beginner";
-      }
+    // Fallback to live AI topic generation using Groq
+    if (!process.env.GROQ_API_KEY) {
+      return successResponse({
+        topic: "What is the most important lesson you've learned?",
+        bullets: [
+          { label: "Who", text: "The main people involved were..." },
+          { label: "What", text: "The core idea or challenge was..." },
+          { label: "Where", text: "This took place in the context of..." },
+          { label: "When", text: "This originally occurred when..." },
+          { label: "How", text: "Ultimately, it was approached by..." },
+        ]
+      });
     }
 
     let difficultyDescription = "Simple, relatable, everyday topics (e.g., 'What is your favorite hobby?', 'Describe a memorable trip').";
@@ -134,6 +163,11 @@ export async function GET(request: Request) {
       ? `CRITICAL REQUIREMENT: Do NOT generate any topic that is identical or semantically similar to any of these previously practiced topics by the user:\n${pastTopics.map(t => `- ${t}`).join("\n")}`
       : "";
 
+    const goalStr = userGoal ? `Goal: ${userGoal}` : "";
+    const focusMetricStr = userFocusMetric ? `Focus Metric: ${userFocusMetric}` : "";
+    const promptContext = [goalStr, focusMetricStr].filter(Boolean).join(", ");
+    const contextPrompt = promptContext ? `The user's personalized context is: ${promptContext}. Ensure the generated topic is highly relevant and helpful for this goal and focus area.` : "";
+
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         {
@@ -142,6 +176,8 @@ export async function GET(request: Request) {
           
           DIFFICULTY LEVEL: ${difficultyLevel}
           GUIDELINES: ${difficultyDescription}
+          
+          ${contextPrompt}
           
           ${excludeInstructions}
           

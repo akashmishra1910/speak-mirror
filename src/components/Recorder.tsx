@@ -464,7 +464,9 @@ export function Recorder({
       const levelQuery = userLevel ? `&level=${encodeURIComponent(userLevel)}` : "";
       const endpoint = userId ? `/api/generate-topic?userId=${userId}${levelQuery}` : `/api/generate-topic?${levelQuery.substring(1)}`;
       const res = await fetch(endpoint);
-      const data = await res.json();
+      const envelope = await res.json();
+      // Unwrap standard successResponse envelope { success: true, data: { topic, bullets } }
+      const data = envelope.success && envelope.data ? envelope.data : envelope;
       if (data.topic && data.bullets) {
         if (!bulletsOnly) setTopic(data.topic);
         setBullets(data.bullets);
