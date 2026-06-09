@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import { useRouter } from "next/navigation";
 import { 
@@ -250,8 +251,8 @@ export default function AdminDashboard() {
   }, [user, authLoading, router]);
 
   // General Fetching Logic
-  const fetchStats = async () => {
-    setLoadingStats(true);
+  const fetchStats = async (silent = false) => {
+    if (!silent) setLoadingStats(true);
     try {
       const res = await fetch("/api/admin?action=stats");
       const data = await res.json();
@@ -261,12 +262,12 @@ export default function AdminDashboard() {
       console.warn("Failed to fetch admin stats. Falling back to mock data.", err);
       setStats(mockStats);
     } finally {
-      setLoadingStats(false);
+      if (!silent) setLoadingStats(false);
     }
   };
 
-  const fetchUsers = async () => {
-    setLoadingUsers(true);
+  const fetchUsers = async (silent = false) => {
+    if (!silent) setLoadingUsers(true);
     try {
       const res = await fetch("/api/admin?action=users");
       const data = await res.json();
@@ -276,12 +277,12 @@ export default function AdminDashboard() {
       console.warn("Failed to fetch users. Falling back to mock data.", err);
       setUsersData({ users: mockUsers, abuseList: mockUsers });
     } finally {
-      setLoadingUsers(false);
+      if (!silent) setLoadingUsers(false);
     }
   };
 
-  const fetchFeedbacks = async () => {
-    setLoadingFeedbacks(true);
+  const fetchFeedbacks = async (silent = false) => {
+    if (!silent) setLoadingFeedbacks(true);
     try {
       const res = await fetch("/api/admin?action=feedback");
       const data = await res.json();
@@ -291,12 +292,12 @@ export default function AdminDashboard() {
       console.warn("Failed to fetch feedbacks. Falling back to mock data.", err);
       setFeedbacks(mockFeedbacks);
     } finally {
-      setLoadingFeedbacks(false);
+      if (!silent) setLoadingFeedbacks(false);
     }
   };
 
-  const fetchTasks = async () => {
-    setLoadingTasks(true);
+  const fetchTasks = async (silent = false) => {
+    if (!silent) setLoadingTasks(true);
     try {
       const res = await fetch("/api/admin?action=tasks");
       const data = await res.json();
@@ -306,12 +307,12 @@ export default function AdminDashboard() {
       console.warn("Failed to fetch tasks. Falling back to mock data.", err);
       setTasks(mockTasks);
     } finally {
-      setLoadingTasks(false);
+      if (!silent) setLoadingTasks(false);
     }
   };
 
-  const fetchTickets = async () => {
-    setLoadingTickets(true);
+  const fetchTickets = async (silent = false) => {
+    if (!silent) setLoadingTickets(true);
     try {
       const res = await fetch("/api/admin?action=tickets");
       const data = await res.json();
@@ -323,7 +324,7 @@ export default function AdminDashboard() {
       setTickets(initialTickets);
       setTicketsDbStatus("missing_migration");
     } finally {
-      setLoadingTickets(false);
+      if (!silent) setLoadingTickets(false);
     }
   };
 
@@ -335,12 +336,64 @@ export default function AdminDashboard() {
     else if (activeTab === "support") fetchTickets();
   };
 
-  // Run initial stats & tickets fetch
+  // Keep activeTabRef synchronized to prevent recreating Supabase channels
+  const activeTabRef = useRef(activeTab);
   useEffect(() => {
-    if (user && user.user_metadata?.role === "admin") {
-      fetchStats();
-      fetchTickets();
-    }
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
+  // Run initial stats & tickets fetch and set up real-time updates
+  useEffect(() => {
+    if (!user || user.user_metadata?.role !== "admin") return;
+
+    fetchStats();
+    fetchTickets();
+
+    // Subscribe to postgres database changes for real-time admin metrics
+    const channel = supabase
+      .channel("admin-realtime-panel")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "recordings" },
+        () => {
+          fetchStats(true); // background update
+          if (activeTabRef.current === "users") fetchUsers(true);
+          if (activeTabRef.current === "feedback") fetchFeedbacks(true);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "api_usage_logs" },
+        () => {
+          fetchStats(true); // background update
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "practice_tasks" },
+        () => {
+          if (activeTabRef.current === "topics") fetchTasks(true);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "support_tickets" },
+        () => {
+          fetchTickets(true);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "profiles" },
+        () => {
+          if (activeTabRef.current === "users") fetchUsers(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   // Fetch when active tab changes
