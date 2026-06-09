@@ -968,7 +968,7 @@ function PracticeContent() {
                     onRecordingComplete={handleRecordingComplete} 
                     isProcessing={isProcessing} 
                     readingText={phase === "reading_recording" ? task?.reading_text : undefined}
-                    taskTopic={task?.topic_of_the_day || "Free Practice"}
+                    taskTopic={task?.topic_of_the_day}
                     userId={user?.id}
                     userLevel={profileExperience}
                     mode={phase === "reading_recording" ? "reading" : (task?.isChallenge ? "warmup" : "freeform")}
