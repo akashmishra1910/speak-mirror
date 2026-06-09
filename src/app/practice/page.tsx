@@ -559,6 +559,67 @@ function PracticeContent() {
   const saveToProgress = async () => {
     if (isSaved || !user || !freeformBlob) return;
     setIsSaving(true);
+
+    const fetchCoachComment = async (recordingId: string, index: number) => {
+      setMetricsList(prev => {
+        const next = [...prev];
+        if (next[index]) {
+          next[index] = {
+            ...next[index],
+            isCommentLoading: true
+          };
+        }
+        return next;
+      });
+
+      try {
+        const res = await fetch("/api/coach-comment", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            recordingId,
+            confidence: metricsList[index].confidence,
+            clarity: metricsList[index].clarity,
+            pacing: metricsList[index].wpm,
+            fillers: metricsList[index].fillerWords,
+            eyeContact: metricsList[index].eyeContact
+          })
+        });
+
+        if (!res.ok) throw new Error("Failed to generate comment");
+        const data = await res.json();
+
+        setMetricsList(prev => {
+          const next = [...prev];
+          if (next[index]) {
+            next[index] = {
+              ...next[index],
+              coachComment: data.ai_coach_comment,
+              coach_comment: data.ai_coach_comment,
+              improvement_vs_last: data.improvement_vs_last,
+              improvement_vs_best: data.improvement_vs_best,
+              focusMetric: data.focus_metric,
+              isCommentLoading: false
+            };
+          }
+          return next;
+        });
+      } catch (err) {
+        console.error("Error fetching AI coach comment:", err);
+        setMetricsList(prev => {
+          const next = [...prev];
+          if (next[index]) {
+            next[index] = {
+              ...next[index],
+              isCommentLoading: false
+            };
+          }
+          return next;
+        });
+      }
+    };
     
     try {
       if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
@@ -591,7 +652,7 @@ function PracticeContent() {
         const url1 = upload1 ? freeformFileName : null;
         
         if (url1 && metricsList[0]) {
-          await supabase.from('recordings').insert({
+          const { data: rec1, error: err1 } = await supabase.from('recordings').insert({
             user_id: user.id,
             room_id: activeRoomId || null,
             task_id: activeTaskId && !task?.isChallenge ? activeTaskId : null,
@@ -608,7 +669,12 @@ function PracticeContent() {
             expression_score: metricsList[0].expressionScore !== undefined ? metricsList[0].expressionScore : null,
             coach_comment: metricsList[0].coachComment || null,
             annotations: metricsList[0].annotations || null
-          });
+          }).select('id').single();
+
+          if (err1) throw err1;
+          if (rec1?.id) {
+            fetchCoachComment(rec1.id, 0);
+          }
         }
 
         // Upload Reading
@@ -622,7 +688,7 @@ function PracticeContent() {
           const url2 = upload2 ? readingFileName : null;
           
           if (url2) {
-            await supabase.from('recordings').insert({
+            const { data: rec2, error: err2 } = await supabase.from('recordings').insert({
               user_id: user.id,
               room_id: activeRoomId || null,
               task_id: activeTaskId || null,
@@ -639,7 +705,12 @@ function PracticeContent() {
               expression_score: metricsList[1].expressionScore !== undefined ? metricsList[1].expressionScore : null,
               coach_comment: metricsList[1].coachComment || null,
               annotations: metricsList[1].annotations || null
-            });
+            }).select('id').single();
+
+            if (err2) throw err2;
+            if (rec2?.id) {
+              fetchCoachComment(rec2.id, 1);
+            }
           }
         }
         
@@ -650,9 +721,9 @@ function PracticeContent() {
           await fetchPersonalStreak();
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving recording:", error);
-      showToast("There was an error saving your progress.", "error");
+      showToast(error.message || "There was an error saving your progress.", "error");
     } finally {
       setIsSaving(false);
     }
