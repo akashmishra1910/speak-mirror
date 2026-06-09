@@ -90,7 +90,7 @@ export async function GET(request: Request) {
         .select("*")
         .limit(30);
 
-      const viewOk = !statsError && dailyStats && dailyStats.length > 0;
+      const viewOk = !statsError;
       let finalDailyStats = dailyStats || [];
 
       if (!viewOk) {
