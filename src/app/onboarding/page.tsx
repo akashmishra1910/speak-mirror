@@ -1,290 +1,403 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/components/AuthProvider";
-import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/components/AuthProvider";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Sparkles, MessageSquare, Presentation, TrendingUp, Award } from "lucide-react";
+import { 
+  Target, 
+  Mic, 
+  Users, 
+  Sprout, 
+  TrendingUp, 
+  Trophy, 
+  Sparkles, 
+  Volume2, 
+  Timer, 
+  Ban, 
+  Eye, 
+  Clock, 
+  Loader2, 
+  ChevronRight, 
+  ChevronLeft 
+} from "lucide-react";
 
-type GoalType = "Interview prep" | "Public speaking" | "Team presentations" | "Personal growth";
-type ExperienceLevelType = "Beginner" | "Intermediate" | "Advanced";
+interface OnboardingData {
+  goal: "interview_prep" | "public_speaking" | "team_presentations" | "personal_growth" | null;
+  experience_level: "beginner" | "intermediate" | "advanced" | null;
+  focus_metric: "confidence" | "clarity" | "pacing" | "fillers" | "eye_contact" | null;
+  practice_duration: 1 | 3 | 5 | null;
+}
 
 export default function OnboardingPage() {
-  const { user, isLoading } = useAuth();
   const router = useRouter();
-
+  const { user, isLoading } = useAuth();
+  
   const [step, setStep] = useState(1);
-  const [displayName, setDisplayName] = useState("");
-  const [primaryGoal, setPrimaryGoal] = useState<GoalType | "">("");
-  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevelType | "">("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState<OnboardingData>({
+    goal: null,
+    experience_level: null,
+    focus_metric: null,
+    practice_duration: null,
+  });
+  
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Set default display name from user metadata when user loads
-  useEffect(() => {
-    if (user?.user_metadata?.full_name) {
-      setDisplayName(user.user_metadata.full_name);
-    }
-  }, [user]);
-
-  // Redirect if not logged in and done loading
+  // Redirect if user is not authenticated or already onboarded
   useEffect(() => {
     if (!isLoading && !user) {
       router.push("/auth");
     }
   }, [user, isLoading, router]);
 
-  const handleNext = () => {
-    if (step === 1 && !displayName.trim()) {
-      setError("Please enter your display name.");
-      return;
-    }
-    if (step === 2 && !primaryGoal) {
-      setError("Please select a primary goal.");
-      return;
-    }
-    setError(null);
-    setStep(step + 1);
-  };
-
-  const handleBack = () => {
-    setError(null);
-    setStep(step - 1);
-  };
-
-  const handleComplete = async () => {
-    if (!experienceLevel) {
-      setError("Please select an experience level.");
-      return;
-    }
-    if (!user) return;
-
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      const { error: upsertError } = await supabase
-        .from("profiles")
-        .upsert({
-          id: user.id,
-          display_name: displayName,
-          primary_goal: primaryGoal,
-          experience_level: experienceLevel,
-          onboarding_completed: true,
-          updated_at: new Date().toISOString(),
-        });
-
-      if (upsertError) throw upsertError;
-
-      // Update auth user metadata full_name if changed
-      if (displayName !== user.user_metadata?.full_name) {
-        await supabase.auth.updateUser({
-          data: { full_name: displayName }
-        });
-      }
-
-      router.push("/");
-    } catch (err: any) {
-      setError(err.message || "An error occurred while saving your onboarding details.");
-      setSubmitting(false);
-    }
-  };
-
-  if (isLoading || !user) {
+  if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#050508]">
-        <Loader2 className="w-10 h-10 text-sky-500 animate-spin" />
+      <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-100">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
+          <p className="text-sm text-zinc-400">Loading your profile...</p>
+        </div>
       </div>
     );
   }
 
-  const progressPercentage = (step / 3) * 100;
+  if (!user) return null;
+
+  const handleSelect = <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => {
+    setFormData(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const handleNext = () => {
+    if (step < 4) {
+      setStep(prev => prev + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(prev => prev - 1);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.goal || !formData.experience_level || !formData.focus_metric || !formData.practice_duration) {
+      setErrorMsg("Please complete all onboarding selections.");
+      return;
+    }
+    
+    setIsSaving(true);
+    setErrorMsg(null);
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .upsert({
+          id: user.id,
+          goal: formData.goal,
+          experience_level: formData.experience_level,
+          focus_metric: formData.focus_metric,
+          practice_duration: formData.practice_duration,
+          onboarding_completed: true,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+      
+      router.push("/");
+      router.refresh();
+    } catch (err: any) {
+      console.error("Failed to save onboarding data:", err);
+      setErrorMsg(err.message || "Failed to save profile preferences. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const isNextDisabled = () => {
+    if (step === 1) return !formData.goal;
+    if (step === 2) return !formData.experience_level;
+    if (step === 3) return !formData.focus_metric;
+    if (step === 4) return !formData.practice_duration;
+    return true;
+  };
+
+  // Steps Slide Animation Configuration
+  const slideVariants = {
+    enter: (direction: number) => ({
+      x: direction > 0 ? 100 : -100,
+      opacity: 0
+    }),
+    center: {
+      x: 0,
+      opacity: 1
+    },
+    exit: (direction: number) => ({
+      x: direction < 0 ? 100 : -100,
+      opacity: 0
+    })
+  };
 
   return (
-    <div className="min-h-screen bg-[#050508] text-white flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden">
-      {/* Background gradients */}
-      <div className="absolute top-1/4 left-1/4 w-[40vw] h-[40vw] rounded-full bg-sky-500/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[40vw] h-[40vw] rounded-full bg-indigo-500/5 blur-[120px] pointer-events-none" />
-
-      {/* Progress Bar Container */}
-      <div className="w-full max-w-lg mb-8">
-        <div className="flex justify-between items-center text-xs text-zinc-400 mb-2.5 font-mono">
-          <span>STEP {step} OF 3</span>
-          <span>{Math.round(progressPercentage)}% COMPLETED</span>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4 py-10 text-zinc-100 selection:bg-cyan-500/30">
+      
+      {/* Container Box */}
+      <div className="w-full max-w-xl rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-6 shadow-2xl backdrop-blur-xl md:p-8">
+        
+        {/* Progress bar */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            <span>Profile Onboarding</span>
+            <span className="text-cyan-400">Step {step} of 4</span>
+          </div>
+          <div className="mt-2 h-1.5 w-full rounded-full bg-zinc-800">
+            <motion.div 
+              className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.4)]"
+              initial={{ width: "25%" }}
+              animate={{ width: `${step * 25}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
         </div>
-        <div className="w-full bg-zinc-900 h-1.5 rounded-full overflow-hidden border border-white/5">
-          <motion.div
-            className="h-full bg-gradient-to-r from-sky-400 to-indigo-500 rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: `${progressPercentage}%` }}
-            transition={{ duration: 0.3 }}
-          />
-        </div>
-      </div>
 
-      {/* Main card */}
-      <div className="w-full max-w-lg glass-panel p-8 md:p-10 rounded-[2.5rem] border border-white/5 bg-zinc-950/40 backdrop-blur-xl relative shadow-2xl">
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm mb-6 text-center">
-            {error}
+        {errorMsg && (
+          <div className="mb-6 rounded-lg border border-red-500/20 bg-red-950/20 p-3 text-sm text-red-400">
+            {errorMsg}
           </div>
         )}
 
-        <AnimatePresence mode="wait">
-          {step === 1 && (
+        {/* Dynamic Step Content */}
+        <div className="relative min-h-[300px] overflow-hidden py-2">
+          <AnimatePresence mode="wait" custom={step}>
             <motion.div
-              key="step1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col gap-6"
+              key={step}
+              custom={step}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+              className="w-full"
             >
-              <div>
-                <h2 className="text-2xl md:text-3xl font-extrabold mb-2 bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">Welcome to Speak Mirror!</h2>
-                <p className="text-zinc-400 text-sm font-light">Let's verify your display name so we know how to address you.</p>
-              </div>
+              
+              {/* STEP 1: GOALS */}
+              {step === 1 && (
+                <div>
+                  <h1 className="text-2xl font-bold tracking-tight text-zinc-50">
+                    What brings you to SpeakMirror?
+                  </h1>
+                  <p className="mt-1.5 text-sm text-zinc-400">
+                    We will personalize your speaking prompts and coach feedback around this goal.
+                  </p>
+                  
+                  <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {[
+                      { id: "interview_prep", label: "Interview Prep", icon: Target, desc: "Prepare for job interviews" },
+                      { id: "public_speaking", label: "Public Speaking", icon: Mic, desc: "Deliver speeches with power" },
+                      { id: "team_presentations", label: "Team Presentations", icon: Users, desc: "Succeed at meetings & reviews" },
+                      { id: "personal_growth", label: "Personal Growth", icon: Sprout, desc: "Improve daily communication" }
+                    ].map(item => {
+                      const Icon = item.icon;
+                      const isSelected = formData.goal === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => handleSelect("goal", item.id as any)}
+                          className={`flex flex-col items-start rounded-xl border p-4 text-left transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-800/30 ${
+                            isSelected 
+                              ? "border-cyan-500 bg-cyan-950/10 shadow-[0_0_15px_rgba(6,182,212,0.1)] ring-1 ring-cyan-500" 
+                              : "border-zinc-800 bg-zinc-900/30"
+                          }`}
+                        >
+                          <div className={`rounded-lg p-2 ${isSelected ? "bg-cyan-500/10 text-cyan-400" : "bg-zinc-800 text-zinc-400"}`}>
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <span className="mt-3 font-semibold text-zinc-100">{item.label}</span>
+                          <span className="mt-1 text-xs text-zinc-400">{item.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium ml-1 text-zinc-300">Display Name</label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="John Doe"
-                  className="w-full bg-white/5 border border-white/5 focus:border-white/10 rounded-2xl px-5 py-4 focus:outline-none focus:bg-white/10 transition-all text-white placeholder-zinc-500 font-light text-base"
-                  autoFocus
-                />
-              </div>
+              {/* STEP 2: EXPERIENCE */}
+              {step === 2 && (
+                <div>
+                  <h1 className="text-2xl font-bold tracking-tight text-zinc-50">
+                    How would you rate your speaking confidence?
+                  </h1>
+                  <p className="mt-1.5 text-sm text-zinc-400">
+                    Choose a speaking level that reflects your current comfort.
+                  </p>
+                  
+                  <div className="mt-6 flex flex-col gap-3">
+                    {[
+                      { id: "beginner", label: "Beginner", icon: Sprout, desc: "I get nervous speaking in front of others." },
+                      { id: "intermediate", label: "Intermediate", icon: TrendingUp, desc: "I can hold my own in meetings but want more impact." },
+                      { id: "advanced", label: "Advanced", icon: Trophy, desc: "I want to fine-tune my pacing, emotional delivery, & filler words." }
+                    ].map(item => {
+                      const Icon = item.icon;
+                      const isSelected = formData.experience_level === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => handleSelect("experience_level", item.id as any)}
+                          className={`flex items-center gap-4 rounded-xl border p-4 text-left transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-800/30 ${
+                            isSelected 
+                              ? "border-cyan-500 bg-cyan-950/10 shadow-[0_0_15px_rgba(6,182,212,0.1)] ring-1 ring-cyan-500" 
+                              : "border-zinc-800 bg-zinc-900/30"
+                          }`}
+                        >
+                          <div className={`rounded-lg p-2 ${isSelected ? "bg-cyan-500/10 text-cyan-400" : "bg-zinc-800 text-zinc-400"}`}>
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <span className="font-semibold text-zinc-100">{item.label}</span>
+                            <span className="block mt-0.5 text-xs text-zinc-400">{item.desc}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
-              <button
-                onClick={handleNext}
-                className="w-full bg-gradient-to-r from-sky-400 to-indigo-500 hover:from-sky-500 hover:to-indigo-600 text-white font-semibold py-4 rounded-2xl mt-4 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98 shadow-lg shadow-sky-500/10"
-              >
-                Next Step
-              </button>
+              {/* STEP 3: FOCUS METRIC */}
+              {step === 3 && (
+                <div>
+                  <h1 className="text-2xl font-bold tracking-tight text-zinc-50">
+                    What do you most want to improve?
+                  </h1>
+                  <p className="mt-1.5 text-sm text-zinc-400">
+                    We will prioritize tracking and highlighting this metric during analysis.
+                  </p>
+                  
+                  <div className="mt-6 flex flex-col gap-2.5">
+                    {[
+                      { id: "confidence", label: "Confidence", icon: Sparkles, desc: "Develop a strong posture and assertive presentation style" },
+                      { id: "clarity", label: "Clarity", icon: Volume2, desc: "Speak clearly and articulate words distinctly" },
+                      { id: "pacing", label: "Pacing", icon: Timer, desc: "Maintain a steady speaking rhythm (words per minute)" },
+                      { id: "fillers", label: "Filler Words", icon: Ban, desc: "Eliminate repetitive 'um', 'ah', and 'like' filler phrases" },
+                      { id: "eye_contact", label: "Eye Contact", icon: Eye, desc: "Maintain connection with the camera and mirror audience" }
+                    ].map(item => {
+                      const Icon = item.icon;
+                      const isSelected = formData.focus_metric === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => handleSelect("focus_metric", item.id as any)}
+                          className={`flex items-center gap-4 rounded-xl border px-4 py-3.5 text-left transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-800/30 ${
+                            isSelected 
+                              ? "border-cyan-500 bg-cyan-950/10 shadow-[0_0_15px_rgba(6,182,212,0.1)] ring-1 ring-cyan-500" 
+                              : "border-zinc-800 bg-zinc-900/30"
+                          }`}
+                        >
+                          <div className={`rounded-lg p-2 ${isSelected ? "bg-cyan-500/10 text-cyan-400" : "bg-zinc-800 text-zinc-400"}`}>
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <span className="font-semibold text-zinc-100">{item.label}</span>
+                            <span className="block mt-0.5 text-xs text-zinc-400">{item.desc}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 4: PRACTICE DURATION */}
+              {step === 4 && (
+                <div>
+                  <h1 className="text-2xl font-bold tracking-tight text-zinc-50">
+                    How long can you practice each day?
+                  </h1>
+                  <p className="mt-1.5 text-sm text-zinc-400">
+                    Setting a daily goal keeps you focused and builds streak consistency.
+                  </p>
+                  
+                  <div className="mt-8 flex flex-col gap-4">
+                    {[
+                      { id: 1, label: "1 min", sub: "Quick burst", desc: "Great for building a daily habit without friction" },
+                      { id: 3, label: "3 min", sub: "Standard", desc: "The recommended daily amount for continuous speaking improvement" },
+                      { id: 5, label: "5 min", sub: "Deep practice", desc: "Intense, philosophical prompt structures and detailed analytics" }
+                    ].map(item => {
+                      const isSelected = formData.practice_duration === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => handleSelect("practice_duration", item.id as any)}
+                          className={`flex items-center justify-between rounded-xl border p-4 text-left transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-800/30 ${
+                            isSelected 
+                              ? "border-cyan-500 bg-cyan-950/10 shadow-[0_0_15px_rgba(6,182,212,0.1)] ring-1 ring-cyan-500" 
+                              : "border-zinc-800 bg-zinc-900/30"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Clock className={`h-5 w-5 ${isSelected ? "text-cyan-400" : "text-zinc-500"}`} />
+                            <div>
+                              <span className="font-semibold text-zinc-100">{item.label}</span>
+                              <span className="ml-2 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium tracking-wide uppercase text-zinc-400">
+                                {item.sub}
+                              </span>
+                              <span className="block mt-1 text-xs text-zinc-400">{item.desc}</span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              
             </motion.div>
-          )}
+          </AnimatePresence>
+        </div>
 
-          {step === 2 && (
-            <motion.div
-              key="step2"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col gap-6"
+        {/* Wizard Navigation Footer */}
+        <div className="mt-8 flex items-center justify-between border-t border-zinc-800/60 pt-6">
+          <button
+            onClick={handleBack}
+            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-zinc-400 transition-colors hover:text-zinc-100 ${
+              step === 1 ? "invisible" : ""
+            }`}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </button>
+          
+          {step < 4 ? (
+            <button
+              onClick={handleNext}
+              disabled={isNextDisabled()}
+              className="flex items-center gap-1.5 rounded-lg bg-cyan-500 px-5 py-2 text-sm font-semibold text-zinc-950 shadow-[0_4px_12px_rgba(6,182,212,0.2)] transition-all hover:bg-cyan-400 disabled:opacity-50 disabled:hover:bg-cyan-500 disabled:shadow-none"
             >
-              <div>
-                <h2 className="text-2xl md:text-3xl font-extrabold mb-2 bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">What brings you here?</h2>
-                <p className="text-zinc-400 text-sm font-light">Select the primary goal you would like to focus on.</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {[
-                  { id: "Interview prep", icon: Sparkles, title: "Interview Prep", desc: "Polish pacing & reduce speech fillers for interviews" },
-                  { id: "Public speaking", icon: MessageSquare, title: "Public Speaking", desc: "Build projection & audience engagement skills" },
-                  { id: "Team presentations", icon: Presentation, title: "Presentations", desc: "Speak clearly & present professionally in teams" },
-                  { id: "Personal growth", icon: TrendingUp, title: "Personal Growth", desc: "Reduce speaking anxiety & build daily confidence" }
-                ].map((item) => {
-                  const Icon = item.icon;
-                  const isSelected = primaryGoal === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        setPrimaryGoal(item.id as GoalType);
-                        setError(null);
-                      }}
-                      className={`flex flex-col text-left p-5 rounded-2xl border transition-all cursor-pointer select-none ${isSelected ? 'border-sky-400 bg-sky-500/10 shadow-[0_0_15px_rgba(56,189,248,0.15)]' : 'border-white/5 bg-white/[0.02] hover:bg-white/5 hover:border-white/10'}`}
-                    >
-                      <Icon className={`w-6 h-6 mb-3 ${isSelected ? 'text-sky-400' : 'text-zinc-400'}`} />
-                      <span className="font-bold text-sm block mb-1 text-white">{item.title}</span>
-                      <span className="text-xs text-zinc-405 leading-relaxed font-light">{item.desc}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex gap-3 mt-4">
-                <button
-                  onClick={handleBack}
-                  className="flex-1 bg-white/5 hover:bg-white/10 text-white font-semibold py-4 rounded-2xl transition-all cursor-pointer text-center"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleNext}
-                  className="flex-1 bg-gradient-to-r from-sky-400 to-indigo-500 hover:from-sky-500 hover:to-indigo-600 text-white font-semibold py-4 rounded-2xl transition-all cursor-pointer text-center"
-                >
-                  Next Step
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {step === 3 && (
-            <motion.div
-              key="step3"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col gap-6"
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={isNextDisabled() || isSaving}
+              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-400 px-6 py-2 text-sm font-semibold text-zinc-950 shadow-[0_4px_12px_rgba(6,182,212,0.3)] transition-all hover:from-cyan-400 hover:to-cyan-300 disabled:opacity-50 disabled:hover:from-cyan-500 disabled:hover:to-cyan-400 disabled:shadow-none"
             >
-              <div>
-                <h2 className="text-2xl md:text-3xl font-extrabold mb-2 bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">Rate your speaking level</h2>
-                <p className="text-zinc-400 text-sm font-light">Help us calibrate the speech pacing guidelines for you.</p>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                {[
-                  { id: "Beginner", title: "Beginner Speaker", desc: "Want to focus on building core speaking confidence and clarity." },
-                  { id: "Intermediate", title: "Comfortable Speaker", desc: "Looking to polish delivery rhythms and reduce filler words." },
-                  { id: "Advanced", title: "Professional Speaker", desc: "Aiming to master pause dynamics, executive style, and projection." }
-                ].map((item) => {
-                  const isSelected = experienceLevel === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        setExperienceLevel(item.id as ExperienceLevelType);
-                        setError(null);
-                      }}
-                      className={`flex items-start text-left p-5 rounded-2xl border transition-all cursor-pointer select-none gap-4 ${isSelected ? 'border-sky-400 bg-sky-500/10 shadow-[0_0_15px_rgba(56,189,248,0.15)]' : 'border-white/5 bg-white/[0.02] hover:bg-white/5 hover:border-white/10'}`}
-                    >
-                      <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center ${isSelected ? 'bg-sky-400/20 text-sky-400' : 'bg-white/5 text-zinc-400'}`}>
-                        <Award className="w-4.5 h-4.5" />
-                      </div>
-                      <div>
-                        <span className="font-bold text-sm block mb-1 text-white">{item.title}</span>
-                        <span className="text-xs text-zinc-400 leading-normal font-light">{item.desc}</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex gap-3 mt-4">
-                <button
-                  onClick={handleBack}
-                  disabled={submitting}
-                  className="flex-1 bg-white/5 hover:bg-white/10 text-white font-semibold py-4 rounded-2xl transition-all cursor-pointer text-center disabled:opacity-50"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleComplete}
-                  disabled={submitting || !experienceLevel}
-                  className="flex-1 bg-gradient-to-r from-sky-400 to-indigo-500 hover:from-sky-500 hover:to-indigo-600 text-white font-semibold py-4 rounded-2xl transition-all cursor-pointer text-center disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Complete Onboarding"}
-                </button>
-              </div>
-            </motion.div>
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Let's Go!"
+              )}
+            </button>
           )}
-        </AnimatePresence>
+        </div>
+
       </div>
     </div>
   );

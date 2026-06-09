@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, Activity, LogIn, Users, Menu, X, Shield } from "lucide-react";
+import { Mic, Activity, LogIn, Users, Menu, X, Shield, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "./AuthProvider";
@@ -90,6 +90,20 @@ export function Navbar() {
               >
                 <Activity className="w-4 h-4" />
                 Profile
+              </Link>
+            )}
+
+            {user && (
+              <Link 
+                href="/settings/profile" 
+                className={`text-sm font-medium px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${
+                  pathname === "/settings/profile" 
+                    ? "bg-[#5B7C99]/10 border border-[#5B7C99]/20 text-[#5B7C99] font-semibold dark:bg-white/5 dark:border-white/10 dark:text-white" 
+                    : "text-slate-600 hover:text-themeText hover:bg-slate-100/50 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5"
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                Settings
               </Link>
             )}
 
@@ -226,6 +240,21 @@ export function Navbar() {
               >
                 <Activity className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
                 Profile
+              </Link>
+            )}
+
+            {user && (
+              <Link 
+                href="/settings/profile" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`text-sm font-semibold p-3.5 rounded-xl transition-all flex items-center gap-2.5 ${
+                  pathname === "/settings/profile" 
+                    ? "bg-[#5B7C99]/10 border border-[#5B7C99]/20 text-[#5B7C99] dark:bg-white/5 dark:border-white/10 dark:text-white" 
+                    : "text-slate-600 dark:text-zinc-400 hover:text-themeText hover:bg-slate-100/50 dark:hover:text-white dark:hover:bg-white/5"
+                }`}
+              >
+                <Settings className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
+                Settings
               </Link>
             )}
 
