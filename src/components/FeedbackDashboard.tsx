@@ -25,6 +25,9 @@ export interface AnalysisMetrics {
   improvement_vs_best?: Record<string, number> | null;
   focusMetric?: string | null;
   isCommentLoading?: boolean;
+  fillerLog?: any[];
+  avgWpm?: number;
+  pacingLog?: any[];
 }
 
 interface DashboardProps {

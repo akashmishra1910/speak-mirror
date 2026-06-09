@@ -1,6 +1,7 @@
 import { requireAuth } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getPreviousSessionMetrics, getPersonalBests, computeImprovement } from "@/lib/coach-comment";
+import { updateWeakAreaFocusMetric } from "@/lib/homefeed";
 import Groq from "groq-sdk";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || "dummy" });
@@ -76,7 +77,7 @@ ${prevMetrics ? `- Confidence Score: ${prevMetrics.confidence}%
 - Eye Contact Quality: ${prevMetrics.eye_contact}%` : "No previous session data available."}`;
 
     let comment = "";
-    if (!process.env.GROQ_API_KEY) {
+    if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === "dummy") {
       comment = "Your clarity was strong, but let's boost your eye contact — try looking directly at the lens more often.";
     } else {
       const chatCompletion = await groq.chat.completions.create({
@@ -90,6 +91,8 @@ ${prevMetrics ? `- Confidence Score: ${prevMetrics.confidence}%
       });
       comment = chatCompletion.choices[0]?.message?.content?.trim() || "";
     }
+
+    let finalFocusMetric = focusMetric;
 
     // Save coach comment and deltas to the recordings table if recordingId is provided
     if (recordingId) {
@@ -106,6 +109,16 @@ ${prevMetrics ? `- Confidence Score: ${prevMetrics.confidence}%
       if (updateErr) {
         console.error("Error updating recording with coach comment:", updateErr);
       }
+
+      // Recompute weak area and update focus metric automatically
+      try {
+        const computedFocusMetric = await updateWeakAreaFocusMetric(user.id);
+        if (computedFocusMetric) {
+          finalFocusMetric = computedFocusMetric;
+        }
+      } catch (weakAreaErr) {
+        console.error("Error recomputing weak area focus metric:", weakAreaErr);
+      }
     }
 
     return new Response(
@@ -113,7 +126,7 @@ ${prevMetrics ? `- Confidence Score: ${prevMetrics.confidence}%
         ai_coach_comment: comment,
         improvement_vs_last: improvementVsLast,
         improvement_vs_best: improvementVsBest,
-        focus_metric: focusMetric
+        focus_metric: finalFocusMetric
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );

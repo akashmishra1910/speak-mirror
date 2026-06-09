@@ -8,6 +8,7 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   turbopack: {},
+  transpilePackages: ["@mediapipe/tasks-vision"],
   async headers() {
     return [
       {

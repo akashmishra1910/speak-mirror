@@ -103,11 +103,12 @@ export async function getWeakAreaSpotlight(userId: string): Promise<WeakAreaSpot
   // Fetch user profile to get focus_metric preference
   const { data: profile } = await supabase
     .from("profiles")
-    .select("focus_metric")
+    .select("focus_metric, weak_area_tip")
     .eq("id", userId)
     .maybeSingle();
 
   const focusMetricPref = profile?.focus_metric;
+  const dbTip = profile?.weak_area_tip;
 
   // Fetch last 5 sessions
   const { data: recordings } = await supabase
@@ -145,12 +146,9 @@ export async function getWeakAreaSpotlight(userId: string): Promise<WeakAreaSpot
   const avgClarity = sumClarity / len;
   const avgWpm = sumWpm / len;
   const avgFillers = sumFillers / len;
-  const avgEyeContact = eyeContactCount > 0 ? sumEyeContact / eyeContactCount : 75; // fallback average if missing
+  const avgEyeContact = eyeContactCount > 0 ? sumEyeContact / eyeContactCount : 75;
 
   // Map to normalized scores (0-100, where 100 is optimal)
-  // Confidence, Clarity, Eye Contact are already 0-100
-  // Pacing (avgWpm): target is 140. Score is 100 - min(100, abs(avgWpm - 140) * 1.5)
-  // Fillers: target is 0. Score is max(0, 100 - avgFillers * 15)
   const normScores = {
     confidence: avgConfidence,
     clarity: avgClarity,
@@ -203,8 +201,105 @@ export async function getWeakAreaSpotlight(userId: string): Promise<WeakAreaSpot
     metric: weakestMetric,
     displayName: displayNames[weakestMetric],
     averageScore: Math.round(averagesMap[weakestMetric]),
-    tip: tips[weakestMetric]
+    tip: weakestMetric === focusMetricPref && dbTip ? dbTip : tips[weakestMetric]
   };
+}
+
+export async function updateWeakAreaFocusMetric(userId: string): Promise<string | null> {
+  const supabase = getSupabaseAdmin();
+  
+  // 1. Fetch last 5 recordings
+  const { data: recordings } = await supabase
+    .from("recordings")
+    .select("confidence, clarity, wpm, filler_words, eye_contact")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (!recordings || recordings.length === 0) return null;
+
+  const len = recordings.length;
+  let sumConfidence = 0, sumClarity = 0, sumWpm = 0, sumFillers = 0, sumEyeContact = 0, eyeContactCount = 0;
+  recordings.forEach(r => {
+    sumConfidence += r.confidence || 0;
+    sumClarity += r.clarity || 0;
+    sumWpm += r.wpm || 0;
+    sumFillers += r.filler_words || 0;
+    if (r.eye_contact !== null && r.eye_contact !== undefined) {
+      sumEyeContact += r.eye_contact;
+      eyeContactCount++;
+    }
+  });
+
+  const avgConfidence = sumConfidence / len;
+  const avgClarity = sumClarity / len;
+  const avgWpm = sumWpm / len;
+  const avgFillers = sumFillers / len;
+  const avgEyeContact = eyeContactCount > 0 ? sumEyeContact / eyeContactCount : 75;
+
+  const normScores = {
+    confidence: avgConfidence,
+    clarity: avgClarity,
+    pacing: 100 - Math.min(100, Math.abs(avgWpm - 140) * 1.5),
+    fillers: Math.max(0, 100 - avgFillers * 15),
+    eye_contact: avgEyeContact
+  };
+
+  // Find lowest normalized score
+  let weakestMetric: keyof typeof normScores = "confidence";
+  let minScore = 999;
+  (Object.keys(normScores) as Array<keyof typeof normScores>).forEach(m => {
+    if (normScores[m] < minScore) {
+      minScore = normScores[m];
+      weakestMetric = m;
+    }
+  });
+
+  // 2. Fetch current profile
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("focus_metric, experience_level")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profile && profile.focus_metric !== weakestMetric) {
+    let newTip = null;
+    if (process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== "dummy") {
+      try {
+        const level = profile.experience_level || "intermediate";
+        const roundedAvg = Math.round(normScores[weakestMetric]);
+        const systemPrompt = "You are an expert executive speaking coach. Generate exactly one actionable advice sentence.";
+        const userPrompt = `The user is an ${level} speaker whose current weakest area is ${weakestMetric}, with a recent average score of ${roundedAvg}%. Write exactly one actionable, highly specific, and motivational advice sentence (max 20 words) that targets how they can improve this specific score level. Do not mention the percentage number.`;
+        
+        const chatCompletion = await groq.chat.completions.create({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          model: "llama-3.1-8b-instant",
+          temperature: 0.7,
+          max_tokens: 60
+        });
+        const responseText = chatCompletion.choices[0]?.message?.content?.trim();
+        if (responseText) {
+          newTip = responseText.replace(/^["']|["']$/g, "");
+        }
+      } catch (err) {
+        console.error("Error generating weak area tip:", err);
+      }
+    }
+
+    // Save update to profile
+    await supabase
+      .from("profiles")
+      .update({
+        focus_metric: weakestMetric,
+        weak_area_tip: newTip || undefined
+      })
+      .eq("id", userId);
+  }
+
+  return weakestMetric;
 }
 
 export async function getDailyPrompt(
@@ -232,7 +327,55 @@ export async function getDailyPrompt(
     return profile.daily_prompt;
   }
 
-  // 2. Generate Prompt - Fallback default
+  // 2. Fetch last 5 sessions to find 3 weakest metrics
+  const { data: recordings } = await supabase
+    .from("recordings")
+    .select("confidence, clarity, wpm, filler_words, eye_contact")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  let sortedMetrics: string[] = [];
+  if (recordings && recordings.length > 0) {
+    const len = recordings.length;
+    let sumConfidence = 0, sumClarity = 0, sumWpm = 0, sumFillers = 0, sumEyeContact = 0, eyeContactCount = 0;
+    recordings.forEach(r => {
+      sumConfidence += r.confidence || 0;
+      sumClarity += r.clarity || 0;
+      sumWpm += r.wpm || 0;
+      sumFillers += r.filler_words || 0;
+      if (r.eye_contact !== null && r.eye_contact !== undefined) {
+        sumEyeContact += r.eye_contact;
+        eyeContactCount++;
+      }
+    });
+    const avgConfidence = sumConfidence / len;
+    const avgClarity = sumClarity / len;
+    const avgWpm = sumWpm / len;
+    const avgFillers = sumFillers / len;
+    const avgEyeContact = eyeContactCount > 0 ? sumEyeContact / eyeContactCount : 75;
+
+    const normScores = {
+      confidence: avgConfidence,
+      clarity: avgClarity,
+      pacing: 100 - Math.min(100, Math.abs(avgWpm - 140) * 1.5),
+      fillers: Math.max(0, 100 - avgFillers * 15),
+      eye_contact: avgEyeContact
+    };
+
+    sortedMetrics = (Object.keys(normScores) as Array<keyof typeof normScores>)
+      .sort((a, b) => normScores[a] - normScores[b])
+      .slice(0, 3);
+  } else {
+    sortedMetrics = ["confidence", "clarity", "pacing"];
+  }
+
+  // 3. Generate difficulty based on Day of Week
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const currentDay = days[new Date().getDay()];
+  const difficultyLabel = currentDay === "Monday" ? "easy" : (currentDay === "Friday" ? "hard" : "medium");
+
+  // 4. Generate Prompt - Fallback default
   let defaultPrompt = "Introduce yourself and talk about your main goals for the upcoming year.";
   if (goal === "interview_prep") {
     defaultPrompt = "Describe a time you overcame a major professional challenge under tight deadlines.";
@@ -246,11 +389,11 @@ export async function getDailyPrompt(
 
   let prompt = defaultPrompt;
 
-  // 3. Request from Groq if key exists
-  if (process.env.GROQ_API_KEY) {
+  // 5. Request from Groq if key exists
+  if (process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== "dummy") {
     try {
-      const systemPrompt = "You are an expert speech coach. Generate exactly one practice prompt (under 20 words) for a speaker.";
-      const userPrompt = `Goal: ${goal}, Experience Level: ${level}, Weakest Metric to practice: ${weakestMetric}. Return ONLY the prompt text, no quotes.`;
+      const systemPrompt = "You are an expert speech coach. Generate exactly one practice prompt (under 30 words) for a speaker. Return ONLY the prompt text, no quotes or additional text.";
+      const userPrompt = `Goal: ${goal}, Experience Level: ${level}, Stated Focus Metric: ${weakestMetric}. The speaker's 3 weakest metrics from last 5 sessions are: ${sortedMetrics.join(", ")}. Today is ${currentDay}, so make the prompt ${difficultyLabel} difficulty.`;
       
       const chatCompletion = await groq.chat.completions.create({
         messages: [
@@ -259,7 +402,7 @@ export async function getDailyPrompt(
         ],
         model: "llama-3.1-8b-instant",
         temperature: 0.7,
-        max_tokens: 50
+        max_tokens: 60
       });
 
       const responseText = chatCompletion.choices[0]?.message?.content?.trim();
@@ -271,7 +414,7 @@ export async function getDailyPrompt(
     }
   }
 
-  // 4. Save to profiles table cache
+  // 6. Save to profiles table cache
   await supabase
     .from("profiles")
     .update({

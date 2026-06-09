@@ -34,6 +34,64 @@ export function PreSessionModal({
   const [screen, setScreen] = useState<number>(1);
   const [breathingStep, setBreathingStep] = useState<string>("inhale");
 
+  const [focusTip, setFocusTip] = useState<string>("");
+  const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [assignedDifficulty, setAssignedDifficulty] = useState<string | null>(null);
+  const [difficultyExplanation, setDifficultyExplanation] = useState<string | null>(null);
+  const [isLoadingWarmup, setIsLoadingWarmup] = useState<boolean>(true);
+
+  // Fetch AI focus tip, dynamic difficulty, and previous performance insights
+  useEffect(() => {
+    const cacheKey = `warmup-brief-${focusMetric}-${goal}-${experienceLevel}-${streak}`;
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const data = JSON.parse(cached);
+        setFocusTip(data.focusTip);
+        setAiInsight(data.aiInsight);
+        setAssignedDifficulty(data.assignedDifficulty);
+        setDifficultyExplanation(data.explanation);
+        setIsLoadingWarmup(false);
+        return;
+      } catch (e) {
+        console.error("Error parsing cached warmup data:", e);
+      }
+    }
+
+    async function loadWarmupData() {
+      try {
+        const res = await fetch("/api/session-warmup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            focusMetric,
+            goal,
+            experienceLevel,
+            streak,
+            taskTopic
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setFocusTip(data.focusTip);
+          setAiInsight(data.aiInsight);
+          setAssignedDifficulty(data.assignedDifficulty);
+          setDifficultyExplanation(data.explanation);
+          
+          sessionStorage.setItem(cacheKey, JSON.stringify(data));
+        }
+      } catch (err) {
+        console.error("Failed to load warmup details:", err);
+      } finally {
+        setIsLoadingWarmup(false);
+      }
+    }
+
+    loadWarmupData();
+  }, [focusMetric, goal, experienceLevel, streak, taskTopic]);
+
   // Screen 1: Focus Reminder - 3 seconds auto-advance
   useEffect(() => {
     if (screen !== 1) return;
@@ -97,11 +155,13 @@ export function PreSessionModal({
 
   // Get Difficulty based on experience level
   const getDifficultyBadge = () => {
-    const level = experienceLevel?.toLowerCase() || "intermediate";
+    const level = (assignedDifficulty || experienceLevel || "intermediate").toLowerCase();
     switch (level) {
       case "beginner":
+      case "easy":
         return <span className="px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold">Easy</span>;
       case "advanced":
+      case "hard":
         return <span className="px-2.5 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-semibold">Hard</span>;
       default:
         return <span className="px-2.5 py-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold">Medium</span>;
@@ -171,9 +231,16 @@ export function PreSessionModal({
                       Today's focus: {metricDetails.name}
                     </span>
                     <h2 className="text-2xl font-bold text-white">Focus Area</h2>
-                    <p className="text-slate-300 text-base md:text-lg italic font-light leading-relaxed mt-2 max-w-sm">
-                      "{metricDetails.tip}"
-                    </p>
+                    {isLoadingWarmup ? (
+                      <div className="flex flex-col gap-2 mt-4 items-center w-full max-w-[280px]">
+                        <div className="h-4 w-full bg-white/10 rounded animate-pulse" />
+                        <div className="h-4 w-3/4 bg-white/10 rounded animate-pulse" />
+                      </div>
+                    ) : (
+                      <p className="text-slate-300 text-base md:text-lg italic font-light leading-relaxed mt-2 max-w-sm animate-fade-in">
+                        "{focusTip || metricDetails.tip}"
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -214,15 +281,22 @@ export function PreSessionModal({
               className="glass-panel p-6 md:p-8 rounded-3xl border border-white/10 bg-white/[0.02] shadow-[0_15px_40px_rgba(0,0,0,0.6)] w-full text-left flex flex-col gap-6"
             >
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                <h3 className="text-lg font-bold text-white">Session Brief</h3>
-                <div className="flex items-center gap-2">
-                  {getDifficultyBadge()}
-                  <span className="px-2.5 py-1 rounded bg-white/5 text-zinc-300 border border-white/10 text-xs font-semibold flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {practiceDuration} min
-                  </span>
+              <div className="flex flex-col border-b border-white/5 pb-4 gap-1.5">
+                <div className="flex items-center justify-between w-full">
+                  <h3 className="text-lg font-bold text-white">Session Brief</h3>
+                  <div className="flex items-center gap-2">
+                    {getDifficultyBadge()}
+                    <span className="px-2.5 py-1 rounded bg-white/5 text-zinc-300 border border-white/10 text-xs font-semibold flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {practiceDuration} min
+                    </span>
+                  </div>
                 </div>
+                {difficultyExplanation && (
+                  <span className="text-[10px] text-zinc-400 font-light italic mt-0.5">
+                    {difficultyExplanation}
+                  </span>
+                )}
               </div>
 
               {/* Task/Topic Details */}
@@ -232,6 +306,19 @@ export function PreSessionModal({
                   {taskTopic}
                 </p>
               </div>
+
+              {/* AI Insight Alert */}
+              {aiInsight && (
+                <div className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 flex flex-col gap-1.5 mt-1">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-indigo-400">
+                    <Sparkles className="w-4 h-4 animate-pulse" />
+                    AI Coach Insight
+                  </div>
+                  <p className="text-slate-350 text-[11px] font-light leading-relaxed">
+                    {aiInsight}
+                  </p>
+                </div>
+              )}
 
               {/* First Session Guidance OR Streak */}
               {isFirstSession ? (

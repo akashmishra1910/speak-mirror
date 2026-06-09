@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
 import { useState, useEffect } from "react";
 import { HomeFeedData } from "@/lib/homefeed";
+import { supabase } from "@/lib/supabase";
 
 // Custom inline SVG Sparkline Component
 function Sparkline({ points, isTrendingUp }: { points: number[]; isTrendingUp: boolean }) {
@@ -56,7 +57,6 @@ export default function Home() {
     }
     
     async function loadFeed() {
-      setIsFeedLoading(true);
       try {
         const res = await fetch("/api/home-feed");
         if (res.ok) {
@@ -70,7 +70,41 @@ export default function Home() {
       }
     }
     
+    setIsFeedLoading(true);
     loadFeed();
+
+    // Subscribe to real-time events for instant updates
+    const channel = supabase
+      .channel(`user-home-feed-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "recordings",
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          loadFeed();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "profiles",
+          filter: `id=eq.${user.id}`
+        },
+        () => {
+          loadFeed();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   if (isLoading || (user && isFeedLoading)) {

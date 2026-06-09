@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Mic, Square, Loader2, Video, Lightbulb, HelpCircle, Shuffle, Bell } from "lucide-react";
+import { Mic, Square, Loader2, Video, Lightbulb, HelpCircle, Shuffle, Bell, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BEAUTIFY_FILTERS } from "@/lib/filters";
 import { useFaceAnalysis } from "@/hooks/useFaceAnalysis";
@@ -9,7 +9,16 @@ import { CountdownOverlay } from "./session/CountdownOverlay";
 import { FocusPill } from "./session/FocusPill";
 
 interface RecorderProps {
-  onRecordingComplete: (videoBlob: Blob, audioBlob: Blob, eyeContactAvg?: number, expressionScoreAvg?: number, exportVideoBlob?: Blob) => void;
+  onRecordingComplete: (
+    videoBlob: Blob,
+    audioBlob: Blob,
+    eyeContactAvg?: number,
+    expressionScoreAvg?: number,
+    exportVideoBlob?: Blob,
+    fillerLog?: any[],
+    avgWpm?: number,
+    pacingLog?: any[]
+  ) => void;
   isProcessing: boolean;
   readingText?: string | null;
   taskTopic?: string | null;
@@ -204,6 +213,22 @@ export function Recorder({
   } = useFaceAnalysis(videoRef, !!userId);
 
   const faceAnalysisResultsRef = useRef<{ eyeContactAvg: number; expressionScoreAvg: number } | null>(null);
+
+  // Real-time AI session telemetry and Web Worker refs
+  const [hasNudgedFiller, setHasNudgedFiller] = useState(false);
+  const [hasNudgedPacing, setHasNudgedPacing] = useState(false);
+  const [coachNudge, setCoachNudge] = useState<string | null>(null);
+
+  const transcriptWorkerRef = useRef<Worker | null>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pacingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const recordingStartTimeRef = useRef<number>(0);
+  const fillerLogRef = useRef<any[]>([]);
+  const pacingLogRef = useRef<any[]>([]);
+  const avgWpmRef = useRef<number>(130);
+  const currentRollingWpmRef = useRef<number>(130);
+  const fastPacingCountRef = useRef<number>(0);
 
   // Initialize camera preview on mount (runs once)
   useEffect(() => {
@@ -458,38 +483,83 @@ export function Recorder({
       console.warn("Speech recognition not supported in this browser.");
       return;
     }
-    
+
+    // Spawn Speech Helper Web Worker inside startSpeechRecognition
+    const worker = new Worker(
+      new URL("../workers/transcriptWorker.ts", import.meta.url),
+      { type: "module" }
+    );
+    transcriptWorkerRef.current = worker;
+
+    worker.onmessage = (e: MessageEvent) => {
+      const { fillerCount, lastFiller, fillerLog, rollingWpm, avgWpm, wordCount } = e.data;
+
+      setLiveFillerCount(fillerCount);
+      setLiveWpm(rollingWpm);
+      currentRollingWpmRef.current = rollingWpm;
+      avgWpmRef.current = avgWpm;
+      wordCountRef.current = wordCount;
+      fillerLogRef.current = fillerLog;
+
+      let status: "slow" | "good" | "fast" = "good";
+      if (rollingWpm < 110) status = "slow";
+      else if (rollingWpm > 150) status = "fast";
+      setPacingStatus(status);
+
+      // Mid-session coach nudges (C4)
+      if (fillerCount > 10 && !hasNudgedFiller) {
+        setHasNudgedFiller(true);
+        setCoachNudge("Too many fillers — try pausing for transition");
+        setTimeout(() => {
+          setCoachNudge(null);
+        }, 4000);
+      }
+
+      if (status === "fast") {
+        fastPacingCountRef.current += 1;
+        if (fastPacingCountRef.current >= 5 && !hasNudgedPacing) {
+          setHasNudgedPacing(true);
+          setCoachNudge("Pacing is fast — take a deep breath and slow down");
+          setTimeout(() => {
+            setCoachNudge(null);
+          }, 4000);
+        }
+      } else {
+        fastPacingCountRef.current = 0;
+      }
+    };
+
     const rec = new SpeechRecognition();
     rec.continuous = true;
     rec.interimResults = true;
     rec.lang = 'en-US';
-    
+
     rec.onresult = (event: any) => {
       let fullTranscript = "";
       for (let i = 0; i < event.results.length; i++) {
         fullTranscript += event.results[i][0].transcript + " ";
       }
-      
+
       const cleanText = fullTranscript.toLowerCase().trim();
       if (cleanText.length > 0) {
-        const words = cleanText.split(/\s+/).filter(w => w.length > 0);
-        const totalWords = words.length;
-        wordCountRef.current = totalWords;
-        
-        // Count fillers: "um", "uh", "like"
-        const fillers = words.filter(w => {
-          const cleanedWord = w.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "").trim();
-          return cleanedWord === "um" || cleanedWord === "uh" || cleanedWord === "like";
-        }).length;
-        
-        setLiveFillerCount(fillers);
+        if (debounceTimeoutRef.current) {
+          clearTimeout(debounceTimeoutRef.current);
+        }
+        debounceTimeoutRef.current = setTimeout(() => {
+          if (transcriptWorkerRef.current) {
+            transcriptWorkerRef.current.postMessage({
+              text: cleanText,
+              startTime: recordingStartTimeRef.current
+            });
+          }
+        }, 300); // 300ms debounce
       }
     };
 
     rec.onerror = (err: any) => {
       console.warn("Speech recognition error:", err);
     };
-    
+
     rec.onend = () => {
       // Restart if still recording
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
@@ -526,7 +596,30 @@ export function Recorder({
     setLiveWpm(130);
     setPacingStatus("good");
     wordCountRef.current = 0;
-    
+
+    // Reset coaching nudges and stats logs
+    setHasNudgedFiller(false);
+    setHasNudgedPacing(false);
+    setCoachNudge(null);
+    recordingStartTimeRef.current = Date.now();
+    fillerLogRef.current = [];
+    pacingLogRef.current = [];
+    avgWpmRef.current = 130;
+    currentRollingWpmRef.current = 130;
+    fastPacingCountRef.current = 0;
+
+    // Start 3-second sample interval for pacing timeline data
+    if (pacingIntervalRef.current) {
+      clearInterval(pacingIntervalRef.current);
+    }
+    pacingIntervalRef.current = setInterval(() => {
+      const elapsed = Math.round((Date.now() - recordingStartTimeRef.current) / 1000);
+      pacingLogRef.current.push({
+        wpm: currentRollingWpmRef.current,
+        timestamp: elapsed
+      });
+    }, 3000);
+
     // Clear and start face analysis session
     faceAnalysisResultsRef.current = null;
     if (userId) {
@@ -676,7 +769,10 @@ export function Recorder({
             audioBlob || storageBlob, 
             eyeContactAvg, 
             expressionScoreAvg,
-            exportBlob
+            exportBlob,
+            fillerLogRef.current,
+            avgWpmRef.current,
+            pacingLogRef.current
           );
           // Clear IndexedDB records asynchronously
           clearDB().catch(console.error);
@@ -760,6 +856,20 @@ export function Recorder({
         recognitionRef.current.stop();
       } catch (e) {}
       recognitionRef.current = null;
+    }
+
+    // Terminate Web Workers and clear timers
+    if (transcriptWorkerRef.current) {
+      transcriptWorkerRef.current.terminate();
+      transcriptWorkerRef.current = null;
+    }
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
+    }
+    if (pacingIntervalRef.current) {
+      clearInterval(pacingIntervalRef.current);
+      pacingIntervalRef.current = null;
     }
 
     if (mediaRecorderRef.current && isRecording) {
@@ -936,6 +1046,23 @@ export function Recorder({
                 <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping" />
                 <span className="text-[10px] font-extrabold text-red-400 uppercase tracking-widest font-mono">
                   Look at camera
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Real-time Coach Nudges HUD overlay */}
+          <AnimatePresence>
+            {coachNudge && isRecording && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 15 }}
+                className="absolute inset-x-4 bottom-32 z-30 mx-auto max-w-[280px] bg-indigo-950/90 border border-indigo-500/30 backdrop-blur-md px-3.5 py-2.5 rounded-xl text-center shadow-[0_0_20px_rgba(99,102,241,0.25)] flex items-center justify-center gap-2 pointer-events-none"
+              >
+                <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse shrink-0" />
+                <span className="text-[10px] font-extrabold text-indigo-200 tracking-wider font-mono">
+                  {coachNudge}
                 </span>
               </motion.div>
             )}

@@ -49,6 +49,14 @@ function PracticeContent() {
   const [readingEyeContact, setReadingEyeContact] = useState<number | undefined>(undefined);
   const [readingExpression, setReadingExpression] = useState<number | undefined>(undefined);
   
+  // Web Speech helper telemetry logs states
+  const [freeformFillerLog, setFreeformFillerLog] = useState<any[]>([]);
+  const [freeformAvgWpm, setFreeformAvgWpm] = useState<number>(130);
+  const [freeformPacingLog, setFreeformPacingLog] = useState<any[]>([]);
+  const [readingFillerLog, setReadingFillerLog] = useState<any[]>([]);
+  const [readingAvgWpm, setReadingAvgWpm] = useState<number>(130);
+  const [readingPacingLog, setReadingPacingLog] = useState<any[]>([]);
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -457,7 +465,10 @@ function PracticeContent() {
     audioBlob: Blob, 
     eyeContactAvg?: number, 
     expressionScoreAvg?: number,
-    exportVideoBlob?: Blob
+    exportVideoBlob?: Blob,
+    fillerLog?: any[],
+    avgWpm?: number,
+    pacingLog?: any[]
   ) => {
     const isReading = activeTaskId && phase === "reading_recording";
 
@@ -465,10 +476,16 @@ function PracticeContent() {
       setReadingBlob(videoBlob);
       setReadingAudioBlob(audioBlob);
       setReadingExportBlob(exportVideoBlob || null);
+      setReadingFillerLog(fillerLog || []);
+      setReadingAvgWpm(avgWpm || 130);
+      setReadingPacingLog(pacingLog || []);
     } else {
       setFreeformBlob(videoBlob);
       setFreeformAudioBlob(audioBlob);
       setFreeformExportBlob(exportVideoBlob || null);
+      setFreeformFillerLog(fillerLog || []);
+      setFreeformAvgWpm(avgWpm || 130);
+      setFreeformPacingLog(pacingLog || []);
     }
 
     if (activeTaskId && phase === "freeform_recording") {
@@ -486,7 +503,11 @@ function PracticeContent() {
           expressionScoreAvg,
           undefined,
           undefined,
-          exportVideoBlob
+          exportVideoBlob,
+          undefined,
+          fillerLog,
+          avgWpm,
+          pacingLog
         );
         return;
       }
@@ -508,7 +529,13 @@ function PracticeContent() {
         eyeContactAvg, 
         expressionScoreAvg,
         freeformExportBlob || undefined,
-        exportVideoBlob
+        exportVideoBlob,
+        freeformFillerLog,
+        freeformAvgWpm,
+        freeformPacingLog,
+        fillerLog,
+        avgWpm,
+        pacingLog
       );
       return;
     }
@@ -526,7 +553,11 @@ function PracticeContent() {
         expressionScoreAvg,
         undefined,
         undefined,
-        exportVideoBlob
+        exportVideoBlob,
+        undefined,
+        fillerLog,
+        avgWpm,
+        pacingLog
       );
     }
   };
@@ -541,7 +572,13 @@ function PracticeContent() {
     rdEyeContact?: number,
     rdExpression?: number,
     freeformExportVideo?: Blob,
-    readingExportVideo?: Blob
+    readingExportVideo?: Blob,
+    ffFillerLog?: any[],
+    ffAvgWpm?: number,
+    ffPacingLog?: any[],
+    rdFillerLog?: any[],
+    rdAvgWpm?: number,
+    rdPacingLog?: any[]
   ) => {
     setIsProcessing(true);
     setMetricsList([]);
@@ -577,6 +614,9 @@ function PracticeContent() {
       realData1.title = "Freeform Speech";
       realData1.eyeContact = ffEyeContact;
       realData1.expressionScore = ffExpression;
+      realData1.fillerLog = ffFillerLog;
+      realData1.avgWpm = ffAvgWpm;
+      realData1.pacingLog = ffPacingLog;
       newMetrics.push(realData1);
 
       if (readingAudio && readingVideo && task?.reading_text) {
@@ -607,6 +647,9 @@ function PracticeContent() {
         realData2.title = "Reading Aloud";
         realData2.eyeContact = rdEyeContact;
         realData2.expressionScore = rdExpression;
+        realData2.fillerLog = rdFillerLog;
+        realData2.avgWpm = rdAvgWpm;
+        realData2.pacingLog = rdPacingLog;
         newMetrics.push(realData2);
       }
 
@@ -734,7 +777,10 @@ function PracticeContent() {
             eye_contact: metricsList[0].eyeContact !== undefined ? metricsList[0].eyeContact : null,
             expression_score: metricsList[0].expressionScore !== undefined ? metricsList[0].expressionScore : null,
             coach_comment: metricsList[0].coachComment || null,
-            annotations: metricsList[0].annotations || null
+            annotations: metricsList[0].annotations || null,
+            filler_log: metricsList[0].fillerLog || [],
+            avg_wpm: metricsList[0].avgWpm || 130,
+            pacing_log: metricsList[0].pacingLog || []
           }).select('id').single();
 
           if (err1) throw err1;
@@ -770,7 +816,10 @@ function PracticeContent() {
               eye_contact: metricsList[1].eyeContact !== undefined ? metricsList[1].eyeContact : null,
               expression_score: metricsList[1].expressionScore !== undefined ? metricsList[1].expressionScore : null,
               coach_comment: metricsList[1].coachComment || null,
-              annotations: metricsList[1].annotations || null
+              annotations: metricsList[1].annotations || null,
+              filler_log: metricsList[1].fillerLog || [],
+              avg_wpm: metricsList[1].avgWpm || 130,
+              pacing_log: metricsList[1].pacingLog || []
             }).select('id').single();
 
             if (err2) throw err2;
