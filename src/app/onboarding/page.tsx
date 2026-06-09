@@ -54,10 +54,10 @@ export default function OnboardingPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-100">
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-50 dark:bg-zinc-950 text-slate-800 dark:text-zinc-100">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
-          <p className="text-sm text-zinc-400">Loading your profile...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-cyan-500 dark:text-cyan-400" />
+          <p className="text-sm text-slate-500 dark:text-zinc-400">Loading your profile...</p>
         </div>
       </div>
     );
@@ -143,20 +143,20 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4 py-10 text-zinc-100 selection:bg-cyan-500/30">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 dark:bg-[#050508] px-4 py-10 text-slate-800 dark:text-zinc-100 selection:bg-cyan-500/30 transition-colors duration-300">
       
       {/* Container Box */}
-      <div className="w-full max-w-xl rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-6 shadow-2xl backdrop-blur-xl md:p-8">
+      <div className="w-full max-w-xl rounded-2xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 p-6 shadow-xl dark:shadow-2xl backdrop-blur-xl md:p-8">
         
         {/* Progress bar */}
         <div className="mb-8">
-          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-zinc-400">
+          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
             <span>Profile Onboarding</span>
-            <span className="text-cyan-400">Step {step} of 4</span>
+            <span className="text-cyan-600 dark:text-cyan-400 font-bold">Step {step} of 4</span>
           </div>
-          <div className="mt-2 h-1.5 w-full rounded-full bg-zinc-800">
+          <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200 dark:bg-zinc-800">
             <motion.div 
-              className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.4)]"
+              className="h-full rounded-full bg-gradient-to-r from-cyan-600 to-cyan-400 dark:from-cyan-500 dark:to-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.3)] dark:shadow-[0_0_8px_rgba(34,211,238,0.4)]"
               initial={{ width: "25%" }}
               animate={{ width: `${step * 25}%` }}
               transition={{ duration: 0.3 }}
@@ -165,7 +165,7 @@ export default function OnboardingPage() {
         </div>
 
         {errorMsg && (
-          <div className="mb-6 rounded-lg border border-red-500/20 bg-red-950/20 p-3 text-sm text-red-400">
+          <div className="mb-6 rounded-lg border border-red-500/20 bg-red-500/5 dark:bg-red-950/20 p-3 text-sm text-red-600 dark:text-red-400">
             {errorMsg}
           </div>
         )}
@@ -187,10 +187,10 @@ export default function OnboardingPage() {
               {/* STEP 1: GOALS */}
               {step === 1 && (
                 <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-zinc-50">
+                  <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-50">
                     What brings you to SpeakMirror?
                   </h1>
-                  <p className="mt-1.5 text-sm text-zinc-400">
+                  <p className="mt-1.5 text-sm text-slate-500 dark:text-zinc-400">
                     We will personalize your speaking prompts and coach feedback around this goal.
                   </p>
                   
@@ -207,17 +207,17 @@ export default function OnboardingPage() {
                         <button
                           key={item.id}
                           onClick={() => handleSelect("goal", item.id as any)}
-                          className={`flex flex-col items-start rounded-xl border p-4 text-left transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-800/30 ${
+                          className={`flex flex-col items-start rounded-xl border p-4 text-left transition-all duration-200 hover:border-slate-350 hover:bg-slate-50/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-800/30 cursor-pointer ${
                             isSelected 
-                              ? "border-cyan-500 bg-cyan-950/10 shadow-[0_0_15px_rgba(6,182,212,0.1)] ring-1 ring-cyan-500" 
-                              : "border-zinc-800 bg-zinc-900/30"
+                              ? "border-cyan-500 bg-cyan-500/5 dark:bg-cyan-950/10 shadow-[0_0_15px_rgba(6,182,212,0.06)] dark:shadow-[0_0_15px_rgba(6,182,212,0.1)] ring-1 ring-cyan-500" 
+                              : "border-slate-200 bg-slate-50/20 dark:border-zinc-800 dark:bg-zinc-900/30"
                           }`}
                         >
-                          <div className={`rounded-lg p-2 ${isSelected ? "bg-cyan-500/10 text-cyan-400" : "bg-zinc-800 text-zinc-400"}`}>
+                          <div className={`rounded-lg p-2 ${isSelected ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400" : "bg-slate-200 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
                             <Icon className="h-5 w-5" />
                           </div>
-                          <span className="mt-3 font-semibold text-zinc-100">{item.label}</span>
-                          <span className="mt-1 text-xs text-zinc-400">{item.desc}</span>
+                          <span className="mt-3 font-semibold text-slate-900 dark:text-zinc-100">{item.label}</span>
+                          <span className="mt-1 text-xs text-slate-500 dark:text-zinc-400">{item.desc}</span>
                         </button>
                       );
                     })}
@@ -228,10 +228,10 @@ export default function OnboardingPage() {
               {/* STEP 2: EXPERIENCE */}
               {step === 2 && (
                 <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-zinc-50">
+                  <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-50">
                     How would you rate your speaking confidence?
                   </h1>
-                  <p className="mt-1.5 text-sm text-zinc-400">
+                  <p className="mt-1.5 text-sm text-slate-500 dark:text-zinc-400">
                     Choose a speaking level that reflects your current comfort.
                   </p>
                   
@@ -247,18 +247,18 @@ export default function OnboardingPage() {
                         <button
                           key={item.id}
                           onClick={() => handleSelect("experience_level", item.id as any)}
-                          className={`flex items-center gap-4 rounded-xl border p-4 text-left transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-800/30 ${
+                          className={`flex items-center gap-4 rounded-xl border p-4 text-left transition-all duration-200 hover:border-slate-350 hover:bg-slate-50/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-800/30 cursor-pointer ${
                             isSelected 
-                              ? "border-cyan-500 bg-cyan-950/10 shadow-[0_0_15px_rgba(6,182,212,0.1)] ring-1 ring-cyan-500" 
-                              : "border-zinc-800 bg-zinc-900/30"
+                              ? "border-cyan-500 bg-cyan-500/5 dark:bg-cyan-950/10 shadow-[0_0_15px_rgba(6,182,212,0.06)] dark:shadow-[0_0_15px_rgba(6,182,212,0.1)] ring-1 ring-cyan-500" 
+                              : "border-slate-200 bg-slate-50/20 dark:border-zinc-800 dark:bg-zinc-900/30"
                           }`}
                         >
-                          <div className={`rounded-lg p-2 ${isSelected ? "bg-cyan-500/10 text-cyan-400" : "bg-zinc-800 text-zinc-400"}`}>
+                          <div className={`rounded-lg p-2 ${isSelected ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400" : "bg-slate-200 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
                             <Icon className="h-5 w-5" />
                           </div>
                           <div>
-                            <span className="font-semibold text-zinc-100">{item.label}</span>
-                            <span className="block mt-0.5 text-xs text-zinc-400">{item.desc}</span>
+                            <span className="font-semibold text-slate-900 dark:text-zinc-100">{item.label}</span>
+                            <span className="block mt-0.5 text-xs text-slate-500 dark:text-zinc-400">{item.desc}</span>
                           </div>
                         </button>
                       );
@@ -270,10 +270,10 @@ export default function OnboardingPage() {
               {/* STEP 3: FOCUS METRIC */}
               {step === 3 && (
                 <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-zinc-50">
+                  <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-50">
                     What do you most want to improve?
                   </h1>
-                  <p className="mt-1.5 text-sm text-zinc-400">
+                  <p className="mt-1.5 text-sm text-slate-500 dark:text-zinc-400">
                     We will prioritize tracking and highlighting this metric during analysis.
                   </p>
                   
@@ -291,18 +291,18 @@ export default function OnboardingPage() {
                         <button
                           key={item.id}
                           onClick={() => handleSelect("focus_metric", item.id as any)}
-                          className={`flex items-center gap-4 rounded-xl border px-4 py-3.5 text-left transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-800/30 ${
+                          className={`flex items-center gap-4 rounded-xl border px-4 py-3.5 text-left transition-all duration-200 hover:border-slate-350 hover:bg-slate-50/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-800/30 cursor-pointer ${
                             isSelected 
-                              ? "border-cyan-500 bg-cyan-950/10 shadow-[0_0_15px_rgba(6,182,212,0.1)] ring-1 ring-cyan-500" 
-                              : "border-zinc-800 bg-zinc-900/30"
+                              ? "border-cyan-500 bg-cyan-500/5 dark:bg-cyan-950/10 shadow-[0_0_15px_rgba(6,182,212,0.06)] dark:shadow-[0_0_15px_rgba(6,182,212,0.1)] ring-1 ring-cyan-500" 
+                              : "border-slate-200 bg-slate-50/20 dark:border-zinc-800 dark:bg-zinc-900/30"
                           }`}
                         >
-                          <div className={`rounded-lg p-2 ${isSelected ? "bg-cyan-500/10 text-cyan-400" : "bg-zinc-800 text-zinc-400"}`}>
+                          <div className={`rounded-lg p-2 ${isSelected ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400" : "bg-slate-200 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
                             <Icon className="h-4 w-4" />
                           </div>
                           <div>
-                            <span className="font-semibold text-zinc-100">{item.label}</span>
-                            <span className="block mt-0.5 text-xs text-zinc-400">{item.desc}</span>
+                            <span className="font-semibold text-slate-900 dark:text-zinc-100">{item.label}</span>
+                            <span className="block mt-0.5 text-xs text-slate-500 dark:text-zinc-400">{item.desc}</span>
                           </div>
                         </button>
                       );
@@ -314,10 +314,10 @@ export default function OnboardingPage() {
               {/* STEP 4: PRACTICE DURATION */}
               {step === 4 && (
                 <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-zinc-50">
+                  <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-50">
                     How long can you practice each day?
                   </h1>
-                  <p className="mt-1.5 text-sm text-zinc-400">
+                  <p className="mt-1.5 text-sm text-slate-500 dark:text-zinc-400">
                     Setting a daily goal keeps you focused and builds streak consistency.
                   </p>
                   
@@ -332,20 +332,20 @@ export default function OnboardingPage() {
                         <button
                           key={item.id}
                           onClick={() => handleSelect("practice_duration", item.id as any)}
-                          className={`flex items-center justify-between rounded-xl border p-4 text-left transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-800/30 ${
+                          className={`flex items-center justify-between rounded-xl border p-4 text-left transition-all duration-200 hover:border-slate-350 hover:bg-slate-50/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-800/30 cursor-pointer ${
                             isSelected 
-                              ? "border-cyan-500 bg-cyan-950/10 shadow-[0_0_15px_rgba(6,182,212,0.1)] ring-1 ring-cyan-500" 
-                              : "border-zinc-800 bg-zinc-900/30"
+                              ? "border-cyan-500 bg-cyan-500/5 dark:bg-cyan-950/10 shadow-[0_0_15px_rgba(6,182,212,0.06)] dark:shadow-[0_0_15px_rgba(6,182,212,0.1)] ring-1 ring-cyan-500" 
+                              : "border-slate-200 bg-slate-50/20 dark:border-zinc-800 dark:bg-zinc-900/30"
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <Clock className={`h-5 w-5 ${isSelected ? "text-cyan-400" : "text-zinc-500"}`} />
+                            <Clock className={`h-5 w-5 ${isSelected ? "text-cyan-600 dark:text-cyan-400" : "text-slate-400 dark:text-zinc-500"}`} />
                             <div>
-                              <span className="font-semibold text-zinc-100">{item.label}</span>
-                              <span className="ml-2 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium tracking-wide uppercase text-zinc-400">
+                              <span className="font-semibold text-slate-900 dark:text-zinc-100">{item.label}</span>
+                              <span className="ml-2 rounded bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium tracking-wide uppercase text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-750">
                                 {item.sub}
                               </span>
-                              <span className="block mt-1 text-xs text-zinc-400">{item.desc}</span>
+                              <span className="block mt-1 text-xs text-slate-500 dark:text-zinc-400">{item.desc}</span>
                             </div>
                           </div>
                         </button>
@@ -360,10 +360,10 @@ export default function OnboardingPage() {
         </div>
 
         {/* Wizard Navigation Footer */}
-        <div className="mt-8 flex items-center justify-between border-t border-zinc-800/60 pt-6">
+        <div className="mt-8 flex items-center justify-between border-t border-slate-200 dark:border-zinc-850 pt-6">
           <button
             onClick={handleBack}
-            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-zinc-400 transition-colors hover:text-zinc-100 ${
+            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer ${
               step === 1 ? "invisible" : ""
             }`}
           >
@@ -375,7 +375,7 @@ export default function OnboardingPage() {
             <button
               onClick={handleNext}
               disabled={isNextDisabled()}
-              className="flex items-center gap-1.5 rounded-lg bg-cyan-500 px-5 py-2 text-sm font-semibold text-zinc-950 shadow-[0_4px_12px_rgba(6,182,212,0.2)] transition-all hover:bg-cyan-400 disabled:opacity-50 disabled:hover:bg-cyan-500 disabled:shadow-none"
+              className="flex items-center gap-1.5 rounded-lg bg-cyan-500 text-zinc-950 px-5 py-2 text-sm font-semibold shadow-[0_4px_12px_rgba(6,182,212,0.15)] dark:shadow-[0_4px_12px_rgba(6,182,212,0.2)] transition-all hover:bg-cyan-400 disabled:opacity-50 disabled:hover:bg-cyan-500 disabled:shadow-none cursor-pointer"
             >
               Next
               <ChevronRight className="h-4 w-4" />
@@ -384,7 +384,7 @@ export default function OnboardingPage() {
             <button
               onClick={handleSubmit}
               disabled={isNextDisabled() || isSaving}
-              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-400 px-6 py-2 text-sm font-semibold text-zinc-950 shadow-[0_4px_12px_rgba(6,182,212,0.3)] transition-all hover:from-cyan-400 hover:to-cyan-300 disabled:opacity-50 disabled:hover:from-cyan-500 disabled:hover:to-cyan-400 disabled:shadow-none"
+              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-600 to-cyan-400 dark:from-cyan-500 dark:to-cyan-400 text-zinc-950 px-6 py-2 text-sm font-semibold shadow-[0_4px_12px_rgba(6,182,212,0.2)] dark:shadow-[0_4px_12px_rgba(6,182,212,0.3)] transition-all hover:from-cyan-550 hover:to-cyan-350 disabled:opacity-50 disabled:hover:from-cyan-600 disabled:hover:to-cyan-400 disabled:shadow-none cursor-pointer"
             >
               {isSaving ? (
                 <>
