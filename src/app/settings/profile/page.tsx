@@ -26,6 +26,7 @@ interface ProfileData {
   experience_level: "beginner" | "intermediate" | "advanced" | null;
   focus_metric: "confidence" | "clarity" | "pacing" | "fillers" | "eye_contact" | null;
   practice_duration: 1 | 3 | 5 | null;
+  show_warmup: boolean;
 }
 
 export default function ProfileSettingsPage() {
@@ -37,6 +38,7 @@ export default function ProfileSettingsPage() {
     experience_level: null,
     focus_metric: null,
     practice_duration: null,
+    show_warmup: true,
   });
   
   const [isFetching, setIsFetching] = useState(true);
@@ -50,7 +52,7 @@ export default function ProfileSettingsPage() {
       try {
         const { data, error } = await supabase
           .from("profiles")
-          .select("goal, experience_level, focus_metric, practice_duration")
+          .select("goal, experience_level, focus_metric, practice_duration, show_warmup")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -62,6 +64,7 @@ export default function ProfileSettingsPage() {
             experience_level: data.experience_level || null,
             focus_metric: data.focus_metric || null,
             practice_duration: data.practice_duration || null,
+            show_warmup: data.show_warmup !== false,
           });
         }
       } catch (err) {
@@ -104,6 +107,7 @@ export default function ProfileSettingsPage() {
           experience_level: formData.experience_level,
           focus_metric: formData.focus_metric,
           practice_duration: formData.practice_duration,
+          show_warmup: formData.show_warmup,
           updated_at: new Date().toISOString()
         });
 
@@ -308,6 +312,33 @@ export default function ProfileSettingsPage() {
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* SECTION 5: WARM-UP PREFERENCE */}
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              Pre-Session Breathing Warm-up
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">Show a short breathing and focus warmup before recording starts.</p>
+            <div className="mt-3.5">
+              <button
+                type="button"
+                onClick={() => handleSelect("show_warmup", !formData.show_warmup)}
+                className={`flex items-center justify-between rounded-xl border p-4 text-left w-full transition-all duration-200 hover:border-slate-350 hover:bg-slate-50/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-800/30 cursor-pointer ${
+                  formData.show_warmup 
+                    ? "border-cyan-500 bg-cyan-500/5 dark:bg-cyan-950/10 shadow-[0_0_15px_rgba(6,182,212,0.06)] dark:shadow-[0_0_15px_rgba(6,182,212,0.1)] ring-1 ring-cyan-500" 
+                    : "border-slate-200 bg-slate-50/20 dark:border-zinc-800 dark:bg-zinc-900/30"
+                }`}
+              >
+                <span className="font-semibold text-slate-900 dark:text-zinc-100 text-sm">
+                  {formData.show_warmup ? "Warm-up Mode: Active (Recommended)" : "Warm-up Mode: Disabled (Go straight to recording)"}
+                </span>
+                <div className={`relative w-11 h-6 rounded-full transition-colors ${formData.show_warmup ? 'bg-cyan-500' : 'bg-slate-300 dark:bg-zinc-800'}`}>
+                  <div className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow-md transition-transform ${formData.show_warmup ? 'translate-x-5' : 'translate-x-0'}`} />
+                </div>
+              </button>
             </div>
           </div>
 

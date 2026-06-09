@@ -17,6 +17,7 @@ import { AnalysisResults } from "@/components/practice/AnalysisResults";
 import { PendingAssignments } from "@/components/practice/PendingAssignments";
 import { ChallengeModal } from "@/components/practice/ChallengeModal";
 import { ToastNotification, Toast } from "@/components/practice/ToastNotification";
+import { PreSessionModal } from "@/components/session/PreSessionModal";
 
 function PracticeContent() {
   const { user, activeWorkspace } = useAuth();
@@ -83,6 +84,58 @@ function PracticeContent() {
   // Export high-quality video blobs
   const [freeformExportBlob, setFreeformExportBlob] = useState<Blob | null>(null);
   const [readingExportBlob, setReadingExportBlob] = useState<Blob | null>(null);
+
+  // Pre-session Warm-up states
+  const [showWarmup, setShowWarmup] = useState<boolean>(true);
+  const [profileGoal, setProfileGoal] = useState<string | null>(null);
+  const [profileExperience, setProfileExperience] = useState<string | null>(null);
+  const [profileFocusMetric, setProfileFocusMetric] = useState<string | null>(null);
+  const [profileDuration, setProfileDuration] = useState<number>(3);
+  const [isFirstSession, setIsFirstSession] = useState<boolean>(false);
+  const [hasWarmedUp, setHasWarmedUp] = useState<boolean>(false);
+
+  // Fetch user profile settings and check if this is their first session
+  useEffect(() => {
+    async function fetchUserProfile() {
+      if (!user) return;
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("show_warmup, goal, experience_level, focus_metric, practice_duration")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (data) {
+          setShowWarmup(data.show_warmup !== false);
+          setProfileGoal(data.goal || null);
+          setProfileExperience(data.experience_level || null);
+          setProfileFocusMetric(data.focus_metric || null);
+          setProfileDuration(Number(data.practice_duration) || 3);
+        }
+
+        // Check if user has any completed recordings to determine isFirstSession
+        const { data: recData, error: recError } = await supabase
+          .from("recordings")
+          .select("id")
+          .eq("user_id", user.id)
+          .limit(1);
+
+        if (!recError) {
+          setIsFirstSession(!recData || recData.length === 0);
+        }
+      } catch (err) {
+        console.error("Failed to load user profile for warmup:", err);
+      }
+    }
+
+    fetchUserProfile();
+  }, [user]);
+
+  // Reset warmup state when selected task changes
+  useEffect(() => {
+    setHasWarmedUp(false);
+  }, [activeTaskId]);
 
   // Initialize Daily Challenge & Notification Permission on Mount
   useEffect(() => {
@@ -862,21 +915,37 @@ function PracticeContent() {
                   <span className="text-xs font-semibold text-slate-500 dark:text-foreground/50 uppercase tracking-widest">Loading Task Details...</span>
                 </div>
               ) : (phase === "freeform_recording" || phase === "reading_recording") && (
-                <div className="w-full max-w-md">
-                  <Recorder 
-                    onRecordingComplete={handleRecordingComplete} 
-                    isProcessing={isProcessing} 
-                    readingText={phase === "reading_recording" ? task?.reading_text : undefined}
-                    taskTopic={task?.topic_of_the_day}
-                    userId={user?.id}
-                    userLevel={user?.user_metadata?.difficulty_level}
-                    mode={phase === "reading_recording" ? "reading" : (task?.isChallenge ? "warmup" : "freeform")}
-                    timeLimit={task?.timeLimit || 90}
-                    wordOfTheDay={task?.word_of_the_day}
-                    wordDefinition={task?.definition}
-                    tips={task?.tips}
+                showWarmup && !hasWarmedUp ? (
+                  <PreSessionModal
+                    focusMetric={profileFocusMetric}
+                    goal={profileGoal}
+                    experienceLevel={profileExperience}
+                    practiceDuration={profileDuration}
+                    streak={streak}
+                    taskTopic={task?.topic_of_the_day || "Free Practice"}
+                    isFirstSession={isFirstSession}
+                    onStartRecording={() => setHasWarmedUp(true)}
+                    onClose={() => clearAssignment()}
                   />
-                </div>
+                ) : (
+                  <div className="w-full max-w-md">
+                    <Recorder 
+                      onRecordingComplete={handleRecordingComplete} 
+                      isProcessing={isProcessing} 
+                      readingText={phase === "reading_recording" ? task?.reading_text : undefined}
+                      taskTopic={task?.topic_of_the_day}
+                      userId={user?.id}
+                      userLevel={user?.user_metadata?.difficulty_level}
+                      mode={phase === "reading_recording" ? "reading" : (task?.isChallenge ? "warmup" : "freeform")}
+                      timeLimit={task?.timeLimit || 90}
+                      wordOfTheDay={task?.word_of_the_day}
+                      wordDefinition={task?.definition}
+                      tips={task?.tips}
+                      autoStart={showWarmup}
+                      focusMetric={profileFocusMetric}
+                    />
+                  </div>
+                )
               )}
             </div>
 

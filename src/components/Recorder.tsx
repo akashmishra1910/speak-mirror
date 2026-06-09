@@ -5,6 +5,8 @@ import { Mic, Square, Loader2, Video, Lightbulb, HelpCircle, Shuffle, Bell } fro
 import { motion, AnimatePresence } from "framer-motion";
 import { BEAUTIFY_FILTERS } from "@/lib/filters";
 import { useFaceAnalysis } from "@/hooks/useFaceAnalysis";
+import { CountdownOverlay } from "./session/CountdownOverlay";
+import { FocusPill } from "./session/FocusPill";
 
 interface RecorderProps {
   onRecordingComplete: (videoBlob: Blob, audioBlob: Blob, eyeContactAvg?: number, expressionScoreAvg?: number, exportVideoBlob?: Blob) => void;
@@ -18,6 +20,8 @@ interface RecorderProps {
   wordOfTheDay?: string | null;
   wordDefinition?: string | null;
   tips?: string[] | null;
+  autoStart?: boolean;
+  focusMetric?: string | null;
 }
 
 // IndexedDB helpers for zero-copy streaming
@@ -98,17 +102,18 @@ export function Recorder({
   timeLimit = 90,
   wordOfTheDay,
   wordDefinition,
-  tips
+  tips,
+  autoStart = false,
+  focusMetric
 }: RecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   
-  // Warm-up breathing states
-  const [showWarmupScreen, setShowWarmupScreen] = useState(false);
-  const [warmupCountdown, setWarmupCountdown] = useState(30);
-  const [breathingState, setBreathingState] = useState<'inhale' | 'hold' | 'exhale'>('inhale');
-  const [breathingSeconds, setBreathingSeconds] = useState(4);
+  // Camera & Countdown states
+  const [cameraLoaded, setCameraLoaded] = useState(false);
+  const [isCountingDown, setIsCountingDown] = useState(false);
+  const [hasStartedCountdown, setHasStartedCountdown] = useState(false);
   
   // Live speech analysis states
   const [liveFillerCount, setLiveFillerCount] = useState(0);
@@ -183,9 +188,7 @@ export function Recorder({
   const storageStreamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const exportStreamRef = useRef<MediaStream | null>(null);
-  
-  // Warmup and speech recognition refs
-  const warmupTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Speech recognition refs
   const recognitionRef = useRef<any>(null);
   const wordCountRef = useRef<number>(0);
 
@@ -304,6 +307,8 @@ export function Recorder({
           ctx.restore();
           // Draw "SpeakMirror" watermark
           drawWatermark(ctx, canvas.width, canvas.height);
+          // Mark camera as loaded
+          setCameraLoaded(true);
         }
       }
       animationFrameId = requestAnimationFrame(renderLoop);
@@ -337,6 +342,14 @@ export function Recorder({
   useEffect(() => {
     setTimeLeft(timeLimit);
   }, [timeLimit, mode]);
+
+  // Trigger countdown automatically if autoStart is true and camera is loaded
+  useEffect(() => {
+    if (autoStart && cameraLoaded && !hasStartedCountdown && !isRecording && !isProcessing) {
+      setHasStartedCountdown(true);
+      setIsCountingDown(true);
+    }
+  }, [autoStart, cameraLoaded, hasStartedCountdown, isRecording, isProcessing]);
 
   // Initialize topic and bullets when mode/taskTopic changes
   useEffect(() => {
@@ -495,53 +508,18 @@ export function Recorder({
   };
 
   const startRecording = () => {
-    if (!userId) {
-      startRecordingActual();
-      return;
-    }
-    // Start warm-up breathing exercise first
-    setShowWarmupScreen(true);
-    setWarmupCountdown(30);
-    setBreathingState('inhale');
-    setBreathingSeconds(4);
-    
-    let wCountdown = 30;
-    let bSeconds = 4;
-    let bState: 'inhale' | 'hold' | 'exhale' = 'inhale';
-    
-    if (warmupTimerRef.current) clearInterval(warmupTimerRef.current);
-    
-    warmupTimerRef.current = setInterval(() => {
-      wCountdown -= 1;
-      setWarmupCountdown(wCountdown);
-      
-      bSeconds -= 1;
-      if (bSeconds === 0) {
-        bSeconds = 4;
-        if (bState === 'inhale') bState = 'hold';
-        else if (bState === 'hold') bState = 'exhale';
-        else bState = 'inhale';
-        setBreathingState(bState);
-      }
-      setBreathingSeconds(bSeconds);
-      
-      if (wCountdown === 0) {
-        skipWarmup(false);
-      }
-    }, 1000);
+    // Trigger countdown before recording starts
+    setIsCountingDown(true);
   };
 
-  const skipWarmup = (userSkipped = false) => {
-    if (warmupTimerRef.current) {
-      clearInterval(warmupTimerRef.current);
-      warmupTimerRef.current = null;
-    }
-    setShowWarmupScreen(false);
+  const handleCountdownComplete = () => {
+    setIsCountingDown(false);
     startRecordingActual();
   };
 
   const startRecordingActual = async () => {
     if (!streamRef.current) return;
+    setHasStartedCountdown(false);
     hasTriggeredBellRef.current = false;
     setShowConcludePrompt(false);
     setLiveFillerCount(0);
@@ -850,7 +828,9 @@ export function Recorder({
               willChange: 'transform',
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
-              filter: BEAUTIFY_FILTERS[activeFilter] || BEAUTIFY_FILTERS.none
+              filter: BEAUTIFY_FILTERS[activeFilter] || BEAUTIFY_FILTERS.none,
+              opacity: cameraLoaded ? 1 : 0,
+              transition: 'opacity 1s ease-out'
             }}
           />
           
@@ -961,77 +941,15 @@ export function Recorder({
             )}
           </AnimatePresence>
 
-          {/* Pre-session Warm-up Breathing Overlay */}
-          <AnimatePresence>
-            {showWarmupScreen && userId && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 z-30 bg-[#050508]/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center"
-              >
-                {/* Header */}
-                <div className="absolute top-8 left-0 right-0 flex flex-col items-center px-4">
-                  <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest animate-pulse">// pre_session_focus</span>
-                  <h3 className="text-white font-extrabold text-lg mt-1 tracking-tight">Breathing & Warm-up</h3>
-                </div>
+          {/* Countdown Overlay */}
+          {isCountingDown && (
+            <CountdownOverlay onComplete={handleCountdownComplete} />
+          )}
 
-                {/* Breathing Circle Container */}
-                <div className="relative w-48 h-48 flex items-center justify-center my-6">
-                  {/* Glowing Ring */}
-                  <motion.div 
-                    className="absolute inset-0 rounded-full bg-gradient-to-tr from-indigo-500/20 via-sky-500/25 to-emerald-500/20 blur-xl"
-                    animate={{
-                      scale: breathingState === 'inhale' ? 1.6 : (breathingState === 'hold' ? 1.6 : 1.0)
-                    }}
-                    transition={{
-                      duration: 4,
-                      ease: "easeInOut"
-                    }}
-                  />
-
-                  {/* Animated Breathing Circle */}
-                  <motion.div 
-                    className="w-32 h-32 rounded-full border-2 border-indigo-400/40 bg-indigo-500/10 backdrop-blur-lg flex flex-col items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.2)]"
-                    animate={{
-                      scale: breathingState === 'inhale' ? 1.4 : (breathingState === 'hold' ? 1.4 : 1.0)
-                    }}
-                    transition={{
-                      duration: 4,
-                      ease: "easeInOut"
-                    }}
-                  >
-                    <span className="text-white text-base font-extrabold tracking-widest uppercase">
-                      {breathingState}
-                    </span>
-                    <span className="text-indigo-300 font-mono text-xl font-bold mt-1">
-                      {breathingSeconds}s
-                    </span>
-                  </motion.div>
-                </div>
-
-                {/* Prompt instructions */}
-                <div className="max-w-[260px] flex flex-col items-center gap-1.5 mt-4">
-                  <p className="text-xs text-white/90 font-light leading-relaxed min-h-[36px]">
-                    {breathingState === 'inhale' && "Slowly breathe in, expanding your chest."}
-                    {breathingState === 'hold' && "Hold your breath. Keep your mind calm."}
-                    {breathingState === 'exhale' && "Exhale slowly, releasing any tension."}
-                  </p>
-                  <span className="text-[10px] text-zinc-400 font-mono">
-                    Session starts in {warmupCountdown}s
-                  </span>
-                </div>
-
-                {/* Skip Button */}
-                <button
-                  onClick={() => skipWarmup(true)}
-                  className="absolute bottom-10 px-6 py-2.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/25 text-white/90 hover:text-white text-[11px] font-bold tracking-widest uppercase transition-all duration-200 cursor-pointer"
-                >
-                  Skip Warm-up
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Persistent Focus Pill during active recording */}
+          {isRecording && !isProcessing && (
+            <FocusPill focusMetric={focusMetric || null} />
+          )}
 
           {/* Visual Conclude Prompt Overlay */}
           <AnimatePresence>
@@ -1151,7 +1069,7 @@ export function Recorder({
 
           {/* Bottom Controls */}
           <div className="absolute bottom-6 left-0 right-0 z-20 flex flex-col items-center">
-            {!isProcessing && (
+            {!isProcessing && !isCountingDown && (
               isRecording ? (
                 <button
                   onClick={stopRecording}
