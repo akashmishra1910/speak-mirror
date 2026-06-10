@@ -10,7 +10,8 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'dummy' });
 const supabaseAdmin = {
   get auth() { return getSupabaseAdmin().auth; },
   get storage() { return getSupabaseAdmin().storage; },
-  from(table: string) { return getSupabaseAdmin().from(table); }
+  from(table: string) { return getSupabaseAdmin().from(table); },
+  rpc(fn: string, args?: any) { return getSupabaseAdmin().rpc(fn, args); }
 } as unknown as SupabaseClient;
 
 // Zod validation schemas for requests
@@ -51,6 +52,17 @@ const PostActionSchema = z.discriminatedUnion("action", [
     action: z.literal("update-ticket"),
     ticketId: z.string().uuid("Invalid ticketId format"),
     status: z.string().min(1),
+  }),
+  z.object({
+    action: z.literal("set-user-role"),
+    userId: z.string().uuid("Invalid userId format"),
+    role: z.enum(["admin", "user"]),
+    email: z.string().email(),
+  }),
+  z.object({
+    action: z.literal("generate-sandbox-topic"),
+    theme: z.string().min(1),
+    difficulty: z.string().optional().default("Beginner")
   })
 ]);
 
@@ -94,7 +106,7 @@ export async function GET(request: Request) {
       let finalDailyStats = dailyStats || [];
 
       if (!viewOk) {
-        console.warn("admin_stats view missing or empty, using fallbacks");
+        console.warn("admin_stats view check failed. statsError detail:", statsError);
         finalDailyStats = [
           { stat_date: new Date().toISOString().split('T')[0], recordings_count: 5, analyze_calls_count: 8, video_calls_count: 12, active_users_count: 3, current_total_storage_bytes: totalStorageBytes }
         ];
@@ -466,6 +478,77 @@ Return ONLY a JSON object with this schema:
 
       if (error) throw error;
       return successResponse({ ticket: data?.[0] });
+    }
+
+    // Set user role (Promote / Demote)
+    if (payload.action === "set-user-role") {
+      const { userId, role, email } = payload;
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        user_metadata: { role }
+      });
+
+      if (authError) throw authError;
+
+      if (role === "admin") {
+        const { error: rpcError } = await supabaseAdmin.rpc("set_user_admin", {
+          target_email: email
+        });
+        if (rpcError) {
+          console.warn("RPC set_user_admin error:", rpcError.message);
+        }
+      }
+
+      return successResponse({ user: authData.user });
+    }
+
+    // Generate single topic for Sandbox without saving
+    if (payload.action === "generate-sandbox-topic") {
+      const { theme, difficulty } = payload;
+      
+      if (!process.env.GROQ_API_KEY) {
+        return errorResponse("GROQ_API_KEY is not configured", 500);
+      }
+
+      const prompt = `You are an expert communication coach. Generate exactly one highly engaging speaking prompt/topic for a public speaking practice app.
+The topic must be related to the theme: "${theme}" and tailored to a "${difficulty}" level.
+
+Provide:
+1. "topic": the topic title or prompt
+2. "word_of_the_day": a useful vocabulary word related to the topic
+3. "definition": the definition of the word
+4. "reading_text": a short paragraph (2-3 sentences) for a reading practice
+5. "bullets": exactly 5 incomplete sentences using the 4W and 1H framework (Who, What, Where, When, How) tailored to the topic
+
+Return ONLY a JSON object with this schema:
+{
+  "topic": "...",
+  "word_of_the_day": "...",
+  "definition": "...",
+  "reading_text": "...",
+  "bullets": [
+    { "label": "Who", "text": "..." },
+    { "label": "What", "text": "..." },
+    { "label": "Where", "text": "..." },
+    { "label": "When", "text": "..." },
+    { "label": "How", "text": "..." }
+  ]
+}`;
+
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [
+          { role: "system", content: "You respond strictly with valid JSON." },
+          { role: "user", content: prompt }
+        ],
+        model: "llama-3.1-8b-instant",
+        temperature: 0.8,
+        response_format: { type: "json_object" }
+      });
+
+      const content = chatCompletion.choices[0]?.message?.content;
+      if (!content) throw new Error("No topic generated");
+
+      const parsedJson = JSON.parse(content);
+      return successResponse({ task: parsedJson });
     }
 
     return errorResponse("Invalid action", 400);
