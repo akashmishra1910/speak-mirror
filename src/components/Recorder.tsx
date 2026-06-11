@@ -748,7 +748,10 @@ export function Recorder({
         const audioTracks = streamRef.current!.getAudioTracks();
         if (audioTracks.length > 0) {
           const audioStream = new MediaStream(audioTracks);
-          let audioMime = 'audio/webm';
+          let audioMime = 'audio/webm;codecs=opus';
+          if (!MediaRecorder.isTypeSupported(audioMime)) {
+            audioMime = 'audio/webm';
+          }
           if (!MediaRecorder.isTypeSupported(audioMime)) {
             if (MediaRecorder.isTypeSupported('audio/mp4')) {
               audioMime = 'audio/mp4';
@@ -780,12 +783,16 @@ export function Recorder({
       let audioBlob: Blob | null = null;
 
       const checkComplete = () => {
-        if (storageBlob && exportBlob && (audioBlob || !audioRecorder)) {
+        const hasValidAudio = audioBlob && audioBlob.size > 500;
+        if (storageBlob && exportBlob && (hasValidAudio || !audioRecorder || (audioBlob && audioBlob.size <= 500))) {
           const eyeContactAvg = faceAnalysisResultsRef.current?.eyeContactAvg;
           const expressionScoreAvg = faceAnalysisResultsRef.current?.expressionScoreAvg;
+          
+          console.log(`[Recorder] Recording complete. Storage blob size: ${storageBlob.size}, Audio blob size: ${audioBlob?.size || 0}. Has valid audio: ${hasValidAudio}`);
+
           onRecordingComplete(
             storageBlob, 
-            audioBlob || storageBlob, 
+            hasValidAudio && audioBlob ? audioBlob : storageBlob, 
             eyeContactAvg, 
             expressionScoreAvg,
             exportBlob,
