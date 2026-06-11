@@ -224,7 +224,7 @@ export function Recorder({
   const audioWritePromisesRef = useRef<Promise<void>[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const downscaleIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const storageCanvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
   const storageStreamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const exportStreamRef = useRef<MediaStream | null>(null);
@@ -379,6 +379,11 @@ export function Recorder({
         ctx.restore();
         
         drawWatermark(ctx, canvas.width, canvas.height);
+
+        // Draw onto the downscaled storage canvas context synchronized with the animation frame
+        if (storageCanvasCtxRef.current) {
+          storageCanvasCtxRef.current.drawImage(canvas, 0, 0, 640, 360);
+        }
       }
       animationFrameIdRef.current = requestAnimationFrame(render);
     };
@@ -671,25 +676,15 @@ export function Recorder({
       isRecordingRef.current = true;
       startWatermarkRenderLoop();
 
-      // Create a downscaled 640x360 15fps canvas stream for the storage recorder
+      // Create a downscaled 640x360 30fps canvas stream for the storage recorder
       const canvas = document.createElement("canvas");
       canvas.width = 640;
       canvas.height = 360;
       const ctx = canvas.getContext("2d");
-      
-      const drawFrame = () => {
-        if (canvasRef.current && ctx) {
-          // Draw from watermarked canvasRef instead of raw videoRef
-          ctx.drawImage(canvasRef.current, 0, 0, 640, 360);
-        }
-      };
+      storageCanvasCtxRef.current = ctx;
 
-      // Draw frames on a 15fps interval (~66.7ms)
-      const downscaleInterval = setInterval(drawFrame, 1000 / 15);
-      downscaleIntervalRef.current = downscaleInterval;
-
-      // Extract low resolution video track
-      const lowResVideoStream = canvas.captureStream(15);
+      // Extract low resolution video track at 30fps for smooth playback
+      const lowResVideoStream = canvas.captureStream(30);
       const lowResVideoTrack = lowResVideoStream.getVideoTracks()[0];
       const audioTrack = streamRef.current?.getAudioTracks()[0];
 
@@ -961,10 +956,7 @@ export function Recorder({
     }
 
     // Stop downscaled loop interval and canvas track
-    if (downscaleIntervalRef.current) {
-      clearInterval(downscaleIntervalRef.current);
-      downscaleIntervalRef.current = null;
-    }
+    storageCanvasCtxRef.current = null;
     if (storageStreamRef.current) {
       storageStreamRef.current.getVideoTracks().forEach(track => track.stop());
       storageStreamRef.current = null;
