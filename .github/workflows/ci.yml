@@ -25,7 +25,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node-v22-${{ hashFiles('**/package-lock.json') }}
 
       - name: Install dependencies
         if: steps.cache-nodemodules.outputs.cache-hit != 'true'
@@ -36,10 +36,10 @@ jobs:
         with:
           path: |
             ${{ github.workspace }}/.next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          key: ${{ runner.os }}-nextjs-v22-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
-            ${{ runner.os }}-nextjs-
+            ${{ runner.os }}-nextjs-v22-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-nextjs-v22-
 
       - name: Run ESLint
         run: npm run lint
