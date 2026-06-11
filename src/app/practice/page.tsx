@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Recorder } from "@/components/Recorder";
 import { AnalysisMetrics } from "@/components/FeedbackDashboard";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -9,14 +8,28 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { useEffect, Suspense, useRef, useCallback } from "react";
 import { dailyChallenges, getRandomChallenge, Challenge } from "@/lib/challenges";
+import dynamic from "next/dynamic";
 
 // Modular Subcomponents
 import { PromptSelector } from "@/components/practice/PromptSelector";
-import { AnalysisLoader } from "@/components/practice/AnalysisLoader";
 import { AnalysisResults } from "@/components/practice/AnalysisResults";
 import { PendingAssignments } from "@/components/practice/PendingAssignments";
 import { ChallengeModal } from "@/components/practice/ChallengeModal";
 import { ToastNotification, Toast } from "@/components/practice/ToastNotification";
+
+const Recorder = dynamic(() => import("@/components/Recorder").then(mod => mod.Recorder), {
+  ssr: false,
+  loading: () => (
+    <div className="flex flex-col items-center justify-center p-24 w-full glass-panel rounded-3xl dark:border-white/5">
+      <Loader2 className="w-8 h-8 animate-spin text-themeText dark:text-white mb-4" />
+      <span className="text-xs font-semibold text-slate-500 dark:text-foreground/50 uppercase tracking-widest">Loading Recorder...</span>
+    </div>
+  )
+});
+
+const AnalysisLoader = dynamic(() => import("@/components/practice/AnalysisLoader").then(mod => mod.AnalysisLoader), {
+  ssr: false
+});
 
 function PracticeContent() {
   const { user, activeWorkspace } = useAuth();
