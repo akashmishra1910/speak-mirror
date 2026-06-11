@@ -1,12 +1,7 @@
 "use server";
 
 import nodemailer from "nodemailer";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { SupabaseClient } from "@supabase/supabase-js";
 
-const supabase = {
-  from(table: string) { return getSupabaseAdmin().from(table); }
-} as unknown as SupabaseClient;
 
 export interface SupportPayload {
   email: string;
@@ -23,28 +18,7 @@ export async function submitSupportRequest(payload: SupportPayload) {
   console.log("Message:", payload.message);
   console.log("========================================");
 
-  // Write support ticket payload to Supabase database
-  if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    try {
-      const { data, error } = await supabase
-        .from("support_tickets")
-        .insert({
-          email: payload.email,
-          category: payload.category,
-          message: payload.message,
-          status: "open",
-        })
-        .select();
 
-      if (error) {
-        console.error("Failed to store ticket in database:", error.message);
-      } else {
-        console.log("Successfully stored support ticket in database, ID:", data?.[0]?.id);
-      }
-    } catch (err: any) {
-      console.error("Exception while storing support ticket in database:", err.message);
-    }
-  }
 
 
   const recipientEmail = "teamclassiq@gmail.com";

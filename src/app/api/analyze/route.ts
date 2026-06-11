@@ -1,19 +1,13 @@
-import { NextResponse } from "next/server";
 import Groq, { toFile } from "groq-sdk";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { requireAuth } from "@/lib/auth";
 import { successResponse, errorResponse } from "@/lib/api-response";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'dummy' });
 
 export async function POST(request: Request) {
-  const supabaseAdmin = getSupabaseAdmin();
-  let userId: string | null = null;
-  
   // Authenticate to safeguard AI processing credits
   try {
-    const user = await requireAuth(request);
-    userId = user.id;
+    await requireAuth(request);
   } catch (authErr: any) {
     return errorResponse(authErr.message || "Unauthorized", 401);
   }
@@ -26,30 +20,14 @@ export async function POST(request: Request) {
     const expression = formData.get("expression") as string | null;
 
     if (!audioFile) {
-      try {
-        await supabaseAdmin.from('api_usage_logs').insert({
-          route: '/api/analyze',
-          user_id: userId,
-          status: 'error'
-        });
-      } catch (logErr) {
-        console.error("Failed to log API error:", logErr);
-      }
+
       return errorResponse("No audio file provided", 400);
     }
 
     if (!process.env.GROQ_API_KEY) {
       // Fallback for missing API key
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      try {
-        await supabaseAdmin.from('api_usage_logs').insert({
-          route: '/api/analyze',
-          user_id: userId,
-          status: 'success'
-        });
-      } catch (logErr) {
-        console.error("Failed to log API success:", logErr);
-      }
+
       return successResponse({
         confidence: 72,
         clarity: 80,
@@ -165,15 +143,7 @@ Note: Provide 2-3 highly specific suggestions. Ensure annotations are exact subs
 
     const analysis = JSON.parse(content);
 
-    try {
-      await supabaseAdmin.from('api_usage_logs').insert({
-        route: '/api/analyze',
-        user_id: userId,
-        status: 'success'
-      });
-    } catch (logErr) {
-      console.error("Failed to log API success:", logErr);
-    }
+
 
     return successResponse({
       confidence: analysis.confidence,
@@ -189,15 +159,7 @@ Note: Provide 2-3 highly specific suggestions. Ensure annotations are exact subs
 
   } catch (error: any) {
     console.error("Analysis error:", error);
-    try {
-      await supabaseAdmin.from('api_usage_logs').insert({
-        route: '/api/analyze',
-        user_id: userId,
-        status: 'error'
-      });
-    } catch (logErr) {
-      console.error("Failed to log API error:", logErr);
-    }
+
     return errorResponse(error.message || "Failed to analyze speech", 500);
   }
 }

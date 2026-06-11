@@ -1,18 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
-import { getCurrentUser } from '@/lib/auth';
 import { errorResponse } from '@/lib/api-response';
 
 export async function GET(request: Request) {
   const supabaseAdmin = getSupabaseAdmin();
-  let userId: string | null = null;
-  
-  try {
-    const user = await getCurrentUser(request);
-    if (user) userId = user.id;
-  } catch (e) {
-    // Ignore auth error during logging
-  }
 
   try {
     const { searchParams } = new URL(request.url);
@@ -20,15 +11,7 @@ export async function GET(request: Request) {
     const download = searchParams.get('download');
 
     if (!file) {
-      try {
-        await supabaseAdmin.from('api_usage_logs').insert({
-          route: '/api/video',
-          user_id: userId,
-          status: 'error'
-        });
-      } catch (logErr) {
-        console.error("Failed to log API error:", logErr);
-      }
+
       return errorResponse("Missing file parameter", 400);
     }
 
@@ -42,15 +25,7 @@ export async function GET(request: Request) {
 
     // If download is requested, redirect directly to the signed URL to trigger native download
     if (download) {
-      try {
-        await supabaseAdmin.from('api_usage_logs').insert({
-          route: '/api/video',
-          user_id: userId,
-          status: 'success'
-        });
-      } catch (logErr) {
-        console.error("Failed to log API success:", logErr);
-      }
+
       return NextResponse.redirect(data.signedUrl, 307);
     }
 
@@ -62,15 +37,7 @@ export async function GET(request: Request) {
     }
 
     // Return the stream with appropriate headers
-    try {
-      await supabaseAdmin.from('api_usage_logs').insert({
-        route: '/api/video',
-        user_id: userId,
-        status: 'success'
-      });
-    } catch (logErr) {
-      console.error("Failed to log API success:", logErr);
-    }
+
 
     return new NextResponse(response.body, {
       headers: {
@@ -81,15 +48,7 @@ export async function GET(request: Request) {
 
   } catch (err: any) {
     console.error('Video Proxy Error:', err);
-    try {
-      await supabaseAdmin.from('api_usage_logs').insert({
-        route: '/api/video',
-        user_id: userId,
-        status: 'error'
-      });
-    } catch (logErr) {
-      console.error("Failed to log API error:", logErr);
-    }
+
     return errorResponse("Internal Server Error", 500);
   }
 }

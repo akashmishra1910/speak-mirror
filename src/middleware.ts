@@ -66,21 +66,14 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Protect paths: /profile, /rooms, /admin
+  // Protect paths: /profile, /rooms
   const isProtectedPath =
     pathname.startsWith("/profile") ||
-    pathname.startsWith("/rooms") ||
-    pathname.startsWith("/admin");
+    pathname.startsWith("/rooms");
 
   if (isProtectedPath && !user) {
     const loginUrl = new URL("/auth", request.url);
     return NextResponse.redirect(loginUrl);
-  }
-
-  // Admin role check for admin routes
-  if (pathname.startsWith("/admin") && user && user.user_metadata?.role !== "admin") {
-    const url = new URL("/practice", request.url);
-    return NextResponse.redirect(url);
   }
 
   // Mentor dashboard check

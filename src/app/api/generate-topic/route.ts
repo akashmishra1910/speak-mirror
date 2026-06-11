@@ -18,8 +18,8 @@ export async function GET(request: Request) {
     try {
       user = await requireAuth(request);
       userId = user?.id || null;
-    } catch (authErr: any) {
-      // Allow unauthenticated requests to read from pool without personalization
+    } catch {
+      // Allow unauthenticated requests without personalization
     }
 
     if (!process.env.GROQ_API_KEY && !userId) {
@@ -111,32 +111,6 @@ export async function GET(request: Request) {
       }
     }
 
-    // Try to load from pre-generated pool first for cost control
-    try {
-      let query = supabaseAdmin.from("practice_tasks").select("*");
-      if (difficultyLevel) {
-        query = query.ilike("difficulty_level", difficultyLevel);
-      }
-      
-      const { data: poolTasks } = await query;
-        
-      if (poolTasks && poolTasks.length > 0) {
-        // Filter out past topics
-        const availableTasks = poolTasks.filter(t => !pastTopics.includes(t.topic_of_the_day));
-        const selectedTask = availableTasks.length > 0
-          ? availableTasks[Math.floor(Math.random() * availableTasks.length)]
-          : poolTasks[Math.floor(Math.random() * poolTasks.length)];
-          
-        if (selectedTask) {
-          return successResponse({
-            topic: selectedTask.topic_of_the_day,
-            bullets: selectedTask.bullets || []
-          });
-        }
-      }
-    } catch (poolErr) {
-      console.warn("Failed to fetch from practice_tasks pool, falling back to live AI:", poolErr);
-    }
 
     // Fallback to live AI topic generation using Groq
     if (!process.env.GROQ_API_KEY) {
