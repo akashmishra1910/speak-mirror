@@ -7,15 +7,17 @@ export interface FaceAnalysisResult {
   expressionScoreAvg: number;
 }
 
-export function useFaceAnalysis(videoRef: React.RefObject<HTMLVideoElement | null>, enabled: boolean = true) {
+export function useFaceAnalysis(
+  videoRef: React.RefObject<HTMLVideoElement | null>, 
+  enabled: boolean = true,
+  onTelemetryUpdate?: (metrics: { eyeContact: number; expression: number; isBlinking: boolean; gazeWarning: boolean }) => void
+) {
   const [isLoading, setIsLoading] = useState(false);
   const [isModelReady, setIsModelReady] = useState(false);
-  const [liveEyeContact, setLiveEyeContact] = useState<number>(100);
-  const [liveExpression, setLiveExpression] = useState<number>(50);
-  const [liveIsBlinking, setLiveIsBlinking] = useState(false);
-  const [liveGazeWarning, setLiveGazeWarning] = useState(false);
   const [earBaseline, setEarBaseline] = useState<number>(0.22);
   const [blinkThreshold, setBlinkThreshold] = useState<number>(0.15);
+
+  const lastEyeContactRef = useRef<number>(100);
 
   const workerRef = useRef<Worker | null>(null);
   const intervalIdRef = useRef<NodeJS.Timeout | null>(null);
@@ -154,9 +156,14 @@ export function useFaceAnalysis(videoRef: React.RefObject<HTMLVideoElement | nul
             }
 
             if (now - lastStateUpdateRef.current > 150) {
-              setLiveIsBlinking(true);
-              setLiveGazeWarning(false);
-              setLiveExpression(Math.round(expressionScoreVal));
+              if (onTelemetryUpdate) {
+                onTelemetryUpdate({
+                  eyeContact: lastEyeContactRef.current,
+                  expression: Math.round(expressionScoreVal),
+                  isBlinking: true,
+                  gazeWarning: false
+                });
+              }
               lastStateUpdateRef.current = now;
             }
           } else {
@@ -207,11 +214,18 @@ export function useFaceAnalysis(videoRef: React.RefObject<HTMLVideoElement | nul
               expressionScoresRef.current.push(expressionScoreVal);
             }
 
+            const roundedEyeContact = Math.round(eyeContactVal);
+            lastEyeContactRef.current = roundedEyeContact;
+            
             if (now - lastStateUpdateRef.current > 150) {
-              setLiveIsBlinking(false);
-              setLiveEyeContact(Math.round(eyeContactVal));
-              setLiveExpression(Math.round(expressionScoreVal));
-              setLiveGazeWarning(isDebouncedGazeWarning);
+              if (onTelemetryUpdate) {
+                onTelemetryUpdate({
+                  eyeContact: roundedEyeContact,
+                  expression: Math.round(expressionScoreVal),
+                  isBlinking: false,
+                  gazeWarning: isDebouncedGazeWarning
+                });
+              }
               lastStateUpdateRef.current = now;
             }
           }
@@ -334,10 +348,6 @@ export function useFaceAnalysis(videoRef: React.RefObject<HTMLVideoElement | nul
   return {
     isLoading,
     isModelReady,
-    liveEyeContact,
-    liveExpression,
-    liveIsBlinking,
-    liveGazeWarning,
     startAnalysis,
     stopAnalysis,
   };

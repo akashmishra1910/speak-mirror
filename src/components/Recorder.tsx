@@ -126,7 +126,6 @@ export function Recorder({
   profileDuration = 1
 }: RecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   
   // Camera & Countdown states
@@ -136,11 +135,6 @@ export function Recorder({
   // Warmup state
   const [showWarmupModal, setShowWarmupModal] = useState(false);
   const [hasWarmedUpState, setHasWarmedUpState] = useState(false);
-  
-  // Live speech analysis states
-  const [liveFillerCount, setLiveFillerCount] = useState(0);
-  const [liveWpm, setLiveWpm] = useState(130);
-  const [pacingStatus, setPacingStatus] = useState<"slow" | "good" | "fast">("good");
   
   const [topic, setTopic] = useState("Generating topic...");
   const [bullets, setBullets] = useState<{label: string, text: string}[]>([]);
@@ -152,8 +146,29 @@ export function Recorder({
   
   // Custom Bell Alert Timing (default: 75 seconds, i.e. 15 seconds remaining)
   const [bellTiming, setBellTiming] = useState(75);
-  const [showConcludePrompt, setShowConcludePrompt] = useState(false);
   const hasTriggeredBellRef = useRef(false);
+
+  // High-frequency UI Refs for zero-latency DOM updates
+  const timeLeftRef = useRef<number>(timeLimit);
+  const timerContainerRef = useRef<HTMLDivElement | null>(null);
+  const timerTextRef = useRef<HTMLSpanElement | null>(null);
+  const liveFillerContainerRef = useRef<HTMLDivElement | null>(null);
+  const liveFillerTextRef = useRef<HTMLSpanElement | null>(null);
+  const livePacingContainerRef = useRef<HTMLDivElement | null>(null);
+  const liveWpmTextRef = useRef<HTMLSpanElement | null>(null);
+  const needleRef = useRef<HTMLDivElement | null>(null);
+  const gazeWarningRef = useRef<HTMLDivElement | null>(null);
+  const coachNudgeRef = useRef<HTMLDivElement | null>(null);
+  const coachNudgeTextRef = useRef<HTMLSpanElement | null>(null);
+  const eyeContactTextRef = useRef<HTMLSpanElement | null>(null);
+  const eyeContactBarRef = useRef<HTMLDivElement | null>(null);
+  const expressionTextRef = useRef<HTMLSpanElement | null>(null);
+  const expressionBarRef = useRef<HTMLDivElement | null>(null);
+  const concludePromptRef = useRef<HTMLDivElement | null>(null);
+  const telemetryCardRef = useRef<HTMLDivElement | null>(null);
+  const animationFrameIdRef = useRef<number | null>(null);
+  const isRecordingRef = useRef(false);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load preferences from localStorage on mount
   useEffect(() => {
@@ -220,20 +235,40 @@ export function Recorder({
   const {
     isLoading: isFaceLoading,
     isModelReady: isFaceReady,
-    liveEyeContact,
-    liveExpression,
-    liveIsBlinking,
-    liveGazeWarning,
     startAnalysis,
     stopAnalysis,
-  } = useFaceAnalysis(videoRef, !!userId);
+  } = useFaceAnalysis(videoRef, !!userId, (metrics) => {
+    // High-frequency telemetry direct DOM updates
+    if (eyeContactTextRef.current) {
+      eyeContactTextRef.current.textContent = metrics.isBlinking ? 'BLINKING...' : `${metrics.eyeContact}%`;
+      eyeContactTextRef.current.className = metrics.gazeWarning ? 'text-red-400 font-extrabold text-right drop-shadow-[0_0_6px_rgba(239,68,68,0.4)]' : 'text-cyan-400 font-extrabold text-right drop-shadow-[0_0_6px_rgba(34,211,238,0.4)]';
+    }
+    if (eyeContactBarRef.current) {
+      eyeContactBarRef.current.style.width = `${metrics.isBlinking ? 0 : metrics.eyeContact}%`;
+      if (metrics.gazeWarning) {
+        eyeContactBarRef.current.className = 'h-full bg-red-500 rounded-full shadow-[0_0_10px_rgba(239,68,68,0.6)] transition-all duration-150 ease-out';
+      } else {
+        eyeContactBarRef.current.className = 'h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.6)] transition-all duration-150 ease-out';
+      }
+    }
+
+    if (expressionTextRef.current) {
+      expressionTextRef.current.textContent = `${metrics.expression}%`;
+    }
+    if (expressionBarRef.current) {
+      expressionBarRef.current.style.width = `${metrics.expression}%`;
+    }
+
+    if (gazeWarningRef.current) {
+      gazeWarningRef.current.style.display = (metrics.gazeWarning && !metrics.isBlinking && isRecordingRef.current) ? 'flex' : 'none';
+    }
+  });
 
   const faceAnalysisResultsRef = useRef<{ eyeContactAvg: number; expressionScoreAvg: number } | null>(null);
 
   // Real-time AI session telemetry and Web Worker refs
   const [hasNudgedFiller, setHasNudgedFiller] = useState(false);
   const [hasNudgedPacing, setHasNudgedPacing] = useState(false);
-  const [coachNudge, setCoachNudge] = useState<string | null>(null);
 
   const transcriptWorkerRef = useRef<Worker | null>(null);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -324,64 +359,40 @@ export function Recorder({
     ctx.fillText(text, x + pillWidth / 2, y + pillHeight / 2 + 1);
   };
 
-  // Web camera watermark rendering loop
-  useEffect(() => {
-    if (hasPermission !== true || !videoRef.current) return;
-    
+  const startWatermarkRenderLoop = () => {
     const video = videoRef.current;
-    let animationFrameId: number;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
 
-    const renderLoop = () => {
-      const canvas = canvasRef.current;
-      if (canvas && video.readyState >= 2) {
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-            canvas.width = video.videoWidth || 640;
-            canvas.height = video.videoHeight || 480;
-          }
-          // Draw video frame mirrored (horizontally flipped)
-          ctx.save();
-          ctx.translate(canvas.width, 0);
-          ctx.scale(-1, 1);
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          ctx.restore();
-          // Draw "SpeakMirror" watermark
-          drawWatermark(ctx, canvas.width, canvas.height);
-          // Mark camera as loaded
-          setCameraLoaded(true);
+    const render = () => {
+      if (!isRecordingRef.current) return;
+      const ctx = canvas.getContext("2d");
+      if (ctx && video.readyState >= 2) {
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+          canvas.width = video.videoWidth || 640;
+          canvas.height = video.videoHeight || 480;
         }
+        ctx.save();
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
+        
+        drawWatermark(ctx, canvas.width, canvas.height);
       }
-      animationFrameId = requestAnimationFrame(renderLoop);
+      animationFrameIdRef.current = requestAnimationFrame(render);
     };
 
-    const startLoop = () => {
-      animationFrameId = requestAnimationFrame(renderLoop);
-    };
+    animationFrameIdRef.current = requestAnimationFrame(render);
+  };
 
-    const stopLoop = () => {
-      cancelAnimationFrame(animationFrameId);
-    };
 
-    video.addEventListener("play", startLoop);
-    video.addEventListener("pause", stopLoop);
-    video.addEventListener("ended", stopLoop);
 
-    if (!video.paused && video.readyState >= 2) {
-      startLoop();
-    }
-
-    return () => {
-      video.removeEventListener("play", startLoop);
-      video.removeEventListener("pause", stopLoop);
-      video.removeEventListener("ended", stopLoop);
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, [hasPermission]);
-
-  // Sync timeLeft when timeLimit or mode changes
+  // Sync timer text when timeLimit or mode changes
   useEffect(() => {
-    setTimeLeft(timeLimit);
+    if (timerTextRef.current) {
+      timerTextRef.current.textContent = formatTime(timeLimit);
+    }
   }, [timeLimit, mode]);
 
   // Trigger recording automatically if autoStart is true and camera is loaded
@@ -412,47 +423,7 @@ export function Recorder({
     }
   }, [mode, taskTopic]);
 
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (isRecording && timeLeft > 0) {
-      timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          const nextTime = prev - 1;
-          const elapsed = timeLimit - nextTime;
-          
-          // Update WPM pacing metrics dynamically
-          const elapsedSeconds = elapsed;
-          const elapsedMinutes = elapsedSeconds / 60;
-          if (elapsedSeconds > 3 && wordCountRef.current > 0) {
-            const currentWpm = Math.round(wordCountRef.current / elapsedMinutes);
-            setLiveWpm(currentWpm);
-            if (currentWpm < 110) {
-              setPacingStatus("slow");
-            } else if (currentWpm <= 150) {
-              setPacingStatus("good");
-            } else {
-              setPacingStatus("fast");
-            }
-          } else {
-            setPacingStatus("good");
-            setLiveWpm(130); // Baseline default
-          }
 
-          if (elapsed === bellTiming && !hasTriggeredBellRef.current) {
-            hasTriggeredBellRef.current = true;
-            playBellSound();
-            setShowConcludePrompt(true);
-            setTimeout(() => setShowConcludePrompt(false), 4000);
-          }
-          
-          return nextTime;
-        });
-      }, 1000);
-    } else if (timeLeft === 0 && isRecording) {
-      stopRecording();
-    }
-    return () => clearInterval(timer);
-  }, [isRecording, timeLeft, timeLimit, bellTiming]);
 
   const fetchDynamicTopic = async (bulletsOnly = false) => {
     if (!bulletsOnly) {
@@ -510,26 +481,48 @@ export function Recorder({
     transcriptWorkerRef.current = worker;
 
     worker.onmessage = (e: MessageEvent) => {
-      const { fillerCount, lastFiller, fillerLog, rollingWpm, avgWpm, wordCount } = e.data;
+      const { fillerCount, fillerLog, rollingWpm, avgWpm, wordCount } = e.data;
 
-      setLiveFillerCount(fillerCount);
-      setLiveWpm(rollingWpm);
       currentRollingWpmRef.current = rollingWpm;
       avgWpmRef.current = avgWpm;
       wordCountRef.current = wordCount;
       fillerLogRef.current = fillerLog;
 
+      if (liveFillerTextRef.current) {
+        liveFillerTextRef.current.textContent = `FILLERS: ${fillerCount}`;
+      }
+
       let status: "slow" | "good" | "fast" = "good";
       if (rollingWpm < 110) status = "slow";
       else if (rollingWpm > 150) status = "fast";
-      setPacingStatus(status);
+
+      if (liveWpmTextRef.current) {
+        liveWpmTextRef.current.textContent = `${rollingWpm} WPM // ${status.toUpperCase()}`;
+        if (status === "good") {
+          liveWpmTextRef.current.className = "text-emerald-400 font-extrabold";
+        } else if (status === "slow") {
+          liveWpmTextRef.current.className = "text-cyan-400 font-extrabold";
+        } else {
+          liveWpmTextRef.current.className = "text-amber-400 font-extrabold";
+        }
+      }
+
+      if (needleRef.current) {
+        const percent = Math.min(Math.max((rollingWpm - 60) / (220 - 60) * 100, 0), 100);
+        needleRef.current.style.left = `${percent}%`;
+      }
 
       // Mid-session coach nudges (C4)
       if (fillerCount > 10 && !hasNudgedFiller) {
         setHasNudgedFiller(true);
-        setCoachNudge("Too many fillers — try pausing for transition");
+        if (coachNudgeRef.current && coachNudgeTextRef.current) {
+          coachNudgeTextRef.current.textContent = "Too many fillers — try pausing for transition";
+          coachNudgeRef.current.style.display = 'flex';
+        }
         setTimeout(() => {
-          setCoachNudge(null);
+          if (coachNudgeRef.current) {
+            coachNudgeRef.current.style.display = 'none';
+          }
         }, 4000);
       }
 
@@ -537,9 +530,14 @@ export function Recorder({
         fastPacingCountRef.current += 1;
         if (fastPacingCountRef.current >= 5 && !hasNudgedPacing) {
           setHasNudgedPacing(true);
-          setCoachNudge("Pacing is fast — take a deep breath and slow down");
+          if (coachNudgeRef.current && coachNudgeTextRef.current) {
+            coachNudgeTextRef.current.textContent = "Pacing is fast — take a deep breath and slow down";
+            coachNudgeRef.current.style.display = 'flex';
+          }
           setTimeout(() => {
-            setCoachNudge(null);
+            if (coachNudgeRef.current) {
+              coachNudgeRef.current.style.display = 'none';
+            }
           }, 4000);
         }
       } else {
@@ -607,16 +605,11 @@ export function Recorder({
     if (!streamRef.current) return;
     setHasStartedCountdown(false);
     hasTriggeredBellRef.current = false;
-    setShowConcludePrompt(false);
-    setLiveFillerCount(0);
-    setLiveWpm(130);
-    setPacingStatus("good");
     wordCountRef.current = 0;
 
     // Reset coaching nudges and stats logs
     setHasNudgedFiller(false);
     setHasNudgedPacing(false);
-    setCoachNudge(null);
     recordingStartTimeRef.current = Date.now();
     fillerLogRef.current = [];
     pacingLogRef.current = [];
@@ -673,6 +666,10 @@ export function Recorder({
       if (!canvasRef.current) {
         throw new Error("Preview canvas not ready");
       }
+
+      // Start background canvas watermark render loop
+      isRecordingRef.current = true;
+      startWatermarkRenderLoop();
 
       // Create a downscaled 640x360 15fps canvas stream for the storage recorder
       const canvas = document.createElement("canvas");
@@ -851,7 +848,97 @@ export function Recorder({
       }
       
       setIsRecording(true);
-      setTimeLeft(timeLimit);
+      
+      // Initialize zero-latency timer
+      timeLeftRef.current = timeLimit;
+      if (timerContainerRef.current) {
+        timerContainerRef.current.style.display = 'flex';
+      }
+      if (timerTextRef.current) {
+        timerTextRef.current.textContent = formatTime(timeLimit);
+      }
+      
+      // Show telemetry controls if active
+      if (userId) {
+        if (liveFillerContainerRef.current) {
+          liveFillerContainerRef.current.style.display = 'flex';
+        }
+        if (liveFillerTextRef.current) {
+          liveFillerTextRef.current.textContent = "FILLERS: 0";
+        }
+        if (livePacingContainerRef.current) {
+          livePacingContainerRef.current.style.display = 'flex';
+        }
+        if (liveWpmTextRef.current) {
+          liveWpmTextRef.current.textContent = "130 WPM // GOOD";
+          liveWpmTextRef.current.className = "text-emerald-400 font-extrabold";
+        }
+        if (needleRef.current) {
+          needleRef.current.style.left = "43.75%";
+        }
+      }
+
+      timerIntervalRef.current = setInterval(() => {
+        if (timeLeftRef.current > 0) {
+          timeLeftRef.current -= 1;
+          const elapsed = timeLimit - timeLeftRef.current;
+          
+          if (timerTextRef.current) {
+            timerTextRef.current.textContent = formatTime(timeLeftRef.current);
+          }
+          
+          // Update WPM pacing metrics dynamically
+          const elapsedSeconds = elapsed;
+          const elapsedMinutes = elapsedSeconds / 60;
+          let wpm = 130;
+          let status: "slow" | "good" | "fast" = "good";
+          
+          if (elapsedSeconds > 3 && wordCountRef.current > 0) {
+            wpm = Math.round(wordCountRef.current / elapsedMinutes);
+          }
+          currentRollingWpmRef.current = wpm;
+          
+          if (wpm < 110) {
+            status = "slow";
+          } else if (wpm <= 150) {
+            status = "good";
+          } else {
+            status = "fast";
+          }
+
+          if (liveWpmTextRef.current) {
+            liveWpmTextRef.current.textContent = `${wpm} WPM // ${status.toUpperCase()}`;
+            if (status === "good") {
+              liveWpmTextRef.current.className = "text-emerald-400 font-extrabold";
+            } else if (status === "slow") {
+              liveWpmTextRef.current.className = "text-cyan-400 font-extrabold";
+            } else {
+              liveWpmTextRef.current.className = "text-amber-400 font-extrabold";
+            }
+          }
+
+          if (needleRef.current) {
+            const percent = Math.min(Math.max((wpm - 60) / (220 - 60) * 100, 0), 100);
+            needleRef.current.style.left = `${percent}%`;
+          }
+
+          if (elapsed === bellTiming && !hasTriggeredBellRef.current) {
+            hasTriggeredBellRef.current = true;
+            playBellSound();
+            if (concludePromptRef.current) {
+              concludePromptRef.current.style.display = 'flex';
+            }
+            setTimeout(() => {
+              if (concludePromptRef.current) {
+                concludePromptRef.current.style.display = 'none';
+              }
+            }, 4000);
+          }
+        } else {
+          stopRecording();
+        }
+      }, 1000);
+
     } catch (err) {
       console.error("Error starting recording", err);
       alert("There was an error starting the recording. Your browser might not support the required video format.");
@@ -859,6 +946,8 @@ export function Recorder({
   };
 
   function stopRecording() {
+    isRecordingRef.current = false;
+
     if (isRecording && userId) {
       faceAnalysisResultsRef.current = stopAnalysis();
     }
@@ -875,6 +964,38 @@ export function Recorder({
     if (exportStreamRef.current) {
       exportStreamRef.current.getVideoTracks().forEach(track => track.stop());
       exportStreamRef.current = null;
+    }
+
+    // Stop background canvas rendering loop
+    if (animationFrameIdRef.current) {
+      cancelAnimationFrame(animationFrameIdRef.current);
+      animationFrameIdRef.current = null;
+    }
+
+    // Stop timer interval
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+
+    // Hide DOM containers
+    if (timerContainerRef.current) {
+      timerContainerRef.current.style.display = 'none';
+    }
+    if (liveFillerContainerRef.current) {
+      liveFillerContainerRef.current.style.display = 'none';
+    }
+    if (livePacingContainerRef.current) {
+      livePacingContainerRef.current.style.display = 'none';
+    }
+    if (concludePromptRef.current) {
+      concludePromptRef.current.style.display = 'none';
+    }
+    if (coachNudgeRef.current) {
+      coachNudgeRef.current.style.display = 'none';
+    }
+    if (gazeWarningRef.current) {
+      gazeWarningRef.current.style.display = 'none';
     }
 
     // Stop Speech Recognition
@@ -947,22 +1068,15 @@ export function Recorder({
         {/* Main Video Card */}
         <div className="glass-panel rounded-[2rem] flex flex-col items-center justify-center w-full max-w-sm relative overflow-hidden aspect-[9/16] max-h-[calc(100vh-120px)] shadow-2xl border border-white/5 group bg-black float-slow interactive-card">
           
-          {/* Live Video Feed (Hidden, used as frame source) */}
+          {/* Live Video Feed (Visible camera preview mirrored in hardware, zero copy) */}
           <video 
             ref={videoRef}
             autoPlay 
             playsInline 
             muted 
-            className="hidden"
-            style={{ display: "none" }}
-          />
-          
-          {/* Live Video Feed Canvas with Watermark */}
-          <canvas 
-            ref={canvasRef}
             className="absolute inset-0 w-full h-full object-cover z-0"
             style={{ 
-              transform: 'translateZ(0)', // Mirror effect handled in 2D context drawing
+              transform: 'scaleX(-1) translateZ(0)',
               willChange: 'transform',
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
@@ -970,6 +1084,15 @@ export function Recorder({
               opacity: cameraLoaded ? 1 : 0,
               transition: 'opacity 1s ease-out'
             }}
+            onPlay={() => setCameraLoaded(true)}
+            onLoadedMetadata={() => setCameraLoaded(true)}
+          />
+          
+          {/* Hidden Canvas used for watermark processing inside background recorder loops only */}
+          <canvas 
+            ref={canvasRef}
+            className="hidden"
+            style={{ display: "none" }}
           />
           
           {/* Subtle Overlay gradient for readability */}
@@ -1010,7 +1133,7 @@ export function Recorder({
 
               {/* Bottom HUD Telemetry Card */}
               {isFaceReady && (
-                <div className="w-full bg-zinc-950/60 backdrop-blur-lg border border-white/10 rounded-2xl p-4 flex flex-col gap-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all duration-300 mb-16">
+                <div ref={telemetryCardRef} className="w-full bg-zinc-950/60 backdrop-blur-lg border border-white/10 rounded-2xl p-4 flex flex-col gap-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all duration-300 mb-16">
                   {/* Telemetry Header */}
                   <div className="flex justify-between items-center text-[9px] text-zinc-400 border-b border-white/5 pb-1.5 font-bold uppercase tracking-widest">
                     <span>// face_telemetry_feed</span>
@@ -1021,14 +1144,15 @@ export function Recorder({
                   <div className="flex flex-col gap-1.5">
                     <div className="flex justify-between items-center text-xs text-white">
                       <span className="text-[10px] font-semibold text-zinc-300 tracking-wider">GAZE // EYE_CONTACT</span>
-                      <span className={`${liveGazeWarning ? 'text-red-400' : 'text-cyan-400'} font-extrabold text-right drop-shadow-[0_0_6px_rgba(34,211,238,0.4)]`}>
-                        {liveIsBlinking ? 'BLINKING...' : `${liveEyeContact}%`}
+                      <span ref={eyeContactTextRef} className="text-cyan-400 font-extrabold text-right drop-shadow-[0_0_6px_rgba(34,211,238,0.4)]">
+                        100%
                       </span>
                     </div>
                     <div className="w-full bg-zinc-900/80 h-1.5 rounded-full overflow-hidden border border-white/5">
                       <div 
-                        className={`h-full rounded-full transition-all duration-150 ease-out ${liveGazeWarning ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)]' : 'bg-gradient-to-r from-cyan-500 to-blue-500 shadow-[0_0_10px_rgba(34,211,238,0.6)]'}`} 
-                        style={{ width: `${liveIsBlinking ? 0 : liveEyeContact}%` }} 
+                        ref={eyeContactBarRef}
+                        className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.6)] transition-all duration-150 ease-out" 
+                        style={{ width: '100%' }} 
                       />
                     </div>
                   </div>
@@ -1037,12 +1161,13 @@ export function Recorder({
                   <div className="flex flex-col gap-1.5">
                     <div className="flex justify-between items-center text-xs text-white">
                       <span className="text-[10px] font-semibold text-zinc-300 tracking-wider">EXPR // EXPRESSION</span>
-                      <span className="text-emerald-400 font-extrabold text-right drop-shadow-[0_0_6px_rgba(52,211,153,0.4)]">{liveExpression}%</span>
+                      <span ref={expressionTextRef} className="text-emerald-400 font-extrabold text-right drop-shadow-[0_0_6px_rgba(52,211,153,0.4)]">50%</span>
                     </div>
                     <div className="w-full bg-zinc-900/80 h-1.5 rounded-full overflow-hidden border border-white/5">
                       <div 
+                        ref={expressionBarRef}
                         className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full shadow-[0_0_10px_rgba(52,211,153,0.6)] transition-all duration-150 ease-out" 
-                        style={{ width: `${liveExpression}%` }} 
+                        style={{ width: '50%' }} 
                       />
                     </div>
                   </div>
@@ -1052,49 +1177,41 @@ export function Recorder({
           )}
 
           {/* Live Filler Counter HUD Overlay */}
-          {isRecording && userId && (
-            <div className="absolute top-16 right-4 z-20 flex flex-col gap-1 items-end pointer-events-none select-none">
-              <div className="px-3 py-1.5 rounded-xl bg-black/60 border border-amber-500/30 backdrop-blur-md flex items-center gap-2 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                <span className="text-[10px] font-extrabold text-amber-400 tracking-widest uppercase">FILLERS: {liveFillerCount}</span>
-              </div>
-              <span className="text-[8px] text-white/50 tracking-widest uppercase bg-black/35 px-1.5 py-0.5 rounded-md">"um" "uh" "like"</span>
+          <div 
+            ref={liveFillerContainerRef}
+            className="absolute top-16 right-4 z-20 flex-col gap-1 items-end pointer-events-none select-none"
+            style={{ display: 'none' }}
+          >
+            <div className="px-3 py-1.5 rounded-xl bg-black/60 border border-amber-500/30 backdrop-blur-md flex items-center gap-2 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+              <span ref={liveFillerTextRef} className="text-[10px] font-extrabold text-amber-400 tracking-widest uppercase">FILLERS: 0</span>
             </div>
-          )}
+            <span className="text-[8px] text-white/50 tracking-widest uppercase bg-black/35 px-1.5 py-0.5 rounded-md">"um" "uh" "like"</span>
+          </div>
 
           {/* Debounced Gaze Warning (Look at Camera) */}
-          <AnimatePresence>
-            {liveGazeWarning && !liveIsBlinking && isRecording && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                className="absolute inset-x-4 top-24 z-30 mx-auto max-w-[200px] bg-red-950/90 border border-red-500/30 backdrop-blur-md px-3.5 py-2 rounded-xl text-center shadow-[0_0_20px_rgba(239,68,68,0.25)] flex items-center justify-center gap-2"
-              >
-                <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping" />
-                <span className="text-[10px] font-extrabold text-red-400 uppercase tracking-widest font-mono">
-                  Look at camera
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <div
+            ref={gazeWarningRef}
+            className="absolute inset-x-4 top-24 z-30 mx-auto max-w-[200px] bg-red-950/90 border border-red-500/30 backdrop-blur-md px-3.5 py-2 rounded-xl text-center shadow-[0_0_20px_rgba(239,68,68,0.25)] flex items-center justify-center gap-2"
+            style={{ display: 'none' }}
+          >
+            <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping" />
+            <span className="text-[10px] font-extrabold text-red-400 uppercase tracking-widest font-mono">
+              Look at camera
+            </span>
+          </div>
 
           {/* Real-time Coach Nudges HUD overlay */}
-          <AnimatePresence>
-            {coachNudge && isRecording && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 15 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 15 }}
-                className="absolute inset-x-4 bottom-32 z-30 mx-auto max-w-[280px] bg-indigo-950/90 border border-indigo-500/30 backdrop-blur-md px-3.5 py-2.5 rounded-xl text-center shadow-[0_0_20px_rgba(99,102,241,0.25)] flex items-center justify-center gap-2 pointer-events-none"
-              >
-                <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse shrink-0" />
-                <span className="text-[10px] font-extrabold text-indigo-200 tracking-wider font-mono">
-                  {coachNudge}
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <div
+            ref={coachNudgeRef}
+            className="absolute inset-x-4 bottom-32 z-30 mx-auto max-w-[280px] bg-indigo-950/90 border border-indigo-500/30 backdrop-blur-md px-3.5 py-2.5 rounded-xl text-center shadow-[0_0_20px_rgba(99,102,241,0.25)] flex items-center justify-center gap-2 pointer-events-none"
+            style={{ display: 'none' }}
+          >
+            <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse shrink-0" />
+            <span ref={coachNudgeTextRef} className="text-[10px] font-extrabold text-indigo-200 tracking-wider font-mono">
+              Nudge
+            </span>
+          </div>
 
           {/* Countdown Overlay removed */}
 
@@ -1125,41 +1242,31 @@ export function Recorder({
           )}
 
           {/* Visual Conclude Prompt Overlay */}
-          <AnimatePresence>
-            {showConcludePrompt && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8, y: -20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.8, y: -20 }}
-                className="absolute inset-x-4 top-1/3 z-30 mx-auto max-w-[280px] bg-red-950/80 border border-red-500/20 backdrop-blur-md px-4 py-3 rounded-2xl text-center shadow-[0_0_30px_rgba(239,68,68,0.15)] flex flex-col items-center gap-1"
-              >
-                <div className="flex items-center gap-2 text-red-400 font-extrabold text-xs uppercase tracking-wider">
-                  <Bell className="w-3.5 h-3.5 animate-bounce" />
-                  Conclude Speech
-                </div>
-                <p className="text-[11px] text-white/90 font-light leading-relaxed">
-                  {timeLimit - bellTiming} seconds remaining! Wrap up your final thoughts.
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <div
+            ref={concludePromptRef}
+            className="absolute inset-x-4 top-1/3 z-30 mx-auto max-w-[280px] bg-red-950/80 border border-red-500/20 backdrop-blur-md px-4 py-3 rounded-2xl text-center shadow-[0_0_30px_rgba(239,68,68,0.15)] flex flex-col items-center gap-1"
+            style={{ display: 'none' }}
+          >
+            <div className="flex items-center gap-2 text-red-400 font-extrabold text-xs uppercase tracking-wider">
+              <Bell className="w-3.5 h-3.5 animate-bounce" />
+              Conclude Speech
+            </div>
+            <p className="text-[11px] text-white/90 font-light leading-relaxed">
+              {timeLimit - bellTiming} seconds remaining! Wrap up your final thoughts.
+            </p>
+          </div>
 
           {/* Top Section: Timer & Indicators */}
           <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-start pointer-events-none">
             {/* PiP Timer */}
-            <AnimatePresence>
-              {isRecording && !isProcessing && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-lg"
-                >
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                  <span className="text-white font-mono font-medium tracking-wider text-xs">{formatTime(timeLeft)}</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div 
+              ref={timerContainerRef}
+              className="bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-lg"
+              style={{ display: 'none' }}
+            >
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              <span ref={timerTextRef} className="text-white font-mono font-medium tracking-wider text-xs">0:00</span>
+            </div>
 
             {/* Toggle Button for Assist or Teleprompter */}
             {mode === "reading" ? (
@@ -1263,48 +1370,43 @@ export function Recorder({
         </div>
 
         {/* Pacing Speedometer Bar */}
-        <AnimatePresence>
-          {isRecording && userId && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="glass-panel w-full p-4 rounded-2xl bg-zinc-950/60 border border-white/5 backdrop-blur-md flex flex-col gap-2.5 text-left"
+        <div 
+          ref={livePacingContainerRef}
+          className="glass-panel w-full p-4 rounded-2xl bg-zinc-950/60 border border-white/5 backdrop-blur-md flex-col gap-2.5 text-left"
+          style={{ display: 'none' }}
+        >
+          <div className="flex justify-between items-center text-[10px] text-zinc-400 font-bold uppercase tracking-widest font-mono">
+            <span>// live_pacing_indicator</span>
+            <span ref={liveWpmTextRef} className="text-emerald-400 font-extrabold">
+              130 WPM // GOOD
+            </span>
+          </div>
+          
+          {/* Horizontal Speedometer Bar */}
+          <div className="relative h-2 w-full bg-zinc-900 rounded-full border border-white/5 overflow-visible mt-1">
+            {/* Slow zone */}
+            <div className="absolute left-0 top-0 bottom-0 w-[31.25%] bg-gradient-to-r from-cyan-500/40 to-blue-500/40 rounded-l-full border-r border-white/10" />
+            {/* Good zone */}
+            <div className="absolute left-[31.25%] top-0 bottom-0 w-[25%] bg-gradient-to-r from-emerald-500/50 to-teal-500/50 border-r border-white/10" />
+            {/* Fast zone */}
+            <div className="absolute left-[56.25%] top-0 bottom-0 w-[43.75%] bg-gradient-to-r from-amber-500/40 to-red-500/40 rounded-r-full" />
+            
+            {/* Needle / Pointer */}
+            <div 
+              ref={needleRef}
+              className="absolute -top-1 w-4 h-4 bg-white rounded-full border border-zinc-950 shadow-[0_0_8px_rgba(255,255,255,0.8)] -ml-2 flex items-center justify-center cursor-default transition-all duration-300 ease-out"
+              style={{ left: '43.75%' }}
             >
-              <div className="flex justify-between items-center text-[10px] text-zinc-400 font-bold uppercase tracking-widest font-mono">
-                <span>// live_pacing_indicator</span>
-                <span className={`${pacingStatus === 'good' ? 'text-emerald-400' : pacingStatus === 'slow' ? 'text-cyan-400' : 'text-amber-400'} font-extrabold`}>
-                  {liveWpm} WPM // {pacingStatus.toUpperCase()}
-                </span>
-              </div>
-              
-              {/* Horizontal Speedometer Bar */}
-              <div className="relative h-2 w-full bg-zinc-900 rounded-full border border-white/5 overflow-visible mt-1">
-                {/* Slow zone */}
-                <div className="absolute left-0 top-0 bottom-0 w-[31.25%] bg-gradient-to-r from-cyan-500/40 to-blue-500/40 rounded-l-full border-r border-white/10" />
-                {/* Good zone */}
-                <div className="absolute left-[31.25%] top-0 bottom-0 w-[25%] bg-gradient-to-r from-emerald-500/50 to-teal-500/50 border-r border-white/10" />
-                {/* Fast zone */}
-                <div className="absolute left-[56.25%] top-0 bottom-0 w-[43.75%] bg-gradient-to-r from-amber-500/40 to-red-500/40 rounded-r-full" />
-                
-                {/* Needle / Pointer */}
-                <motion.div 
-                  className="absolute -top-1 w-4 h-4 bg-white rounded-full border border-zinc-950 shadow-[0_0_8px_rgba(255,255,255,0.8)] -ml-2 flex items-center justify-center cursor-default"
-                  animate={{ left: `${Math.min(Math.max((liveWpm - 60) / (220 - 60) * 100, 0), 100)}%` }}
-                  transition={{ type: "spring", stiffness: 120, damping: 14 }}
-                >
-                  <div className="w-1.5 h-1.5 bg-zinc-950 rounded-full" />
-                </motion.div>
-              </div>
-              
-              <div className="flex justify-between text-[8px] text-zinc-500 font-mono tracking-wider font-semibold">
-                <span>SLOW (&lt;110)</span>
-                <span>STEADY (110-150)</span>
-                <span>FAST (&gt;150)</span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <div className="w-1.5 h-1.5 bg-zinc-950 rounded-full" />
+            </div>
+          </div>
+          
+          <div className="flex justify-between text-[8px] text-zinc-500 font-mono tracking-wider font-semibold">
+            <span>SLOW (&lt;110)</span>
+            <span>STEADY (110-150)</span>
+            <span>FAST (&gt;150)</span>
+          </div>
+        </div>
       </div>
 
       {/* Side Panel: Topic display */}
