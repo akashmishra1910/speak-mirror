@@ -245,29 +245,27 @@ export function useFaceAnalysis(
     if (!enabled || !isModelReady || !videoRef.current) return;
 
     const video = videoRef.current;
-    
-    // Create an offscreen helper canvas for frame extraction
-    const canvas = document.createElement("canvas");
-    canvas.width = 640;
-    canvas.height = 360;
-    const ctx = canvas.getContext("2d");
-
     let isIntervalActive = false;
 
-    const processFrame = () => {
+    const processFrame = async () => {
       if (!isPlayingRef.current || !workerRef.current) return;
 
-      if (video && video.readyState >= 2 && ctx) {
+      if (video && video.readyState >= 2) {
         try {
-          ctx.drawImage(video, 0, 0, 640, 360);
-          const imageData = ctx.getImageData(0, 0, 640, 360);
-          // Zero-copy transferable transfer of pixel buffer
+          // Zero-copy GPU-accelerated ImageBitmap extraction with resizing
+          const imageBitmap = await createImageBitmap(video, {
+            resizeWidth: 640,
+            resizeHeight: 360,
+            resizeQuality: "low"
+          });
+          
+          // Transfer ownership of ImageBitmap to the Web Worker
           workerRef.current.postMessage(
-            { type: "detect", imageData },
-            [imageData.data.buffer]
+            { type: "detect", imageBitmap },
+            [imageBitmap]
           );
         } catch (err) {
-          console.error("Error sending frame to MediaPipe worker:", err);
+          console.error("Error sending ImageBitmap to MediaPipe worker:", err);
         }
       }
     };

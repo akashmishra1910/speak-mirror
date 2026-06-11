@@ -32,7 +32,7 @@ async function loadModel() {
 }
 
 self.onmessage = async (e: MessageEvent) => {
-  const { type, imageData } = e.data;
+  const { type, imageData, imageBitmap } = e.data;
 
   if (type === "init") {
     await loadModel();
@@ -45,12 +45,27 @@ self.onmessage = async (e: MessageEvent) => {
       return;
     }
 
+    const source = imageBitmap || imageData;
+    if (!source) {
+      self.postMessage({ type: "error", error: "No image source provided" });
+      return;
+    }
+
     try {
-      // Run face mesh detection on the transferred ImageData
-      const results = landmarker.detect(imageData);
+      // Run face mesh detection on the transferred ImageBitmap or ImageData
+      const results = landmarker.detect(source);
+      
+      // Release GPU/graphic resources immediately in the worker thread
+      if (imageBitmap && typeof imageBitmap.close === "function") {
+        imageBitmap.close();
+      }
+      
       self.postMessage({ type: "results", results });
     } catch (err) {
       console.error("FaceLandmarker detection error in worker:", err);
+      if (imageBitmap && typeof imageBitmap.close === "function") {
+        imageBitmap.close();
+      }
       self.postMessage({ type: "error", error: String(err) });
     }
   }
