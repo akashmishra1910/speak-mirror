@@ -36,6 +36,8 @@ interface RecorderProps {
   isFirstSession?: boolean;
   profileGoal?: string | null;
   profileDuration?: number;
+  initialBullets?: { label: string; text: string }[] | null;
+  onTopicGenerated?: (topic: string, bullets: { label: string; text: string }[]) => void;
 }
 
 // IndexedDB helpers for zero-copy streaming
@@ -123,7 +125,9 @@ export function Recorder({
   streak = 0,
   isFirstSession = false,
   profileGoal = null,
-  profileDuration = 1
+  profileDuration = 1,
+  initialBullets,
+  onTopicGenerated
 }: RecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -420,13 +424,17 @@ export function Recorder({
       if (taskTopic) {
         setTopic(taskTopic);
         setIsLoadingTopic(false);
-        // We still fetch bullets for assist mode
-        fetchDynamicTopic(true);
+        if (initialBullets && initialBullets.length > 0) {
+          setBullets(initialBullets);
+        } else {
+          // We still fetch bullets for assist mode
+          fetchDynamicTopic(true);
+        }
       } else {
         fetchDynamicTopic();
       }
     }
-  }, [mode, taskTopic]);
+  }, [mode, taskTopic, initialBullets]);
 
 
 
@@ -444,28 +452,42 @@ export function Recorder({
       // Unwrap standard successResponse envelope { success: true, data: { topic, bullets } }
       const data = envelope.success && envelope.data ? envelope.data : envelope;
       if (data.topic && data.bullets) {
+        const targetTopic = bulletsOnly ? topic : data.topic;
         if (!bulletsOnly) setTopic(data.topic);
         setBullets(data.bullets);
+        if (onTopicGenerated) {
+          onTopicGenerated(targetTopic, data.bullets);
+        }
       } else {
         console.warn("Invalid format from API, using fallback data");
-        setTopic("What is the most important lesson you've learned?");
-        setBullets([
+        const fallbackTopic = "What is the most important lesson you've learned?";
+        const fallbackBullets = [
           { label: "Who", text: "The main people involved were..." },
           { label: "What", text: "The core idea or challenge was..." },
           { label: "Where", text: "This took place in the context of..." },
           { label: "When", text: "This originally occurred when..." },
           { label: "How", text: "Ultimately, it was approached by..." },
-        ]);
+        ];
+        const targetTopic = bulletsOnly ? topic : fallbackTopic;
+        if (!bulletsOnly) setTopic(fallbackTopic);
+        setBullets(fallbackBullets);
+        if (onTopicGenerated) {
+          onTopicGenerated(targetTopic, fallbackBullets);
+        }
       }
     } catch (err) {
       console.warn("Failed to fetch topic, using fallback:", err);
-      setBullets([
+      const fallbackBullets = [
         { label: "Who", text: "The main people involved were..." },
         { label: "What", text: "The core idea or challenge was..." },
         { label: "Where", text: "This took place in the context of..." },
         { label: "When", text: "This originally occurred when..." },
         { label: "How", text: "Ultimately, it was approached by..." },
-      ]);
+      ];
+      setBullets(fallbackBullets);
+      if (onTopicGenerated) {
+        onTopicGenerated(topic, fallbackBullets);
+      }
     } finally {
       setIsLoadingTopic(false);
     }

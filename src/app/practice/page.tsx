@@ -92,6 +92,10 @@ function PracticeContent() {
   const [freeformExportBlob, setFreeformExportBlob] = useState<Blob | null>(null);
   const [readingExportBlob, setReadingExportBlob] = useState<Blob | null>(null);
 
+  // Caching topic & bullets for Free Practice retakes
+  const [freeformTopic, setFreeformTopic] = useState<string | null>(null);
+  const [freeformBullets, setFreeformBullets] = useState<{ label: string; text: string }[]>([]);
+
   // Pre-session Warm-up states
   const [showWarmup, setShowWarmup] = useState<boolean>(true);
   const [profileGoal, setProfileGoal] = useState<string | null>(null);
@@ -139,9 +143,11 @@ function PracticeContent() {
     fetchUserProfile();
   }, [user]);
 
-  // Reset warmup state when selected task changes
+  // Reset warmup state and freeform topic caches when selected task changes
   useEffect(() => {
     setHasWarmedUp(false);
+    setFreeformTopic(null);
+    setFreeformBullets([]);
   }, [activeTaskId]);
 
   // Initialize Daily Challenge & Notification Permission on Mount
@@ -968,7 +974,12 @@ function PracticeContent() {
                     onRecordingComplete={handleRecordingComplete} 
                     isProcessing={isProcessing} 
                     readingText={phase === "reading_recording" ? task?.reading_text : undefined}
-                    taskTopic={task?.topic_of_the_day}
+                    taskTopic={task?.topic_of_the_day || freeformTopic}
+                    initialBullets={freeformBullets}
+                    onTopicGenerated={(topic, bullets) => {
+                      setFreeformTopic(topic);
+                      setFreeformBullets(bullets);
+                    }}
                     userId={user?.id}
                     userLevel={profileExperience}
                     mode={phase === "reading_recording" ? "reading" : (task?.isChallenge ? "warmup" : "freeform")}
