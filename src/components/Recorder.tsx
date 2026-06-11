@@ -953,9 +953,10 @@ export function Recorder({
   };
 
   function stopRecording() {
+    const wasRecording = isRecordingRef.current;
     isRecordingRef.current = false;
 
-    if (isRecording && userId) {
+    if (wasRecording && userId) {
       faceAnalysisResultsRef.current = stopAnalysis();
     }
 
@@ -1028,21 +1029,21 @@ export function Recorder({
       pacingIntervalRef.current = null;
     }
 
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       try {
         mediaRecorderRef.current.stop();
       } catch (err) {
         console.error("Error stopping storage video recorder:", err);
       }
     }
-    if (exportRecorderRef.current && isRecording) {
+    if (exportRecorderRef.current && exportRecorderRef.current.state === "recording") {
       try {
         exportRecorderRef.current.stop();
       } catch (err) {
         console.error("Error stopping export video recorder:", err);
       }
     }
-    if (audioRecorderRef.current && isRecording) {
+    if (audioRecorderRef.current && audioRecorderRef.current.state === "recording") {
       try {
         audioRecorderRef.current.stop();
       } catch (err) {
@@ -1050,7 +1051,7 @@ export function Recorder({
       }
     }
     setIsRecording(false);
-  };
+  }
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
