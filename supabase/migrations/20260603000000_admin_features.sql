@@ -1,0 +1,1 @@
+-- Migration placeholder to reconcile remote history after admin panel cleanup
