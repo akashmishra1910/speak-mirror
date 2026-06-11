@@ -7,6 +7,8 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import Link from "next/link";
 import { CookieConsent } from "@/components/CookieConsent";
 import { SupportWidget } from "@/components/SupportWidget";
+import { PageTransition } from "@/components/PageTransition";
+import NextTopLoader from "nextjs-toploader";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -47,11 +49,22 @@ export default function RootLayout({
 
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
+            <NextTopLoader
+              color="linear-gradient(to right, #38bdf8, #0284c7, #6366f1)"
+              initialPosition={0.08}
+              crawlSpeed={200}
+              height={3}
+              crawl={true}
+              showSpinner={false}
+              easing="ease"
+              speed={200}
+              shadow="0 0 10px #0284c7, 0 0 5px #0284c7"
+            />
             <Navbar />
             <CookieConsent />
             <SupportWidget />
             <main className="flex-1 pt-16 relative z-10">
-              {children}
+              <PageTransition>{children}</PageTransition>
             </main>
             <footer className="border-t border-slate-200/50 bg-white/30 backdrop-blur-md dark:border-white/5 dark:bg-[#050508]/80 py-8 relative z-10 transition-colors duration-300">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-zinc-500 font-light">
