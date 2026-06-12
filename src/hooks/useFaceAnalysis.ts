@@ -58,10 +58,15 @@ export function useFaceAnalysis(
 
   // Initialize and load the Web Worker
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      setIsModelReady(false);
+      setIsLoading(false);
+      return;
+    }
 
     if (typeof window === "undefined") return;
     setIsLoading(true);
+    setIsModelReady(false);
 
     // Spawn Web Worker using module type to allow next.js compilation
     const worker = new Worker(
@@ -244,6 +249,9 @@ export function useFaceAnalysis(
 
     return () => {
       worker.terminate();
+      workerRef.current = null;
+      setIsModelReady(false);
+      setIsLoading(false);
     };
   }, [enabled]);
 

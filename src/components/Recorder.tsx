@@ -226,7 +226,7 @@ export function Recorder({
     isModelReady: isFaceReady,
     startAnalysis,
     stopAnalysis,
-  } = useFaceAnalysis(videoRef, !!userId, (metrics) => {
+  } = useFaceAnalysis(videoRef, isRecording, (metrics) => {
     // High-frequency telemetry direct DOM updates
     if (eyeContactTextRef.current) {
       eyeContactTextRef.current.textContent = metrics.isBlinking ? 'BLINKING...' : `${metrics.eyeContact}%`;
@@ -695,8 +695,8 @@ export function Recorder({
       const ctx = storageCanvas.getContext("2d");
       storageCanvasCtxRef.current = ctx;
 
-      // Extract low resolution video track at 30fps for smooth playback
-      const lowResVideoStream = storageCanvas.captureStream(30);
+      // Extract low resolution video track at 15fps as requested
+      const lowResVideoStream = storageCanvas.captureStream(15);
       const lowResVideoTrack = lowResVideoStream.getVideoTracks()[0];
       const audioTrack = streamRef.current?.getAudioTracks()[0];
 
