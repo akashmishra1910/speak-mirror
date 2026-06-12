@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AnalysisMetrics } from "@/components/FeedbackDashboard";
-import { Loader2 } from "lucide-react";
+import { Loader2, Flame, Sparkles, Bell, Shuffle, Check } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
@@ -32,6 +32,14 @@ const Recorder = dynamic(() => import("@/components/Recorder").then(mod => mod.R
 const AnalysisLoader = dynamic(() => import("@/components/practice/AnalysisLoader").then(mod => mod.AnalysisLoader), {
   ssr: false
 });
+
+const defaultSuggestedTopics = [
+  "Describe your dream career path",
+  "Explain AI to a 10-year-old child",
+  "Overcoming a difficult challenge",
+  "90-second pitch for a new app idea",
+  "The most important lesson learned"
+];
 
 function PracticeContent() {
   const { user, isLoading, activeWorkspace } = useAuth();
@@ -119,6 +127,35 @@ function PracticeContent() {
   const [profileDuration, setProfileDuration] = useState<number>(3);
   const [isFirstSession, setIsFirstSession] = useState<boolean>(false);
   const [hasWarmedUp, setHasWarmedUp] = useState<boolean>(false);
+
+  // Suggested topic states for visual configuration panel
+  const [isLoadingTopic, setIsLoadingTopic] = useState(false);
+  const [customSuggestedTopics, setCustomSuggestedTopics] = useState<string[]>(defaultSuggestedTopics);
+
+  const handleGenerateAITopic = async () => {
+    setIsLoadingTopic(true);
+    try {
+      const levelQuery = profileExperience ? `&level=${encodeURIComponent(profileExperience)}` : "";
+      const endpoint = user?.id ? `/api/generate-topic?userId=${user.id}${levelQuery}` : `/api/generate-topic?${levelQuery.substring(1)}`;
+      const res = await fetch(endpoint);
+      const envelope = await res.json();
+      const data = envelope.success && envelope.data ? envelope.data : envelope;
+      if (data.topic) {
+        setFreeformTopic(data.topic);
+        setFreeformBullets(data.bullets || []);
+        showToast("New AI topic generated!", "success");
+        setCustomSuggestedTopics(prev => {
+          const filtered = prev.filter(t => t !== data.topic);
+          return [data.topic, ...filtered].slice(0, 5);
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to generate AI topic.", "error");
+    } finally {
+      setIsLoadingTopic(false);
+    }
+  };
 
   // Fetch user profile settings and check if this is their first session
   useEffect(() => {
@@ -949,7 +986,7 @@ function PracticeContent() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col items-center relative">
+    <div className="max-w-7xl mx-auto p-6 animate-in fade-in duration-700 ease-out relative flex flex-col gap-6">
       {/* 1. Prompt Selector & Header Area */}
       <PromptSelector
         activeRoomId={activeRoomId}
@@ -966,87 +1003,283 @@ function PracticeContent() {
         activeWorkspaceName={activeWorkspace.name}
       />
 
-      <div className="w-full">
-        {/* 2. Analysis Results View */}
-        <AnalysisResults
-          phase={phase}
-          metricsList={metricsList}
-          videoUrls={videoUrls}
-          onSave={saveToProgress}
-          isSaving={isSaving}
-          isSaved={isSaved}
-          onRetake={handleRetake}
-          activeRoomId={activeRoomId}
-          user={user}
-        />
+      {/* Main Two-Column practice grid */}
+      <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        {/* Left Column: Studio Configuration (Span 5) */}
+        <div className="lg:col-span-5 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/40 dark:border-gray-700 rounded-3xl p-8 shadow-xl flex flex-col gap-6">
+          
+          {/* Top row: Streak Pill and notifications */}
+          <div className="flex justify-between items-center w-full flex-wrap gap-3">
+            {isPersonal && (
+              <div className="flex items-center gap-1.5 bg-white/50 dark:bg-gray-800/50 rounded-full px-4 py-2 border border-white/20 dark:border-white/5 text-orange-500 dark:text-orange-400 font-extrabold text-xs">
+                <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500 dark:fill-orange-400 dark:text-orange-400" />
+                <span>{isLoadingStreak ? "..." : `${streak} ${streak === 1 ? 'day' : 'days'}`}</span>
+              </div>
+            )}
 
-        {/* 3. Recording Phase View */}
-        {phase !== "results" && (
-          <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            
-            {/* Left Column: Recording Sandbox */}
-            <div className={user && !isPersonal ? "lg:col-span-2 flex flex-col items-center w-full" : "lg:col-span-3 flex flex-col items-center w-full"}>
-              
-              {/* Loader overlay during Llama 3 analysis */}
-              <AnalysisLoader phase={phase} />
-
-              {isLoadingTask ? (
-                <div className="flex flex-col items-center justify-center p-24 w-full glass-panel rounded-3xl dark:border-white/5">
-                  <Loader2 className="w-8 h-8 animate-spin text-themeText dark:text-white mb-4" />
-                  <span className="text-xs font-semibold text-slate-500 dark:text-foreground/50 uppercase tracking-widest">Loading Task Details...</span>
-                </div>
-              ) : (phase === "freeform_recording" || phase === "reading_recording") && (
-                showWarmup && !hasWarmedUp && phase === "freeform_recording" ? (
-                  <PreSessionModal
-                    focusMetric={profileFocusMetric}
-                    goal={profileGoal}
-                    experienceLevel={profileExperience}
-                    practiceDuration={profileDuration}
-                    streak={streak}
-                    taskTopic={task?.topic_of_the_day || freeformTopic || "Free Practice"}
-                    isFirstSession={isFirstSession}
-                    onStartRecording={() => setHasWarmedUp(true)}
-                    onClose={() => setHasWarmedUp(true)}
-                  />
-                ) : (
-                  <div className="w-full max-w-md">
-                    <Recorder 
-                      onRecordingComplete={handleRecordingComplete} 
-                      isProcessing={isProcessing} 
-                      readingText={phase === "reading_recording" ? task?.reading_text : undefined}
-                      taskTopic={task?.topic_of_the_day || freeformTopic}
-                      initialBullets={freeformBullets}
-                      onTopicGenerated={(topic, bullets) => {
-                        setFreeformTopic(topic);
-                        setFreeformBullets(bullets);
-                      }}
-                      userId={user?.id}
-                      userLevel={profileExperience}
-                      mode={phase === "reading_recording" ? "reading" : (task?.isChallenge ? "warmup" : "freeform")}
-                      timeLimit={task?.timeLimit || 90}
-                      wordOfTheDay={task?.word_of_the_day}
-                      wordDefinition={task?.definition}
-                      tips={task?.tips}
-                      autoStart={showWarmup}
-                      focusMetric={profileFocusMetric}
-                    />
-                  </div>
-                )
+            {/* Reminders / Daily challenge button in the configuration header */}
+            <div className="flex items-center gap-2">
+              {isPersonal && (
+                <button
+                  onClick={() => setShowChallengeModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 dark:text-white transition-all text-xs font-semibold"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-orange-400" />
+                  <span>Daily Challenge</span>
+                </button>
+              )}
+              {notificationPermission !== "unsupported" && (
+                <button
+                  onClick={notificationPermission !== "granted" ? handleRequestNotificationPermission : undefined}
+                  disabled={notificationPermission === "granted" || notificationPermission === "denied"}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all text-[10px] font-bold uppercase tracking-wider ${
+                    notificationPermission === "granted"
+                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                      : notificationPermission === "denied"
+                        ? "bg-rose-500/10 border-rose-500/20 text-rose-400 opacity-60 cursor-not-allowed"
+                        : "bg-indigo-500/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20"
+                  }`}
+                >
+                  <Bell className="w-3.5 h-3.5" />
+                  <span>{notificationPermission === "granted" ? "Active" : "Remind"}</span>
+                </button>
               )}
             </div>
-
-            {/* Right Column: Pending Team Assignments list */}
-            <PendingAssignments
-              isPersonal={isPersonal}
-              activeTaskId={activeTaskId}
-              isLoadingAssignments={isLoadingAssignments}
-              pendingAssignments={pendingAssignments}
-              onClearAssignment={clearAssignment}
-              onSelectAssignment={selectAssignment}
-            />
           </div>
-        )}
+
+          {/* Mode Selection Segmented Toggle */}
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-slate-500 dark:text-zinc-555 uppercase tracking-widest text-left">
+              Studio Mode
+            </label>
+            <div className="relative flex p-1 bg-slate-100 dark:bg-zinc-800/80 rounded-full border border-slate-200/50 dark:border-white/5 w-full">
+              <div
+                className="absolute top-1 bottom-1 rounded-full bg-white dark:bg-zinc-700 shadow-sm transition-all duration-300 ease-out"
+                style={{
+                  left: !activeTaskId ? "4px" : "calc(50% + 2px)",
+                  width: "calc(50% - 6px)",
+                }}
+              />
+              <button
+                onClick={clearAssignment}
+                className={`relative z-10 w-1/2 py-2 text-xs font-bold text-center rounded-full transition-colors cursor-pointer ${
+                  !activeTaskId
+                    ? "text-slate-800 dark:text-white"
+                    : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200"
+                }`}
+              >
+                Freeform
+              </button>
+              <button
+                onClick={() => {
+                  if (isPersonal) {
+                    startChallenge();
+                  } else if (pendingAssignments.length > 0) {
+                    selectAssignment(pendingAssignments[0]);
+                  } else {
+                    setShowChallengeModal(true);
+                  }
+                }}
+                className={`relative z-10 w-1/2 py-2 text-xs font-bold text-center rounded-full transition-colors cursor-pointer ${
+                  activeTaskId
+                    ? "text-slate-800 dark:text-white"
+                    : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200"
+                }`}
+              >
+                Prompt
+              </button>
+            </div>
+          </div>
+
+          {/* Dynamic Configuration content */}
+          {!activeTaskId ? (
+            /* Topic Generator badges when in Freeform Mode */
+            <div className="flex flex-col gap-4 text-left">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-bold text-slate-500 dark:text-zinc-555 uppercase tracking-widest">
+                  Topic Suggestions
+                </label>
+                <button
+                  onClick={handleGenerateAITopic}
+                  disabled={isLoadingTopic}
+                  className="text-[11px] font-bold text-[#5B7C99] dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                >
+                  {isLoadingTopic ? "Generating..." : "Generate AI Topic"}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                {customSuggestedTopics.map((item, idx) => {
+                  const isSelected = (freeformTopic === item || (!freeformTopic && idx === 0));
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setFreeformTopic(item);
+                        setFreeformBullets([]);
+                      }}
+                      className={`text-xs px-3.5 py-2.5 rounded-2xl border text-left transition-all duration-200 hover:-translate-y-1 transform cursor-pointer ${
+                        isSelected
+                          ? "bg-indigo-500/10 border-indigo-500 text-indigo-700 dark:text-indigo-300 font-bold"
+                          : "bg-white/40 border-slate-200 dark:bg-white/[0.02] dark:border-white/5 text-slate-655 dark:text-zinc-400 hover:border-slate-350 dark:hover:border-white/10"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            /* Prompt Mode details */
+            <div className="flex flex-col gap-4">
+              {isPersonal ? (
+                /* Daily Challenge prompt in Personal Mode */
+                <div className="flex flex-col gap-4 text-left">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-bold text-slate-500 dark:text-zinc-500 uppercase tracking-widest">
+                      Active Challenge Prompt
+                    </label>
+                    <button
+                      onClick={handleShuffleChallenge}
+                      className="p-1.5 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-500 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 dark:text-zinc-400 rounded-full transition-all cursor-pointer"
+                      title="Shuffle Challenge"
+                    >
+                      <Shuffle className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  {selectedChallenge && (
+                    <div 
+                      onClick={startChallenge}
+                      className={`p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${
+                        activeTaskId === `challenge-${selectedChallenge.id}`
+                          ? "bg-indigo-500/5 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.08)]"
+                          : "bg-slate-100/30 border-slate-200/50 hover:bg-slate-100/80 dark:bg-white/[0.01] dark:border-white/5 dark:hover:bg-white/[0.04] hover:border-slate-300"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold text-indigo-650 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-400/10 dark:text-indigo-400">
+                          DAILY CHALLENGE
+                        </span>
+                        {completedWarmupToday && (
+                          <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-emerald-500/20 text-emerald-655 dark:text-emerald-400 border border-emerald-500/30">
+                            Completed
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="text-xs font-extrabold text-slate-800 dark:text-white leading-snug mb-2">
+                        {selectedChallenge.prompt}
+                      </h4>
+                      <p className="text-[10px] text-slate-550 dark:text-zinc-500 leading-relaxed font-light">
+                        Word of the day: <strong className="text-slate-700 dark:text-zinc-350">{selectedChallenge.word_of_the_day}</strong> - {selectedChallenge.definition}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Mentor Assignments list in Team workspace */
+                <PendingAssignments
+                  isPersonal={isPersonal}
+                  activeTaskId={activeTaskId}
+                  isLoadingAssignments={isLoadingAssignments}
+                  pendingAssignments={pendingAssignments}
+                  onClearAssignment={clearAssignment}
+                  onSelectAssignment={selectAssignment}
+                />
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: The Mirror (Span 7) */}
+        <div className="lg:col-span-7 flex items-center justify-center w-full min-h-[480px]">
+          <div className="w-full max-w-lg p-6 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-3xl shadow-2xl ring-1 ring-sky-200/50 dark:ring-sky-900/50 transition-all duration-300 flex flex-col justify-center items-center relative overflow-hidden">
+            {phase === "results" ? (
+              <div className="w-full p-8 text-center flex flex-col items-center justify-center gap-4 animate-in fade-in duration-500">
+                <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 shadow-md">
+                  <Check className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-850 dark:text-white">Session Completed!</h3>
+                <p className="text-xs text-slate-550 dark:text-zinc-400 font-light leading-relaxed max-w-sm">
+                  Your speech has been analyzed successfully. Scroll down to view your diagnostic metrics, transcript analysis, and custom cert card.
+                </p>
+                <button
+                  onClick={handleRetake}
+                  className="px-6 py-2.5 bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white rounded-xl text-xs font-bold transition-all shadow-[0_4px_15px_rgba(2,132,199,0.2)] cursor-pointer"
+                >
+                  Start New Session
+                </button>
+              </div>
+            ) : (
+              <>
+                <AnalysisLoader phase={phase} />
+
+                {isLoadingTask ? (
+                  <div className="flex flex-col items-center justify-center p-24 w-full">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#5B7C99] dark:text-indigo-400 mb-4" />
+                    <span className="text-xs font-semibold text-slate-555 dark:text-zinc-500 uppercase tracking-widest animate-pulse">Loading Task Details...</span>
+                  </div>
+                ) : (phase === "freeform_recording" || phase === "reading_recording") && (
+                  showWarmup && !hasWarmedUp && phase === "freeform_recording" ? (
+                    <PreSessionModal
+                      focusMetric={profileFocusMetric}
+                      goal={profileGoal}
+                      experienceLevel={profileExperience}
+                      practiceDuration={profileDuration}
+                      streak={streak}
+                      taskTopic={task?.topic_of_the_day || freeformTopic || "Free Practice"}
+                      isFirstSession={isFirstSession}
+                      onStartRecording={() => setHasWarmedUp(true)}
+                      onClose={() => setHasWarmedUp(true)}
+                    />
+                  ) : (
+                    <div className="w-full">
+                      <Recorder 
+                        onRecordingComplete={handleRecordingComplete} 
+                        isProcessing={isProcessing} 
+                        readingText={phase === "reading_recording" ? task?.reading_text : undefined}
+                        taskTopic={task?.topic_of_the_day || freeformTopic}
+                        initialBullets={freeformBullets}
+                        onTopicGenerated={(topic, bullets) => {
+                          setFreeformTopic(topic);
+                          setFreeformBullets(bullets);
+                        }}
+                        userId={user?.id}
+                        userLevel={profileExperience}
+                        mode={phase === "reading_recording" ? "reading" : (task?.isChallenge ? "warmup" : "freeform")}
+                        timeLimit={task?.timeLimit || 90}
+                        wordOfTheDay={task?.word_of_the_day}
+                        wordDefinition={task?.definition}
+                        tips={task?.tips}
+                        autoStart={showWarmup}
+                        focusMetric={profileFocusMetric}
+                      />
+                    </div>
+                  )
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
       </div>
+
+      {/* 2. Feedback Dashboard Reveal Area */}
+      {phase === "results" && (
+        <div className="w-full animate-in fade-in slide-in-from-bottom-8 duration-500 mt-6">
+          <AnalysisResults
+            phase={phase}
+            metricsList={metricsList}
+            videoUrls={videoUrls}
+            onSave={saveToProgress}
+            isSaving={isSaving}
+            isSaved={isSaved}
+            onRetake={handleRetake}
+            activeRoomId={activeRoomId}
+            user={user}
+          />
+        </div>
+      )}
 
       {/* 4. Challenge Selector Modal */}
       <ChallengeModal

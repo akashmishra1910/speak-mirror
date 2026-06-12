@@ -66,7 +66,7 @@ export function MetricScore({
 
   return (
     <motion.div
-      className={`glass-panel p-5 rounded-2xl flex flex-col items-start text-left ${floatSpeed} interactive-card relative overflow-hidden font-mono border-slate-200/50 bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-800/80 dark:bg-[#09090d]/60 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]`}
+      className={`glass-panel p-5 rounded-2xl flex flex-col items-start text-left ${floatSpeed} interactive-card relative overflow-hidden font-mono border-slate-200/50 bg-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-800/80 dark:bg-gray-800/40 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]`}
     >
       {/* Label & Personal Best Trophy */}
       <div className="flex w-full items-center justify-between">
