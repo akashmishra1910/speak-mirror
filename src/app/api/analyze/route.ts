@@ -48,7 +48,10 @@ export async function POST(request: Request) {
     const mimeType = audioFile.type || "audio/webm";
     
     // Strip codecs parameters (e.g. 'audio/webm;codecs=opus' -> 'audio/webm')
-    const baseMimeType = mimeType.split(";")[0];
+    let baseMimeType = mimeType.split(";")[0];
+    if (baseMimeType.startsWith("video/")) {
+      baseMimeType = baseMimeType.replace("video/", "audio/");
+    }
     let extension = baseMimeType.split("/")[1] || "webm";
     
     // Map extensions to Groq's allowed Whisper types: [flac mp3 mp4 mpeg mpga m4a ogg opus wav webm]

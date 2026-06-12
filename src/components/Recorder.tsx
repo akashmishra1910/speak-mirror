@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BEAUTIFY_FILTERS } from "@/lib/filters";
 import { useFaceAnalysis } from "@/hooks/useFaceAnalysis";
 import { FocusPill } from "./session/FocusPill";
-import { PreSessionModal } from "./session/PreSessionModal";
 
 interface RecorderProps {
   onRecordingComplete: (
@@ -31,11 +30,6 @@ interface RecorderProps {
   tips?: string[] | null;
   autoStart?: boolean;
   focusMetric?: string | null;
-  showWarmup?: boolean;
-  streak?: number;
-  isFirstSession?: boolean;
-  profileGoal?: string | null;
-  profileDuration?: number;
   initialBullets?: { label: string; text: string }[] | null;
   onTopicGenerated?: (topic: string, bullets: { label: string; text: string }[]) => void;
 }
@@ -121,11 +115,6 @@ export function Recorder({
   tips,
   autoStart = false,
   focusMetric,
-  showWarmup = false,
-  streak = 0,
-  isFirstSession = false,
-  profileGoal = null,
-  profileDuration = 1,
   initialBullets,
   onTopicGenerated
 }: RecorderProps) {
@@ -134,11 +123,6 @@ export function Recorder({
   
   // Camera & Countdown states
   const [cameraLoaded, setCameraLoaded] = useState(false);
-  const [hasStartedCountdown, setHasStartedCountdown] = useState(false);
-  
-  // Warmup state
-  const [showWarmupModal, setShowWarmupModal] = useState(false);
-  const [hasWarmedUpState, setHasWarmedUpState] = useState(false);
   
   const [topic, setTopic] = useState("Generating topic...");
   const [bullets, setBullets] = useState<{label: string, text: string}[]>([]);
@@ -278,6 +262,7 @@ export function Recorder({
   const transcriptWorkerRef = useRef<Worker | null>(null);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pacingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const hasAutoStartedRef = useRef(false);
 
   const recordingStartTimeRef = useRef<number>(0);
   const fillerLogRef = useRef<any[]>([]);
@@ -407,11 +392,11 @@ export function Recorder({
 
   // Trigger recording automatically if autoStart is true and camera is loaded
   useEffect(() => {
-    if (autoStart && cameraLoaded && !hasStartedCountdown && !isRecording && !isProcessing) {
-      setHasStartedCountdown(true);
+    if (autoStart && cameraLoaded && !hasAutoStartedRef.current && !isRecording && !isProcessing) {
+      hasAutoStartedRef.current = true;
       startRecordingActual();
     }
-  }, [autoStart, cameraLoaded, hasStartedCountdown, isRecording, isProcessing]);
+  }, [autoStart, cameraLoaded, isRecording, isProcessing]);
 
   // Initialize topic and bullets when mode/taskTopic changes
   useEffect(() => {
@@ -622,16 +607,11 @@ export function Recorder({
   };
 
   const startRecording = () => {
-    if (showWarmup && !hasWarmedUpState) {
-      setShowWarmupModal(true);
-    } else {
-      startRecordingActual();
-    }
+    startRecordingActual();
   };
 
   const startRecordingActual = async () => {
     if (!streamRef.current) return;
-    setHasStartedCountdown(false);
     hasTriggeredBellRef.current = false;
     wordCountRef.current = 0;
 
@@ -758,60 +738,24 @@ export function Recorder({
         }
       };
 
-      // 2. Setup Audio-Only Recorder for lightweight API analysis
-      let audioRecorder: MediaRecorder | null = null;
-      audioChunksRef.current = [];
-      audioWritePromisesRef.current = [];
-      
-      try {
-        const audioTracks = streamRef.current!.getAudioTracks();
-        if (audioTracks.length > 0) {
-          const audioStream = new MediaStream(audioTracks);
-          let audioMime = 'audio/webm;codecs=opus';
-          if (!MediaRecorder.isTypeSupported(audioMime)) {
-            audioMime = 'audio/webm';
-          }
-          if (!MediaRecorder.isTypeSupported(audioMime)) {
-            if (MediaRecorder.isTypeSupported('audio/mp4')) {
-              audioMime = 'audio/mp4';
-            } else if (MediaRecorder.isTypeSupported('audio/aac')) {
-              audioMime = 'audio/aac';
-            }
-          }
 
-          audioRecorder = new MediaRecorder(audioStream, {
-            mimeType: audioMime,
-            audioBitsPerSecond: 48000
-          });
-          audioRecorderRef.current = audioRecorder;
+      // Setup Audio-Only Recorder disabled to save CPU and avoid WebKit/Safari audio-only MP4 encoding bugs.
+      // We will fall back to transcribing the low-res video stream directly.
+      const audioRecorder: MediaRecorder | null = null;
 
-          audioRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0) {
-              const p = writeChunk("audioChunks", e.data).catch(console.error) as Promise<void>;
-              audioWritePromisesRef.current.push(p);
-            }
-          };
-        }
-      } catch (audioErr) {
-        console.warn("Failed to initialize separate audio recorder:", audioErr);
-      }
-
-      // Synchronize all recorder stops
       let storageBlob: Blob | null = null;
       let exportBlob: Blob | null = null;
-      let audioBlob: Blob | null = null;
 
       const checkComplete = () => {
-        const hasValidAudio = audioBlob && audioBlob.size > 500;
-        if (storageBlob && exportBlob && (hasValidAudio || !audioRecorder || (audioBlob && audioBlob.size <= 500))) {
+        if (storageBlob && exportBlob) {
           const eyeContactAvg = faceAnalysisResultsRef.current?.eyeContactAvg;
           const expressionScoreAvg = faceAnalysisResultsRef.current?.expressionScoreAvg;
           
-          console.log(`[Recorder] Recording complete. Storage blob size: ${storageBlob.size}, Audio blob size: ${audioBlob?.size || 0}. Has valid audio: ${hasValidAudio}`);
+          console.log(`[Recorder] Recording complete. Storage blob size: ${storageBlob.size}, Export blob size: ${exportBlob.size}`);
 
           onRecordingComplete(
             storageBlob, 
-            hasValidAudio && audioBlob ? audioBlob : storageBlob, 
+            storageBlob, // Use low-res storage video for audio transcription fallback
             eyeContactAvg, 
             expressionScoreAvg,
             exportBlob,
@@ -850,28 +794,12 @@ export function Recorder({
         checkComplete();
       };
 
-      if (audioRecorder) {
-        audioRecorder.onstop = async () => {
-          const audioMimeType = audioRecorder?.mimeType || "audio/webm";
-          try {
-            // Wait for all chunk writing promises to complete to resolve the race condition
-            await Promise.all(audioWritePromisesRef.current);
-            const dbChunks = await getChunks("audioChunks");
-            audioBlob = new Blob(dbChunks, { type: audioMimeType });
-          } catch (err) {
-            console.error("Failed to read audio chunks from IndexedDB:", err);
-            audioBlob = new Blob([], { type: audioMimeType });
-          }
-          checkComplete();
-        };
-      }
+      // audioRecorder is disabled, so we skip registering onstop
 
       // Collect chunks every 5s (reduces callback frequency overhead by 5x)
       mediaRecorder.start(5000);
       exportRecorder.start(5000);
-      if (audioRecorder) {
-        audioRecorder.start(5000);
-      }
+      // audioRecorder is disabled, so we skip start()
       
       setIsRecording(true);
       
@@ -1256,27 +1184,6 @@ export function Recorder({
           </div>
 
           {/* Countdown Overlay removed */}
-
-          {/* Warmup Modal overlay */}
-          {showWarmupModal && (
-            <PreSessionModal
-              focusMetric={focusMetric || null}
-              goal={profileGoal || null}
-              experienceLevel={userLevel || null}
-              practiceDuration={profileDuration || 1}
-              streak={streak || 0}
-              taskTopic={taskTopic || "Free Practice"}
-              isFirstSession={isFirstSession || false}
-              onStartRecording={() => {
-                setShowWarmupModal(false);
-                setHasWarmedUpState(true);
-                startRecordingActual();
-              }}
-              onClose={() => {
-                setShowWarmupModal(false);
-              }}
-            />
-          )}
 
           {/* Persistent Focus Pill during active recording */}
           {isRecording && !isProcessing && (

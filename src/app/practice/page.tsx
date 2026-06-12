@@ -16,6 +16,7 @@ import { AnalysisResults } from "@/components/practice/AnalysisResults";
 import { PendingAssignments } from "@/components/practice/PendingAssignments";
 import { ChallengeModal } from "@/components/practice/ChallengeModal";
 import { ToastNotification, Toast } from "@/components/practice/ToastNotification";
+import { PreSessionModal } from "@/components/session/PreSessionModal";
 
 const Recorder = dynamic(() => import("@/components/Recorder").then(mod => mod.Recorder), {
   ssr: false,
@@ -608,8 +609,9 @@ function PracticeContent() {
       const freeformUrl = URL.createObjectURL(freeformExportVideo || freeformVideo);
       newUrls.push(freeformUrl);
 
+      const freeformExt = freeformAudio?.type?.includes("mp4") ? "mp4" : "webm";
       const formData1 = new FormData();
-      formData1.append("audio", freeformAudio, "recording.webm");
+      formData1.append("audio", freeformAudio, `recording.${freeformExt}`);
       if (ffEyeContact !== undefined) formData1.append("eyeContact", ffEyeContact.toString());
       if (ffExpression !== undefined) formData1.append("expression", ffExpression.toString());
 
@@ -641,8 +643,9 @@ function PracticeContent() {
         const readingUrl = URL.createObjectURL(readingExportVideo || readingVideo);
         newUrls.push(readingUrl);
 
+        const readingExt = readingAudio?.type?.includes("mp4") ? "mp4" : "webm";
         const formData2 = new FormData();
-        formData2.append("audio", readingAudio, "recording.webm");
+        formData2.append("audio", readingAudio, `recording.${readingExt}`);
         formData2.append("expectedText", task.reading_text);
         if (rdEyeContact !== undefined) formData2.append("eyeContact", rdEyeContact.toString());
         if (rdExpression !== undefined) formData2.append("expression", rdExpression.toString());
@@ -982,33 +985,42 @@ function PracticeContent() {
                   <span className="text-xs font-semibold text-slate-500 dark:text-foreground/50 uppercase tracking-widest">Loading Task Details...</span>
                 </div>
               ) : (phase === "freeform_recording" || phase === "reading_recording") && (
-                <div className="w-full max-w-md">
-                  <Recorder 
-                    onRecordingComplete={handleRecordingComplete} 
-                    isProcessing={isProcessing} 
-                    readingText={phase === "reading_recording" ? task?.reading_text : undefined}
-                    taskTopic={task?.topic_of_the_day || freeformTopic}
-                    initialBullets={freeformBullets}
-                    onTopicGenerated={(topic, bullets) => {
-                      setFreeformTopic(topic);
-                      setFreeformBullets(bullets);
-                    }}
-                    userId={user?.id}
-                    userLevel={profileExperience}
-                    mode={phase === "reading_recording" ? "reading" : (task?.isChallenge ? "warmup" : "freeform")}
-                    timeLimit={task?.timeLimit || 90}
-                    wordOfTheDay={task?.word_of_the_day}
-                    wordDefinition={task?.definition}
-                    tips={task?.tips}
-                    autoStart={false}
+                showWarmup && !hasWarmedUp ? (
+                  <PreSessionModal
                     focusMetric={profileFocusMetric}
-                    showWarmup={showWarmup}
+                    goal={profileGoal}
+                    experienceLevel={profileExperience}
+                    practiceDuration={profileDuration}
                     streak={streak}
+                    taskTopic={task?.topic_of_the_day || freeformTopic || "Free Practice"}
                     isFirstSession={isFirstSession}
-                    profileGoal={profileGoal}
-                    profileDuration={profileDuration}
+                    onStartRecording={() => setHasWarmedUp(true)}
+                    onClose={() => clearAssignment()}
                   />
-                </div>
+                ) : (
+                  <div className="w-full max-w-md">
+                    <Recorder 
+                      onRecordingComplete={handleRecordingComplete} 
+                      isProcessing={isProcessing} 
+                      readingText={phase === "reading_recording" ? task?.reading_text : undefined}
+                      taskTopic={task?.topic_of_the_day || freeformTopic}
+                      initialBullets={freeformBullets}
+                      onTopicGenerated={(topic, bullets) => {
+                        setFreeformTopic(topic);
+                        setFreeformBullets(bullets);
+                      }}
+                      userId={user?.id}
+                      userLevel={profileExperience}
+                      mode={phase === "reading_recording" ? "reading" : (task?.isChallenge ? "warmup" : "freeform")}
+                      timeLimit={task?.timeLimit || 90}
+                      wordOfTheDay={task?.word_of_the_day}
+                      wordDefinition={task?.definition}
+                      tips={task?.tips}
+                      autoStart={showWarmup}
+                      focusMetric={profileFocusMetric}
+                    />
+                  </div>
+                )
               )}
             </div>
 
