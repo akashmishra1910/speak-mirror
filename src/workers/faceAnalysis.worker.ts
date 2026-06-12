@@ -5,24 +5,43 @@ let landmarker: any = null;
 
 async function loadModel() {
   try {
-    const moduleUrl = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/vision_bundle.mjs";
-    // Using importShim or Function import to fetch ES module from CDN in worker
+    const moduleUrl = `${self.location.origin}/mediapipe/vision_bundle.js`;
+    // Using importShim or Function import to fetch ES module from local origin in worker
     const vision = await new Function(`return import("${moduleUrl}")`)();
     const { FilesetResolver, FaceLandmarker } = vision;
 
     const filesetResolver = await FilesetResolver.forVisionTasks(
-      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/wasm"
+      `${self.location.origin}/mediapipe/wasm`
     );
 
-    landmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
-      baseOptions: {
-        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-        delegate: "GPU",
-      },
-      runningMode: "IMAGE",
-      outputFaceBlendshapes: true,
-      outputFacialTransformationMatrixes: false,
-    });
+    const modelAssetPath = `${self.location.origin}/mediapipe/face_landmarker.task`;
+
+    try {
+      // Attempt GPU-accelerated initialization
+      landmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: {
+          modelAssetPath,
+          delegate: "GPU",
+        },
+        runningMode: "VIDEO",
+        outputFaceBlendshapes: true,
+        outputFacialTransformationMatrixes: false,
+      });
+      console.log("MediaPipe FaceLandmarker successfully initialized on GPU");
+    } catch (gpuErr) {
+      console.warn("MediaPipe GPU initialization failed, falling back to CPU:", gpuErr);
+      // Fallback to CPU execution
+      landmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: {
+          modelAssetPath,
+          delegate: "CPU",
+        },
+        runningMode: "VIDEO",
+        outputFaceBlendshapes: true,
+        outputFacialTransformationMatrixes: false,
+      });
+      console.log("MediaPipe FaceLandmarker successfully initialized on CPU");
+    }
 
     self.postMessage({ type: "ready" });
   } catch (err) {
@@ -32,7 +51,7 @@ async function loadModel() {
 }
 
 self.onmessage = async (e: MessageEvent) => {
-  const { type, imageData, imageBitmap } = e.data;
+  const { type, imageData, imageBitmap, timestampMs } = e.data;
 
   if (type === "init") {
     await loadModel();
@@ -52,8 +71,8 @@ self.onmessage = async (e: MessageEvent) => {
     }
 
     try {
-      // Run face mesh detection on the transferred ImageBitmap or ImageData
-      const results = landmarker.detect(source);
+      // Run face mesh detection on the transferred ImageBitmap or ImageData with temporal video mode
+      const results = landmarker.detectForVideo(source, timestampMs || performance.now());
       
       // Release GPU/graphic resources immediately in the worker thread
       if (imageBitmap && typeof imageBitmap.close === "function") {

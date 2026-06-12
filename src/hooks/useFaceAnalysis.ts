@@ -20,8 +20,10 @@ export function useFaceAnalysis(
   const lastEyeContactRef = useRef<number>(100);
 
   const workerRef = useRef<Worker | null>(null);
-  const intervalIdRef = useRef<NodeJS.Timeout | null>(null);
   const isPlayingRef = useRef(false);
+  const isProcessingRef = useRef(false);
+  const lastProcessedTimeRef = useRef(0);
+  const triggerNextFrameRef = useRef<(() => void) | null>(null);
   
   // Tracking state for session averages
   const isTrackingRef = useRef(false);
@@ -77,7 +79,12 @@ export function useFaceAnalysis(
       } else if (type === "error") {
         console.error("Worker error:", error);
         setIsLoading(false);
+        isProcessingRef.current = false;
+        triggerNextFrameRef.current?.();
       } else if (type === "results") {
+        isProcessingRef.current = false;
+        triggerNextFrameRef.current?.();
+
         if (!results) return;
         const now = performance.now();
         
@@ -240,18 +247,29 @@ export function useFaceAnalysis(
     };
   }, [enabled]);
 
-  // Frame processing loop (Throttled Gaze/MediaPipe to every 150ms)
+  // Frame processing loop
   useEffect(() => {
     if (!enabled || !isModelReady || !videoRef.current) return;
 
     const video = videoRef.current;
-    let isIntervalActive = false;
+    let rVFCId: number | null = null;
+    let rAFId: number | null = null;
 
     const processFrame = async () => {
-      if (!isPlayingRef.current || !workerRef.current) return;
+      if (!isPlayingRef.current || !workerRef.current || isProcessingRef.current) return;
 
       if (video && video.readyState >= 2) {
+        const now = performance.now();
+        // Enforce the 150ms throttle so we don't spam the worker/device
+        if (now - lastProcessedTimeRef.current < 150) {
+          queueNextFrame();
+          return;
+        }
+
         try {
+          isProcessingRef.current = true;
+          lastProcessedTimeRef.current = now;
+
           // Zero-copy GPU-accelerated ImageBitmap extraction with resizing
           const imageBitmap = await createImageBitmap(video, {
             resizeWidth: 640,
@@ -259,30 +277,56 @@ export function useFaceAnalysis(
             resizeQuality: "low"
           });
           
-          // Transfer ownership of ImageBitmap to the Web Worker
+          // Transfer ownership of ImageBitmap to the Web Worker and pass timestampMs
           workerRef.current.postMessage(
-            { type: "detect", imageBitmap },
+            { type: "detect", imageBitmap, timestampMs: now },
             [imageBitmap]
           );
         } catch (err) {
           console.error("Error sending ImageBitmap to MediaPipe worker:", err);
+          isProcessingRef.current = false;
+          queueNextFrame();
         }
+      } else {
+        // Video not ready, try again on next frame
+        queueNextFrame();
+      }
+    };
+
+    const queueNextFrame = () => {
+      if (!isPlayingRef.current) return;
+
+      if ("requestVideoFrameCallback" in video) {
+        rVFCId = (video as any).requestVideoFrameCallback(processFrame);
+      } else {
+        rAFId = requestAnimationFrame(processFrame);
       }
     };
 
     const startLoop = () => {
-      if (isIntervalActive) return;
-      isIntervalActive = true;
+      if (isPlayingRef.current) return;
       isPlayingRef.current = true;
-      intervalIdRef.current = setInterval(processFrame, 150); // Run every 150ms (~6fps)
+      isProcessingRef.current = false;
+      processFrame();
     };
 
     const stopLoop = () => {
-      isIntervalActive = false;
       isPlayingRef.current = false;
-      if (intervalIdRef.current) {
-        clearInterval(intervalIdRef.current);
-        intervalIdRef.current = null;
+      isProcessingRef.current = false;
+      if (rVFCId !== null && "cancelVideoFrameCallback" in video) {
+        (video as any).cancelVideoFrameCallback(rVFCId);
+        rVFCId = null;
+      }
+      if (rAFId !== null) {
+        cancelAnimationFrame(rAFId);
+        rAFId = null;
+      }
+    };
+
+    // Assign the trigger function so the worker can signal that it's done
+    triggerNextFrameRef.current = () => {
+      if (isPlayingRef.current && !isProcessingRef.current) {
+        queueNextFrame();
       }
     };
 
@@ -300,6 +344,7 @@ export function useFaceAnalysis(
       video.removeEventListener("pause", stopLoop);
       video.removeEventListener("ended", stopLoop);
       stopLoop();
+      triggerNextFrameRef.current = null;
     };
   }, [enabled, isModelReady, videoRef]);
 
