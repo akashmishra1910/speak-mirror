@@ -17,20 +17,7 @@ async function loadModel() {
     const modelAssetPath = `${self.location.origin}/mediapipe/face_landmarker.task`;
 
     try {
-      // Attempt GPU-accelerated initialization
-      landmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
-        baseOptions: {
-          modelAssetPath,
-          delegate: "GPU",
-        },
-        runningMode: "VIDEO",
-        outputFaceBlendshapes: true,
-        outputFacialTransformationMatrixes: false,
-      });
-      console.log("MediaPipe FaceLandmarker successfully initialized on GPU");
-    } catch (gpuErr) {
-      console.warn("MediaPipe GPU initialization failed, falling back to CPU:", gpuErr);
-      // Fallback to CPU execution
+      // Attempt CPU-accelerated initialization
       landmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
         baseOptions: {
           modelAssetPath,
@@ -41,6 +28,19 @@ async function loadModel() {
         outputFacialTransformationMatrixes: false,
       });
       console.log("MediaPipe FaceLandmarker successfully initialized on CPU");
+    } catch (cpuErr) {
+      console.warn("MediaPipe CPU initialization failed, falling back to GPU:", cpuErr);
+      // Fallback to GPU execution
+      landmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: {
+          modelAssetPath,
+          delegate: "GPU",
+        },
+        runningMode: "VIDEO",
+        outputFaceBlendshapes: true,
+        outputFacialTransformationMatrixes: false,
+      });
+      console.log("MediaPipe FaceLandmarker successfully initialized on GPU");
     }
 
     self.postMessage({ type: "ready" });

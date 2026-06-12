@@ -704,10 +704,11 @@ export function Recorder({
       const storageStream = new MediaStream(audioTrack ? [lowResVideoTrack, audioTrack] : [lowResVideoTrack]);
       storageStreamRef.current = storageStream;
 
-      // Storage Recorder (low bitrate: 400 Kbps video, 64 Kbps audio, downscaled 360p stream)
+      // Storage Recorder (low bitrate: 200 Kbps video, 64 Kbps audio, downscaled 360p stream)
+      // Capped under 3 MB for 90s (total ~2.97 MB)
       const mediaRecorder = new MediaRecorder(storageStream, {
         mimeType: selectedMimeType,
-        videoBitsPerSecond: 400000,
+        videoBitsPerSecond: 200000,
         audioBitsPerSecond: 64000
       });
       mediaRecorderRef.current = mediaRecorder;
@@ -729,11 +730,11 @@ export function Recorder({
       const exportStream = new MediaStream(audioTrack ? [canvasExportVideoTrack, audioTrack] : [canvasExportVideoTrack]);
       exportStreamRef.current = exportStream;
 
-      // Export Recorder (high quality: 2.5 Mbps video, 128 Kbps audio, watermarked 1080p stream)
+      // Export Recorder (high quality: 8 Mbps video, 192 Kbps audio, actual camera high-definition quality)
       const exportRecorder = new MediaRecorder(exportStream, {
         mimeType: selectedMimeType,
-        videoBitsPerSecond: 2500000,
-        audioBitsPerSecond: 128000
+        videoBitsPerSecond: 8000000,
+        audioBitsPerSecond: 192000
       });
       exportRecorderRef.current = exportRecorder;
       exportChunksRef.current = [];
@@ -1048,30 +1049,23 @@ export function Recorder({
             onLoadedMetadata={() => setCameraLoaded(true)}
           />
           
-          {/* Off-screen Canvas for watermark high-res export stream (positioned off-screen to prevent browser throttling) */}
-          <canvas 
-            ref={canvasRef}
-            style={{
-              position: "absolute",
-              left: "-9999px",
-              top: "-9999px",
-              pointerEvents: "none",
-              opacity: 0,
+          {/* Container for canvases to keep them in the viewport layout/compositor tree, preventing browser throttling (reducing framerate to 0) while keeping them invisible to the user */}
+          <div 
+            style={{ 
+              position: "absolute", 
+              left: 0, 
+              top: 0, 
+              width: "1px", 
+              height: "1px", 
+              overflow: "hidden", 
+              opacity: 0.01, 
+              pointerEvents: "none", 
+              zIndex: -1 
             }}
-          />
-          {/* Off-screen Canvas for low-res storage stream (positioned off-screen to prevent browser throttling) */}
-          <canvas 
-            ref={storageCanvasRef}
-            width={640}
-            height={360}
-            style={{
-              position: "absolute",
-              left: "-9999px",
-              top: "-9999px",
-              pointerEvents: "none",
-              opacity: 0,
-            }}
-          />
+          >
+            <canvas ref={canvasRef} />
+            <canvas ref={storageCanvasRef} width={640} height={360} />
+          </div>
           
           {/* Subtle Overlay gradient for readability */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80 z-10 pointer-events-none" />
