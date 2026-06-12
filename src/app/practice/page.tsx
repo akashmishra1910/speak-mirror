@@ -8,6 +8,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { useEffect, Suspense, useRef, useCallback } from "react";
 import { dailyChallenges, getRandomChallenge, Challenge } from "@/lib/challenges";
+import { PracticeTask, PracticeAssignment, FillerLogEntry, PacingLogEntry } from "@/types";
 import dynamic from "next/dynamic";
 
 // Modular Subcomponents
@@ -33,16 +34,24 @@ const AnalysisLoader = dynamic(() => import("@/components/practice/AnalysisLoade
 });
 
 function PracticeContent() {
-  const { user, activeWorkspace } = useAuth();
+  const { user, isLoading, activeWorkspace } = useAuth();
+  const isPersonal = activeWorkspace?.id === "personal";
   const searchParams = useSearchParams();
   const router = useRouter();
   const roomId = searchParams.get("roomId");
   const taskId = searchParams.get("taskId");
   const customPrompt = searchParams.get("prompt");
 
+  // Authentication Guard redirect (Issue 3)
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace("/auth");
+    }
+  }, [user, isLoading, router]);
+
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [task, setTask] = useState<any>(null);
+  const [task, setTask] = useState<PracticeTask | null>(null);
   const [isLoadingTask, setIsLoadingTask] = useState(true);
   
   type TaskPhase = "freeform_recording" | "reading_recording" | "analyzing" | "results";
@@ -50,25 +59,9 @@ function PracticeContent() {
   
   const [freeformBlob, setFreeformBlob] = useState<Blob | null>(null);
   const [readingBlob, setReadingBlob] = useState<Blob | null>(null);
-  const [freeformAudioBlob, setFreeformAudioBlob] = useState<Blob | null>(null);
-  const [readingAudioBlob, setReadingAudioBlob] = useState<Blob | null>(null);
   
   const [metricsList, setMetricsList] = useState<AnalysisMetrics[]>([]);
   const [videoUrls, setVideoUrls] = useState<string[]>([]);
-
-  // Face Analysis Metrics States
-  const [freeformEyeContact, setFreeformEyeContact] = useState<number | undefined>(undefined);
-  const [freeformExpression, setFreeformExpression] = useState<number | undefined>(undefined);
-  const [readingEyeContact, setReadingEyeContact] = useState<number | undefined>(undefined);
-  const [readingExpression, setReadingExpression] = useState<number | undefined>(undefined);
-  
-  // Web Speech helper telemetry logs states
-  const [freeformFillerLog, setFreeformFillerLog] = useState<any[]>([]);
-  const [freeformAvgWpm, setFreeformAvgWpm] = useState<number>(130);
-  const [freeformPacingLog, setFreeformPacingLog] = useState<any[]>([]);
-  const [readingFillerLog, setReadingFillerLog] = useState<any[]>([]);
-  const [readingAvgWpm, setReadingAvgWpm] = useState<number>(130);
-  const [readingPacingLog, setReadingPacingLog] = useState<any[]>([]);
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -80,8 +73,18 @@ function PracticeContent() {
   const [completedWarmupToday, setCompletedWarmupToday] = useState(false);
 
   // Team Assignments State
-  const [pendingAssignments, setPendingAssignments] = useState<any[]>([]);
+  const [pendingAssignments, setPendingAssignments] = useState<PracticeAssignment[]>([]);
   const [isLoadingAssignments, setIsLoadingAssignments] = useState(false);
+
+  // Synchronized Media State Refs to resolve stale closure issues (Issue 2)
+  const freeformBlobRef = useRef<Blob | null>(null);
+  const freeformAudioBlobRef = useRef<Blob | null>(null);
+  const freeformExportBlobRef = useRef<Blob | null>(null);
+  const freeformEyeContactRef = useRef<number | undefined>(undefined);
+  const freeformExpressionRef = useRef<number | undefined>(undefined);
+  const freeformFillerLogRef = useRef<FillerLogEntry[]>([]);
+  const freeformAvgWpmRef = useRef<number>(130);
+  const freeformPacingLogRef = useRef<PacingLogEntry[]>([]);
 
   // Daily Challenge State
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
@@ -102,9 +105,7 @@ function PracticeContent() {
     return id;
   }, []);
 
-  // Export high-quality video blobs
-  const [freeformExportBlob, setFreeformExportBlob] = useState<Blob | null>(null);
-  const [readingExportBlob, setReadingExportBlob] = useState<Blob | null>(null);
+
 
   // Caching topic & bullets for Free Practice retakes
   const [freeformTopic, setFreeformTopic] = useState<string | null>(null);
@@ -194,7 +195,7 @@ function PracticeContent() {
     url.searchParams.delete("roomId");
     url.searchParams.delete("taskId");
     router.replace(url.pathname);
-  }, [activeWorkspace.id]);
+  }, [activeWorkspace.id, router]);
 
   // Sync Search Params to Local State initially
   useEffect(() => {
@@ -226,7 +227,6 @@ function PracticeContent() {
       try {
         if (activeTaskId.startsWith("challenge-")) {
           const challengeId = activeTaskId.replace("challenge-", "");
-          const { dailyChallenges } = await import("@/lib/challenges");
           const found = dailyChallenges.find(c => c.id === challengeId);
           if (found) {
             setTask({
@@ -305,12 +305,13 @@ function PracticeContent() {
         }
         setStreak(currentStreak);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching streak:", err);
+      showToast("Could not load your practice streak progress.", "error");
     } finally {
       setIsLoadingStreak(false);
     }
-  }, [user, activeWorkspace.id]);
+  }, [user, activeWorkspace.id, showToast]);
 
   useEffect(() => {
     fetchPersonalStreak();
@@ -411,7 +412,21 @@ function PracticeContent() {
     };
   }, [fetchTeamAssignments]);
 
-  const selectAssignment = (assignment: any) => {
+  // Cleanup object URLs to prevent memory leaks (Issue 6)
+  useEffect(() => {
+    const urlsToCleanup = [...videoUrls];
+    return () => {
+      urlsToCleanup.forEach(url => {
+        if (url.startsWith("blob:")) {
+          try {
+            URL.revokeObjectURL(url);
+          } catch (e) {}
+        }
+      });
+    };
+  }, [videoUrls]);
+
+  const selectAssignment = (assignment: PracticeAssignment) => {
     setActiveTaskId(assignment.id);
     setActiveRoomId(assignment.room_id);
     setPhase("freeform_recording");
@@ -424,7 +439,7 @@ function PracticeContent() {
     const url = new URL(window.location.href);
     url.searchParams.set("roomId", assignment.room_id);
     url.searchParams.set("taskId", assignment.id);
-    window.history.replaceState({}, "", url.pathname + url.search);
+    router.replace(`${url.pathname}${url.search}`);
   };
 
   const clearAssignment = () => {
@@ -441,7 +456,7 @@ function PracticeContent() {
     const url = new URL(window.location.href);
     url.searchParams.delete("roomId");
     url.searchParams.delete("taskId");
-    window.history.replaceState({}, "", url.pathname + url.search);
+    router.replace(`${url.pathname}${url.search}`);
   };
 
   const handleShuffleChallenge = () => {
@@ -485,31 +500,27 @@ function PracticeContent() {
     eyeContactAvg?: number, 
     expressionScoreAvg?: number,
     exportVideoBlob?: Blob,
-    fillerLog?: any[],
+    fillerLog?: FillerLogEntry[],
     avgWpm?: number,
-    pacingLog?: any[]
+    pacingLog?: PacingLogEntry[]
   ) => {
     const isReading = activeTaskId && phase === "reading_recording";
 
     if (isReading) {
       setReadingBlob(videoBlob);
-      setReadingAudioBlob(audioBlob);
-      setReadingExportBlob(exportVideoBlob || null);
-      setReadingFillerLog(fillerLog || []);
-      setReadingAvgWpm(avgWpm || 130);
-      setReadingPacingLog(pacingLog || []);
     } else {
       setFreeformBlob(videoBlob);
-      setFreeformAudioBlob(audioBlob);
-      setFreeformExportBlob(exportVideoBlob || null);
-      setFreeformFillerLog(fillerLog || []);
-      setFreeformAvgWpm(avgWpm || 130);
-      setFreeformPacingLog(pacingLog || []);
+      freeformBlobRef.current = videoBlob;
+      freeformAudioBlobRef.current = audioBlob;
+      freeformExportBlobRef.current = exportVideoBlob || null;
+      freeformFillerLogRef.current = fillerLog || [];
+      freeformAvgWpmRef.current = avgWpm || 130;
+      freeformPacingLogRef.current = pacingLog || [];
     }
 
     if (activeTaskId && phase === "freeform_recording") {
-      setFreeformEyeContact(eyeContactAvg);
-      setFreeformExpression(expressionScoreAvg);
+      freeformEyeContactRef.current = eyeContactAvg;
+      freeformExpressionRef.current = expressionScoreAvg;
       
       if (task?.isChallenge) {
         setPhase("analyzing");
@@ -535,23 +546,21 @@ function PracticeContent() {
     }
 
     if (activeTaskId && phase === "reading_recording") {
-      setReadingEyeContact(eyeContactAvg);
-      setReadingExpression(expressionScoreAvg);
       setPhase("analyzing");
       processRecordings(
-        freeformBlob!, 
-        freeformAudioBlob!, 
+        freeformBlobRef.current!, 
+        freeformAudioBlobRef.current!, 
         videoBlob, 
         audioBlob, 
-        freeformEyeContact, 
-        freeformExpression, 
+        freeformEyeContactRef.current, 
+        freeformExpressionRef.current, 
         eyeContactAvg, 
         expressionScoreAvg,
-        freeformExportBlob || undefined,
+        freeformExportBlobRef.current || undefined,
         exportVideoBlob,
-        freeformFillerLog,
-        freeformAvgWpm,
-        freeformPacingLog,
+        freeformFillerLogRef.current,
+        freeformAvgWpmRef.current,
+        freeformPacingLogRef.current,
         fillerLog,
         avgWpm,
         pacingLog
@@ -560,8 +569,8 @@ function PracticeContent() {
     }
 
     if (!activeTaskId) {
-      setFreeformEyeContact(eyeContactAvg);
-      setFreeformExpression(expressionScoreAvg);
+      freeformEyeContactRef.current = eyeContactAvg;
+      freeformExpressionRef.current = expressionScoreAvg;
       setPhase("analyzing");
       processRecordings(
         videoBlob, 
@@ -592,12 +601,12 @@ function PracticeContent() {
     rdExpression?: number,
     freeformExportVideo?: Blob,
     readingExportVideo?: Blob,
-    ffFillerLog?: any[],
+    ffFillerLog?: FillerLogEntry[],
     ffAvgWpm?: number,
-    ffPacingLog?: any[],
-    rdFillerLog?: any[],
+    ffPacingLog?: PacingLogEntry[],
+    rdFillerLog?: FillerLogEntry[],
     rdAvgWpm?: number,
-    rdPacingLog?: any[]
+    rdPacingLog?: PacingLogEntry[]
   ) => {
     setIsProcessing(true);
     setMetricsList([]);
@@ -680,14 +689,14 @@ function PracticeContent() {
       setIsSaved(false);
     } catch (err: any) {
       console.error("Error processing:", err);
-      alert(`An error occurred during analysis: ${err.message || err}`);
+      showToast(`An error occurred during analysis: ${err.message || err}`, "error");
     } finally {
       setIsProcessing(false);
     }
   };
 
   const saveToProgress = async () => {
-    if (isSaved || !user || !freeformBlob) return;
+    if (isSaving || isSaved || !user || !freeformBlob) return;
     setIsSaving(true);
 
     const fetchCoachComment = async (recordingId: string, index: number) => {
@@ -852,7 +861,8 @@ function PracticeContent() {
         
         // Update User Streak
         try {
-          const todayDateStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+          const now = new Date();
+          const todayDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; // Local YYYY-MM-DD
           
           const { data: currentStreakInfo } = await supabase
             .from("streaks")
@@ -918,24 +928,25 @@ function PracticeContent() {
   };
 
   const handleRetake = () => {
-    videoUrls.forEach(url => URL.revokeObjectURL(url));
     setPhase("freeform_recording");
-    setFreeformExportBlob(null);
-    setReadingExportBlob(null);
     setFreeformBlob(null);
     setReadingBlob(null);
-    setFreeformAudioBlob(null);
-    setReadingAudioBlob(null);
-    setFreeformEyeContact(undefined);
-    setFreeformExpression(undefined);
-    setReadingEyeContact(undefined);
-    setReadingExpression(undefined);
+    setFreeformTopic(null);
+    setFreeformBullets([]);
     setMetricsList([]);
     setVideoUrls([]);
     setIsSaved(false);
-  };
 
-  const isPersonal = activeWorkspace.id === "personal";
+    // Reset Refs (Issue 2)
+    freeformBlobRef.current = null;
+    freeformAudioBlobRef.current = null;
+    freeformExportBlobRef.current = null;
+    freeformEyeContactRef.current = undefined;
+    freeformExpressionRef.current = undefined;
+    freeformFillerLogRef.current = [];
+    freeformAvgWpmRef.current = 130;
+    freeformPacingLogRef.current = [];
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col items-center relative">
@@ -985,7 +996,7 @@ function PracticeContent() {
                   <span className="text-xs font-semibold text-slate-500 dark:text-foreground/50 uppercase tracking-widest">Loading Task Details...</span>
                 </div>
               ) : (phase === "freeform_recording" || phase === "reading_recording") && (
-                showWarmup && !hasWarmedUp ? (
+                showWarmup && !hasWarmedUp && phase === "freeform_recording" ? (
                   <PreSessionModal
                     focusMetric={profileFocusMetric}
                     goal={profileGoal}
@@ -995,7 +1006,7 @@ function PracticeContent() {
                     taskTopic={task?.topic_of_the_day || freeformTopic || "Free Practice"}
                     isFirstSession={isFirstSession}
                     onStartRecording={() => setHasWarmedUp(true)}
-                    onClose={() => clearAssignment()}
+                    onClose={() => setHasWarmedUp(true)}
                   />
                 ) : (
                   <div className="w-full max-w-md">

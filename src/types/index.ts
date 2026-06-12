@@ -112,3 +112,39 @@ export interface ApiResponse<T = any> {
   data?: T;
   error?: string;
 }
+
+export interface PracticeTask {
+  id: string;
+  topic_of_the_day: string;
+  word_of_the_day?: string | null;
+  definition?: string | null;
+  reading_text?: string | null;
+  isChallenge?: boolean;
+  isCustom?: boolean;
+  timeLimit?: number | null;
+  tips?: string[] | null;
+}
+
+export interface PracticeAssignment {
+  id: string;
+  roomName: string;
+  room_id: string;
+  isUrgent?: boolean;
+  deadlineText: string;
+  topic_of_the_day: string;
+  word_of_the_day?: string | null;
+  definition?: string | null;
+  reading_text?: string | null;
+  timeLimit?: number | null;
+  tips?: string[] | null;
+}
+
+export interface FillerLogEntry {
+  word: string;
+  timestamp: number;
+}
+
+export interface PacingLogEntry {
+  wpm: number;
+  timestamp: number;
+}

@@ -1,13 +1,15 @@
 import { motion } from "framer-motion";
 import { BookOpen, Loader2, Sparkles, Clock, ChevronRight } from "lucide-react";
 
+import { PracticeAssignment } from "@/types";
+
 interface PendingAssignmentsProps {
   isPersonal: boolean;
   activeTaskId: string | null;
   isLoadingAssignments: boolean;
-  pendingAssignments: any[];
+  pendingAssignments: PracticeAssignment[];
   onClearAssignment: () => void;
-  onSelectAssignment: (assignment: any) => void;
+  onSelectAssignment: (assignment: PracticeAssignment) => void;
 }
 
 export function PendingAssignments({
