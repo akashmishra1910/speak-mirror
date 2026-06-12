@@ -558,6 +558,7 @@ export function Recorder({
       }
     };
 
+    let lastError: string | null = null;
     const rec = new SpeechRecognition();
     rec.continuous = true;
     rec.interimResults = true;
@@ -586,16 +587,23 @@ export function Recorder({
     };
 
     rec.onerror = (err: any) => {
-      console.warn("Speech recognition error:", err);
+      lastError = err.error;
+      // Filter out benign/normal silence and abort errors to avoid console warning spam
+      if (err.error === "no-speech" || err.error === "aborted") {
+        return;
+      }
+      console.warn("Speech recognition error:", err.error, err);
     };
 
     rec.onend = () => {
-      // Restart if still recording
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      // Restart if still recording AND we didn't encounter a fatal error (like not-allowed or audio-capture)
+      const isFatal = lastError && lastError !== "no-speech" && lastError !== "aborted";
+      if (!isFatal && mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
         try {
           rec.start();
         } catch (e) {}
       }
+      lastError = null;
     };
 
     recognitionRef.current = rec;
