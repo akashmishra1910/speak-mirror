@@ -19,9 +19,8 @@ export async function POST(request: Request) {
     const eyeContact = formData.get("eyeContact") as string | null;
     const expression = formData.get("expression") as string | null;
 
-    if (!audioFile) {
-
-      return errorResponse("No audio file provided", 400);
+    if (!audioFile || audioFile.size < 20000) {
+      return errorResponse("Audio recording is too short or empty. Please speak for at least 2 seconds.", 400);
     }
 
     if (!process.env.GROQ_API_KEY) {

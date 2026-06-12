@@ -270,6 +270,7 @@ export function Recorder({
   const avgWpmRef = useRef<number>(130);
   const currentRollingWpmRef = useRef<number>(130);
   const fastPacingCountRef = useRef<number>(0);
+  const isTooShortRef = useRef(false);
 
   // Initialize camera preview on mount (runs once)
   useEffect(() => {
@@ -622,6 +623,7 @@ export function Recorder({
     if (!streamRef.current) return;
     hasTriggeredBellRef.current = false;
     wordCountRef.current = 0;
+    isTooShortRef.current = false;
 
     // Reset coaching nudges and stats logs
     setHasNudgedFiller(false);
@@ -757,6 +759,11 @@ export function Recorder({
 
       const checkComplete = () => {
         if (storageBlob && exportBlob) {
+          if (isTooShortRef.current) {
+            console.log("[Recorder] Recording discarded because it was too short.");
+            clearDB().catch(console.error);
+            return;
+          }
           const eyeContactAvg = faceAnalysisResultsRef.current?.eyeContactAvg;
           const expressionScoreAvg = faceAnalysisResultsRef.current?.expressionScoreAvg;
           
@@ -911,6 +918,12 @@ export function Recorder({
   function stopRecording() {
     const wasRecording = isRecordingRef.current;
     isRecordingRef.current = false;
+
+    const duration = (Date.now() - recordingStartTimeRef.current) / 1000;
+    if (wasRecording && duration < 2.0) {
+      isTooShortRef.current = true;
+      alert("Recording too short. Please speak for at least 2 seconds.");
+    }
 
     if (wasRecording && userId) {
       faceAnalysisResultsRef.current = stopAnalysis();
