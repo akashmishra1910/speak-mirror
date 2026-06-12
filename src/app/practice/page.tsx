@@ -1006,8 +1006,8 @@ function PracticeContent() {
       {/* Main Two-Column practice grid */}
       <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* Left Column: Studio Configuration (Span 5) */}
-        <div className="lg:col-span-5 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/40 dark:border-gray-700 rounded-3xl p-8 shadow-xl flex flex-col gap-6">
+        {/* Left Column: Studio Configuration (Span 4) */}
+        <div className="lg:col-span-4 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/40 dark:border-gray-700 rounded-3xl p-6 lg:p-8 shadow-xl flex flex-col gap-6">
           
           {/* Top row: Streak Pill and notifications */}
           <div className="flex justify-between items-center w-full flex-wrap gap-3">
@@ -1191,9 +1191,9 @@ function PracticeContent() {
           )}
         </div>
 
-        {/* Right Column: The Mirror (Span 7) */}
-        <div className="lg:col-span-7 flex items-center justify-center w-full min-h-[480px]">
-          <div className="w-full max-w-3xl p-6 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-3xl shadow-2xl ring-1 ring-sky-200/50 dark:ring-sky-900/50 transition-all duration-300 flex flex-col justify-center items-center relative overflow-hidden">
+        {/* Right Column: The Mirror (Span 8) */}
+        <div className="lg:col-span-8 flex items-center justify-center w-full min-h-[480px]">
+          <div className="w-full max-w-3xl p-4 sm:p-6 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-3xl shadow-2xl ring-1 ring-sky-200/50 dark:ring-sky-900/50 transition-all duration-300 flex flex-col justify-center items-center relative overflow-hidden">
             {phase === "results" ? (
               <div className="w-full p-8 text-center flex flex-col items-center justify-center gap-4 animate-in fade-in duration-500">
                 <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 shadow-md">

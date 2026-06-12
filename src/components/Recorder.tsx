@@ -1023,11 +1023,11 @@ export function Recorder({
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 items-center md:items-start justify-center w-full">
+    <div className="flex flex-col md:flex-row gap-4 lg:gap-6 items-center md:items-start justify-center w-full">
       {/* Video & Pacing Wrapper */}
-      <div className="flex flex-col gap-4 w-full max-w-sm shrink-0">
+      <div className="flex flex-col gap-4 w-full max-w-[300px] sm:max-w-[320px] xl:max-w-sm shrink animate-in fade-in duration-350">
         {/* Main Video Card */}
-        <div className="glass-panel rounded-[2rem] flex flex-col items-center justify-center w-full max-w-sm relative overflow-hidden aspect-[9/16] max-h-[calc(100vh-120px)] shadow-2xl border border-white/5 group bg-black float-slow interactive-card">
+        <div className="glass-panel rounded-[2rem] flex flex-col items-center justify-center w-full relative overflow-hidden aspect-[9/16] max-h-[calc(100vh-120px)] shadow-2xl border border-white/5 group bg-black float-slow interactive-card">
           
           {/* Live Video Feed (Visible camera preview mirrored in hardware, zero copy) */}
           <video 
@@ -1361,7 +1361,7 @@ export function Recorder({
       </div>
 
       {/* Side Panel: Topic display */}
-      <div className="w-full md:w-64 shrink-0 flex flex-col gap-4 mt-2 md:mt-0 float-medium interactive-card">
+      <div className="w-full md:w-56 xl:w-64 shrink flex flex-col gap-4 mt-2 md:mt-0 float-medium interactive-card">
         {/* Beautify Filters (Available to all users) */}
         <div className="glass-panel p-5 md:p-6 rounded-3xl bg-white/[0.01] border-white/5 text-left">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
