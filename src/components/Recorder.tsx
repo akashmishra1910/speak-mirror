@@ -231,6 +231,7 @@ export function Recorder({
   const storageCanvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
   const storageStreamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const storageCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const exportStreamRef = useRef<MediaStream | null>(null);
   // Speech recognition refs
   const recognitionRef = useRef<any>(null);
@@ -698,15 +699,16 @@ export function Recorder({
       isRecordingRef.current = true;
       startWatermarkRenderLoop();
 
-      // Create a downscaled 640x360 30fps canvas stream for the storage recorder
-      const canvas = document.createElement("canvas");
-      canvas.width = 640;
-      canvas.height = 360;
-      const ctx = canvas.getContext("2d");
+      // Use the off-screen storage canvas ref for the storage recorder
+      if (!storageCanvasRef.current) {
+        throw new Error("Storage canvas not ready");
+      }
+      const storageCanvas = storageCanvasRef.current;
+      const ctx = storageCanvas.getContext("2d");
       storageCanvasCtxRef.current = ctx;
 
       // Extract low resolution video track at 30fps for smooth playback
-      const lowResVideoStream = canvas.captureStream(30);
+      const lowResVideoStream = storageCanvas.captureStream(30);
       const lowResVideoTrack = lowResVideoStream.getVideoTracks()[0];
       const audioTrack = streamRef.current?.getAudioTracks()[0];
 
@@ -1110,11 +1112,29 @@ export function Recorder({
             onLoadedMetadata={() => setCameraLoaded(true)}
           />
           
-          {/* Hidden Canvas used for watermark processing inside background recorder loops only */}
+          {/* Off-screen Canvas for watermark high-res export stream (positioned off-screen to prevent browser throttling) */}
           <canvas 
             ref={canvasRef}
-            className="hidden"
-            style={{ display: "none" }}
+            style={{
+              position: "absolute",
+              left: "-9999px",
+              top: "-9999px",
+              pointerEvents: "none",
+              opacity: 0,
+            }}
+          />
+          {/* Off-screen Canvas for low-res storage stream (positioned off-screen to prevent browser throttling) */}
+          <canvas 
+            ref={storageCanvasRef}
+            width={640}
+            height={360}
+            style={{
+              position: "absolute",
+              left: "-9999px",
+              top: "-9999px",
+              pointerEvents: "none",
+              opacity: 0,
+            }}
           />
           
           {/* Subtle Overlay gradient for readability */}
