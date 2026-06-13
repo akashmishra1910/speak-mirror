@@ -1143,47 +1143,49 @@ export function Recorder({
       />
 
       {/* Right Column: Info Sidebar */}
-      <InfoSidebar
-        mode={mode}
-        topic={topic}
-        bullets={bullets}
-        wordOfTheDay={wordOfTheDay}
-        wordDefinition={wordDefinition}
-        tips={tips}
-        focusMetric={focusMetric ?? null}
-        isRecording={isRecording}
-        isLoadingTopic={isLoadingTopic}
-        onShuffleTopic={mode === "freeform" && !taskTopic ? () => fetchDynamicTopic(false) : undefined}
-        onGenerateAITopic={mode === "freeform" && !taskTopic ? () => fetchDynamicTopic(false) : undefined}
-        customSuggestedTopics={customSuggestedTopics}
-        onSelectSuggestedTopic={(t) => {
-          setTopic(t);
-          setBullets([]);
-          if (onTopicGenerated) onTopicGenerated(t, []);
-        }}
-        activeFilter={activeFilter}
-        setActiveFilter={(val) => {
-          setActiveFilter(val);
-          localStorage.setItem("speak_mirror_beautify_filter", val);
-        }}
-        bellTiming={bellTiming}
-        setBellTiming={(val) => {
-          setBellTiming(val);
-          localStorage.setItem("speak_mirror_bell_timing", val.toString());
-        }}
-        timeLimit={timeLimit}
-        userId={userId}
-        isPersonal={isPersonal}
-        activeTaskId={activeTaskId}
-        pendingAssignments={pendingAssignments}
-        selectedChallenge={selectedChallenge}
-        completedWarmupToday={completedWarmupToday}
-        onStartChallenge={onStartChallenge}
-        onShuffleChallenge={onShuffleChallenge}
-        onSelectAssignment={onSelectAssignment}
-        onClearAssignment={onClearAssignment}
-        onShowChallengeModal={onShowChallengeModal}
-      />
+      <div className="w-full lg:w-[280px] shrink-0 flex flex-col">
+        <InfoSidebar
+          mode={mode}
+          topic={topic}
+          bullets={bullets}
+          wordOfTheDay={wordOfTheDay}
+          wordDefinition={wordDefinition}
+          tips={tips}
+          focusMetric={focusMetric ?? null}
+          isRecording={isRecording}
+          isLoadingTopic={isLoadingTopic}
+          onShuffleTopic={mode === "freeform" && !taskTopic ? () => fetchDynamicTopic(false) : undefined}
+          onGenerateAITopic={mode === "freeform" && !taskTopic ? () => fetchDynamicTopic(false) : undefined}
+          customSuggestedTopics={customSuggestedTopics}
+          onSelectSuggestedTopic={(t) => {
+            setTopic(t);
+            setBullets([]);
+            if (onTopicGenerated) onTopicGenerated(t, []);
+          }}
+          activeFilter={activeFilter}
+          setActiveFilter={(val) => {
+            setActiveFilter(val);
+            localStorage.setItem("speak_mirror_beautify_filter", val);
+          }}
+          bellTiming={bellTiming}
+          setBellTiming={(val) => {
+            setBellTiming(val);
+            localStorage.setItem("speak_mirror_bell_timing", val.toString());
+          }}
+          timeLimit={timeLimit}
+          userId={userId}
+          isPersonal={isPersonal}
+          activeTaskId={activeTaskId}
+          pendingAssignments={pendingAssignments}
+          selectedChallenge={selectedChallenge}
+          completedWarmupToday={completedWarmupToday}
+          onStartChallenge={onStartChallenge}
+          onShuffleChallenge={onShuffleChallenge}
+          onSelectAssignment={onSelectAssignment}
+          onClearAssignment={onClearAssignment}
+          onShowChallengeModal={onShowChallengeModal}
+        />
+      </div>
     </div>
   );
 }
