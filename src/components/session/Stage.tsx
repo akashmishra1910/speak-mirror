@@ -156,7 +156,7 @@ export function Stage({
       </div>
 
       {/* 2. Bounded Video Card Feed */}
-      <div className="flex-1 w-full h-full relative rounded-[2rem] overflow-hidden bg-white/40 dark:bg-gray-900/40 backdrop-blur-md border border-white/60 dark:border-gray-700 shadow-[0_8px_40px_rgb(0,0,0,0.08)] flex items-center justify-center z-10">
+      <div className="w-full flex-1 h-[60vh] min-h-[500px] lg:h-full lg:min-h-0 relative rounded-[2rem] overflow-hidden bg-white/40 dark:bg-gray-900/40 backdrop-blur-md border border-white/60 dark:border-gray-700 shadow-[0_8px_40px_rgb(0,0,0,0.08)] flex items-center justify-center z-10">
         <video
           ref={videoRef}
           autoPlay

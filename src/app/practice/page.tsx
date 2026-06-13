@@ -1027,7 +1027,7 @@ function PracticeContent() {
               </div>
             </div>
           ) : (
-            <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 h-[calc(100vh-6rem)] min-h-[600px] animate-in fade-in duration-700 ease-out p-4">
+            <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 h-auto lg:h-[calc(100vh-6rem)] p-4 animate-in fade-in duration-700 ease-out">
               <Recorder 
                 onRecordingComplete={handleRecordingComplete} 
                 isProcessing={isProcessing} 

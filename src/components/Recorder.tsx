@@ -1103,7 +1103,7 @@ export function Recorder({
   return (
     <>
       {/* Left Panel: Scrollable Configuration */}
-      <div className="w-full lg:w-1/3 xl:w-1/4 h-full flex flex-col gap-6 overflow-y-auto hidden-scrollbar pb-4 shrink-0">
+      <div className="w-full lg:w-1/3 xl:w-1/4 h-auto lg:h-full flex flex-col gap-6 lg:overflow-y-auto hidden-scrollbar pb-4 shrink-0 order-2 lg:order-1">
         <InfoSidebar
           mode={mode}
           topic={topic}
@@ -1148,7 +1148,7 @@ export function Recorder({
       </div>
 
       {/* Right Panel: Contained Video Feed */}
-      <div className="flex-1 h-full flex flex-col">
+      <div className="flex-1 h-auto lg:h-full flex flex-col order-1 lg:order-2">
         <Stage
           videoRef={videoRef}
           canvasRef={canvasRef}
