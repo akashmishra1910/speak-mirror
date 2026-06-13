@@ -101,7 +101,7 @@ export function Stage({
   streak,
 }: StageProps) {
   return (
-    <div className="flex-1 min-h-[450px] h-auto bg-brand-stage rounded-3xl border border-brand-gold/12 flex flex-col justify-between p-3.5 relative overflow-hidden select-none">
+    <div className="flex-1 h-full flex flex-col justify-between relative select-none">
       
       {/* 3-2-1 Countdown Overlay */}
       {showCountdown && (
@@ -127,7 +127,7 @@ export function Stage({
       </div>
 
       {/* 1. Header Row (Mounts Speech Mode and Streak above recording screen without overlapping) */}
-      <div className="w-full flex items-center justify-between pb-2 border-b border-brand-gold/12 relative z-20 shrink-0">
+      <div className="w-full flex items-center justify-between pb-2 border-b border-brand-gold/12 relative z-20 shrink-0 mb-2">
         <div className="flex items-center gap-2">
           <span className="text-[9px] font-bold text-white uppercase tracking-wider bg-brand-gold/10 px-2 py-0.5 rounded border border-brand-gold/25 font-mono">
             {mode === "warmup" ? "Warm-up" : mode === "reading" ? "Reading Aloud" : "Freeform Speech"}
@@ -156,15 +156,14 @@ export function Stage({
       </div>
 
       {/* 2. Bounded Video Card Feed */}
-      <div className="flex-1 w-full relative rounded-2xl overflow-hidden bg-black border border-brand-gold/10 flex items-center justify-center z-10 my-2 shadow-inner">
+      <div className="flex-1 w-full h-full relative rounded-[2rem] overflow-hidden bg-white/40 dark:bg-gray-900/40 backdrop-blur-md border border-white/60 dark:border-gray-700 shadow-[0_8px_40px_rgb(0,0,0,0.08)] flex items-center justify-center z-10">
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted
-          className="absolute inset-0 w-full h-full object-cover z-0"
+          className="absolute inset-0 w-full h-full object-cover rounded-[2rem] scale-x-[-1] z-0"
           style={{
-            transform: "scaleX(-1) translateZ(0)",
             willChange: "transform",
             backfaceVisibility: "hidden",
             WebkitBackfaceVisibility: "hidden",
@@ -200,6 +199,24 @@ export function Stage({
             pacingFillRef={pacingFillRef}
             pacingTextRef={pacingTextRef}
           />
+        </div>
+
+        {/* Symmetrically Centered Recording Controls (floating over video bottom) */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-auto select-none">
+          {!isProcessing && (
+            isRecording ? (
+              <StopButton onClick={onStopRecording} isRecording={isRecording} />
+            ) : (
+              <motion.button
+                onClick={() => setShowCountdown(true)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="w-11 h-11 rounded-full bg-brand-navy border-2 border-brand-gold/30 hover:border-brand-gold text-brand-gold flex items-center justify-center shadow-lg transition-colors duration-300 cursor-pointer"
+              >
+                <Mic className="w-4 h-4 stroke-[1.5]" />
+              </motion.button>
+            )
+          )}
         </div>
 
         {/* Center Warnings & Interactive Cards inside video card */}
@@ -249,7 +266,7 @@ export function Stage({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="pointer-events-auto absolute inset-3 bg-brand-stage/90 border border-brand-gold/20 backdrop-blur-xl p-3 rounded-xl shadow-2xl overflow-y-auto flex flex-col justify-start"
+                className="pointer-events-auto absolute top-4 left-4 right-4 max-h-[30%] overflow-y-auto bg-brand-stage/95 border border-brand-gold/20 backdrop-blur-xl p-3 rounded-2xl shadow-2xl flex flex-col justify-start"
               >
                 {mode === "reading" ? (
                   <>
@@ -282,27 +299,6 @@ export function Stage({
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
-      </div>
-
-      {/* 3. Bottom Controls Area (Symmetrically Centered) */}
-      <div className="w-full flex items-center justify-center z-20 relative shrink-0 pt-1">
-        {/* Record/Stop Button Controls */}
-        <div className="pointer-events-auto select-none">
-          {!isProcessing && (
-            isRecording ? (
-              <StopButton onClick={onStopRecording} isRecording={isRecording} />
-            ) : (
-              <motion.button
-                onClick={() => setShowCountdown(true)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-11 h-11 rounded-full bg-brand-navy border-2 border-brand-gold/30 hover:border-brand-gold text-brand-gold flex items-center justify-center shadow-lg transition-colors duration-300 cursor-pointer"
-              >
-                <Mic className="w-4 h-4 stroke-[1.5]" />
-              </motion.button>
-            )
-          )}
         </div>
       </div>
 

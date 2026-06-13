@@ -1101,49 +1101,9 @@ export function Recorder({
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 w-full max-w-[660px] mx-auto items-stretch justify-center">
-      {/* Left Column: The Stage */}
-      <Stage
-        videoRef={videoRef}
-        canvasRef={canvasRef}
-        storageCanvasRef={storageCanvasRef}
-        timerContainerRef={timerContainerRef}
-        timerTextRef={timerTextRef}
-        eyeContactDotRef={eyeContactDotRef}
-        eyeContactTextRef={eyeContactTextRef}
-        expressionTextRef={expressionTextRef}
-        wpmTextRef={wpmTextRef}
-        metricsContainerRef={metricsContainerRef}
-        gazeWarningRef={gazeWarningRef}
-        coachNudgeContainerRef={coachNudgeRef}
-        coachNudgeTextRef={coachNudgeTextRef}
-        concludePromptRef={concludePromptRef}
-        fillerContainerRef={liveFillerContainerRef}
-        fillerTextRef={liveFillerTextRef}
-        pacingContainerRef={livePacingContainerRef}
-        pacingFillRef={needleRef}
-        pacingTextRef={liveWpmTextRef}
-        activeFilter={activeFilter}
-        isRecording={isRecording}
-        isProcessing={isProcessing}
-        cameraLoaded={cameraLoaded}
-        setCameraLoaded={setCameraLoaded}
-        isAssistEnabled={isAssistEnabled}
-        setIsAssistEnabled={setIsAssistEnabled}
-        mode={mode}
-        readingText={readingText}
-        bullets={bullets}
-        onStartRecording={startRecording}
-        onStopRecording={stopRecording}
-        showCountdown={showCountdown}
-        setShowCountdown={setShowCountdown}
-        onCountdownComplete={handleCountdownComplete}
-        isPersonal={isPersonal}
-        streak={streak}
-      />
-
-      {/* Right Column: Info Sidebar */}
-      <div className="w-full lg:w-[280px] shrink-0 flex flex-col">
+    <>
+      {/* Left Panel: Scrollable Configuration */}
+      <div className="w-full lg:w-1/3 xl:w-1/4 h-full flex flex-col gap-6 overflow-y-auto hidden-scrollbar pb-4 shrink-0">
         <InfoSidebar
           mode={mode}
           topic={topic}
@@ -1186,6 +1146,48 @@ export function Recorder({
           onShowChallengeModal={onShowChallengeModal}
         />
       </div>
-    </div>
+
+      {/* Right Panel: Contained Video Feed */}
+      <div className="flex-1 h-full flex flex-col">
+        <Stage
+          videoRef={videoRef}
+          canvasRef={canvasRef}
+          storageCanvasRef={storageCanvasRef}
+          timerContainerRef={timerContainerRef}
+          timerTextRef={timerTextRef}
+          eyeContactDotRef={eyeContactDotRef}
+          eyeContactTextRef={eyeContactTextRef}
+          expressionTextRef={expressionTextRef}
+          wpmTextRef={wpmTextRef}
+          metricsContainerRef={metricsContainerRef}
+          gazeWarningRef={gazeWarningRef}
+          coachNudgeContainerRef={coachNudgeRef}
+          coachNudgeTextRef={coachNudgeTextRef}
+          concludePromptRef={concludePromptRef}
+          fillerContainerRef={liveFillerContainerRef}
+          fillerTextRef={liveFillerTextRef}
+          pacingContainerRef={livePacingContainerRef}
+          pacingFillRef={needleRef}
+          pacingTextRef={liveWpmTextRef}
+          activeFilter={activeFilter}
+          isRecording={isRecording}
+          isProcessing={isProcessing}
+          cameraLoaded={cameraLoaded}
+          setCameraLoaded={setCameraLoaded}
+          isAssistEnabled={isAssistEnabled}
+          setIsAssistEnabled={setIsAssistEnabled}
+          mode={mode}
+          readingText={readingText}
+          bullets={bullets}
+          onStartRecording={startRecording}
+          onStopRecording={stopRecording}
+          showCountdown={showCountdown}
+          setShowCountdown={setShowCountdown}
+          onCountdownComplete={handleCountdownComplete}
+          isPersonal={isPersonal}
+          streak={streak}
+        />
+      </div>
+    </>
   );
 }

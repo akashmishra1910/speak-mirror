@@ -1027,7 +1027,7 @@ function PracticeContent() {
               </div>
             </div>
           ) : (
-            <div className="w-full bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/50 dark:border-white/5 rounded-[2rem] ring-1 ring-sky-200/50 dark:ring-sky-800/50 shadow-[0_0_40px_rgba(14,165,233,0.1)] p-4 md:p-6 transition-all duration-300 ease-out hover:shadow-lg">
+            <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 h-[calc(100vh-6rem)] min-h-[600px] animate-in fade-in duration-700 ease-out p-4">
               <Recorder 
                 onRecordingComplete={handleRecordingComplete} 
                 isProcessing={isProcessing} 
