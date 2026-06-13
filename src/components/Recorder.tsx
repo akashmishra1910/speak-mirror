@@ -55,6 +55,7 @@ interface RecorderProps {
   setActiveFilter?: (val: string) => void;
   bellTiming?: number;
   setBellTiming?: (val: number) => void;
+  streak?: number;
 }
 
 // IndexedDB helpers for zero-copy streaming
@@ -154,6 +155,7 @@ export function Recorder({
   onSelectAssignment,
   onClearAssignment,
   onShowChallengeModal,
+  streak,
 
   activeFilter: propActiveFilter,
   setActiveFilter: propSetActiveFilter,
@@ -1136,6 +1138,8 @@ export function Recorder({
         showCountdown={showCountdown}
         setShowCountdown={setShowCountdown}
         onCountdownComplete={handleCountdownComplete}
+        isPersonal={isPersonal}
+        streak={streak}
       />
 
       {/* Right Column: Info Sidebar */}
