@@ -1070,7 +1070,7 @@ function PracticeContent() {
         /* Two columns manually layout in results phase */
         <div className="flex flex-col lg:flex-row gap-6 w-full items-stretch justify-center relative z-10">
           {/* Left Column: Completion Card (brand-consistent) */}
-          <div className="flex-1 h-[400px] bg-brand-stage rounded-3xl border border-brand-gold/12 flex flex-col items-center justify-center p-8 text-center relative overflow-hidden select-none">
+          <div className="flex-1 h-[450px] bg-brand-stage rounded-3xl border border-brand-gold/12 flex flex-col items-center justify-center p-8 text-center relative overflow-hidden select-none">
             {/* Completion content */}
             <div className="w-full max-w-sm flex flex-col items-center justify-center gap-4 animate-in fade-in duration-500 z-20">
               <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 shadow-md">

@@ -90,7 +90,7 @@ export function InfoSidebar({
   ];
 
   return (
-    <aside className="w-full lg:w-[280px] shrink-0 flex flex-col gap-5 text-left p-4 lg:p-5 bg-[#faf8f4]/60 dark:bg-[#0a0e1a]/65 backdrop-blur-xl border-t lg:border-t-0 lg:border-l border-[#e8e2d8]/55 dark:border-brand-gold/10 transition-colors duration-300 h-[400px] overflow-y-auto">
+    <aside className="w-full lg:w-[280px] shrink-0 flex flex-col gap-5 text-left p-4 lg:p-5 bg-white/70 dark:bg-[#0d1117]/75 backdrop-blur-md border border-[#e8e2d8]/50 dark:border-brand-gold/12 rounded-3xl transition-colors duration-300 h-[450px] overflow-y-auto shadow-sm">
       
       {/* Configuration Section (Only shown when not recording) */}
       {!isRecording && (

@@ -101,7 +101,7 @@ export function Stage({
   streak,
 }: StageProps) {
   return (
-    <div className="flex-1 h-[400px] bg-brand-stage rounded-3xl border border-brand-gold/12 flex flex-col justify-between p-3.5 relative overflow-hidden select-none">
+    <div className="flex-1 h-[450px] bg-brand-stage rounded-3xl border border-brand-gold/12 flex flex-col justify-between p-3.5 relative overflow-hidden select-none">
       
       {/* 3-2-1 Countdown Overlay */}
       {showCountdown && (
@@ -140,9 +140,6 @@ export function Stage({
           )}
         </div>
         <div className="flex items-center gap-2 pointer-events-auto">
-          {/* Timer Pill */}
-          <TimerPill containerRef={timerContainerRef} textRef={timerTextRef} />
-
           {/* Right Controls: Teleprompter / Assist trigger */}
           <button
             onClick={() => setIsAssistEnabled(!isAssistEnabled)}
@@ -188,6 +185,22 @@ export function Stage({
           wpmTextRef={wpmTextRef}
           containerRef={metricsContainerRef}
         />
+
+        {/* Recording Timer Pill (absolute top-center overlay) */}
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 pointer-events-none">
+          <TimerPill containerRef={timerContainerRef} textRef={timerTextRef} />
+        </div>
+
+        {/* Speech Telemetry Pills (absolute bottom-left overlay) */}
+        <div className="absolute bottom-4 left-4 z-20 pointer-events-none">
+          <StageHUD
+            fillerContainerRef={fillerContainerRef}
+            fillerTextRef={fillerTextRef}
+            pacingContainerRef={pacingContainerRef}
+            pacingFillRef={pacingFillRef}
+            pacingTextRef={pacingTextRef}
+          />
+        </div>
 
         {/* Center Warnings & Interactive Cards inside video card */}
         <div className="w-full max-w-sm absolute inset-0 z-20 flex flex-col items-center justify-center p-3 gap-3 pointer-events-none">
@@ -272,11 +285,10 @@ export function Stage({
         </div>
       </div>
 
-      {/* 3. Bottom Controls & HUD Area */}
-      <div className="w-full flex items-center justify-between gap-4 z-20 relative shrink-0">
-        
+      {/* 3. Bottom Controls Area (Symmetrically Centered) */}
+      <div className="w-full flex items-center justify-center z-20 relative shrink-0 pt-1">
         {/* Record/Stop Button Controls */}
-        <div className="pointer-events-auto select-none shrink-0">
+        <div className="pointer-events-auto select-none">
           {!isProcessing && (
             isRecording ? (
               <StopButton onClick={onStopRecording} isRecording={isRecording} />
@@ -291,17 +303,6 @@ export function Stage({
               </motion.button>
             )
           )}
-        </div>
-
-        {/* Stage Bottom telemetry pacing & fillers HUD */}
-        <div className="flex-1 max-w-[340px]">
-          <StageHUD
-            fillerContainerRef={fillerContainerRef}
-            fillerTextRef={fillerTextRef}
-            pacingContainerRef={pacingContainerRef}
-            pacingFillRef={pacingFillRef}
-            pacingTextRef={pacingTextRef}
-          />
         </div>
       </div>
 

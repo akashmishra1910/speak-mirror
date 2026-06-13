@@ -16,37 +16,39 @@ export function StageHUD({
   pacingTextRef,
 }: StageHUDProps) {
   return (
-    <div className="w-full flex flex-col gap-2 select-none font-mono">
+    <div className="flex flex-col gap-2 select-none font-mono">
       {/* Bar 1: Filler Words */}
       <div
         ref={fillerContainerRef}
-        className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-brand-stage/70 border border-brand-gold/12 backdrop-blur-md shadow-md"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-stage/75 border border-brand-gold/20 shadow-md backdrop-blur-md"
         style={{ display: "none" }}
       >
-        <span className="text-[10px] text-white/35 font-bold tracking-wider">// FILLERS</span>
-        <span ref={fillerTextRef} className="text-xs font-bold text-brand-gold">
-          0 (um)
+        <span className="text-[9px] text-white/50 font-bold uppercase tracking-wider">// FILLERS</span>
+        <div className="w-px h-2.5 bg-white/20" />
+        <span ref={fillerTextRef} className="text-[9px] font-bold text-brand-gold whitespace-nowrap">
+          0
         </span>
       </div>
 
       {/* Bar 2: Pacing Progress */}
       <div
         ref={pacingContainerRef}
-        className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-brand-stage/70 border border-brand-gold/12 backdrop-blur-md shadow-md gap-4"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-stage/75 border border-brand-gold/20 shadow-md backdrop-blur-md min-w-[140px]"
         style={{ display: "none" }}
       >
-        <span className="text-[10px] text-white/35 font-bold tracking-wider">// PACING</span>
+        <span className="text-[9px] text-white/50 font-bold uppercase tracking-wider">// PACING</span>
+        <div className="w-px h-2.5 bg-white/20" />
         
         {/* Thin progress track */}
-        <div className="flex-1 h-1 bg-white/8 rounded-full overflow-hidden relative">
+        <div className="w-12 h-1 bg-white/10 rounded-full overflow-hidden relative shrink-0">
           <div
             ref={pacingFillRef}
             className="h-full bg-brand-gold rounded-full transition-all duration-300 ease-out"
-            style={{ width: "43.75%" }} // Initial fallback width representing 130 WPM
+            style={{ width: "43.75%" }}
           />
         </div>
 
-        <span ref={pacingTextRef} className="text-xs font-bold text-brand-gold whitespace-nowrap">
+        <span ref={pacingTextRef} className="text-[9px] font-bold text-brand-gold whitespace-nowrap">
           GOOD
         </span>
       </div>
