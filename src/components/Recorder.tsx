@@ -1101,7 +1101,7 @@ export function Recorder({
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 w-full items-stretch justify-center">
+    <div className="flex flex-col lg:flex-row gap-6 w-full max-w-[660px] mx-auto items-stretch justify-center">
       {/* Left Column: The Stage */}
       <Stage
         videoRef={videoRef}

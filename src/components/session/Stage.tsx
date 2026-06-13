@@ -101,7 +101,7 @@ export function Stage({
   streak,
 }: StageProps) {
   return (
-    <div className="flex-1 h-[450px] bg-brand-stage rounded-3xl border border-brand-gold/12 flex flex-col justify-between p-3.5 relative overflow-hidden select-none">
+    <div className="flex-1 min-h-[450px] h-auto bg-brand-stage rounded-3xl border border-brand-gold/12 flex flex-col justify-between p-3.5 relative overflow-hidden select-none">
       
       {/* 3-2-1 Countdown Overlay */}
       {showCountdown && (

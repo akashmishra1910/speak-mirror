@@ -22,15 +22,22 @@ export function PracticeLayout({
 }: PracticeLayoutProps) {
   // Determine phase badge text
   let phaseText = "Freeform";
-  if (mode === "warmup") phaseText = "Warm-up";
-  else if (mode === "reading") phaseText = "Reading";
+  let stepText = "Step 1 of 2: Freeform Speech";
+  if (mode === "warmup") {
+    phaseText = "Warm-up";
+    stepText = "Step 1 of 1: Warm-up";
+  } else if (mode === "reading") {
+    phaseText = "Reading";
+    stepText = "Step 2 of 2: Reading Aloud";
+  }
 
-  if (phase === "analyzing") phaseText = "Analyzing";
-  else if (phase === "results") phaseText = "Results";
-
-  // Determine active states for the two progress bars
-  const bar1Active = phase === "freeform_recording" || phase === "reading_recording" || phase === "analyzing" || phase === "results";
-  const bar2Active = phase === "reading_recording" || phase === "analyzing" || phase === "results";
+  if (phase === "analyzing") {
+    phaseText = "Analyzing";
+    stepText = "Analyzing Speech...";
+  } else if (phase === "results") {
+    phaseText = "Results";
+    stepText = "Session Summary";
+  }
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex flex-col w-full bg-brand-cream dark:bg-[#050508] transition-colors duration-300 relative overflow-hidden">
@@ -70,25 +77,10 @@ export function PracticeLayout({
               </div>
             )}
 
-            {/* Phase progress bars (two bars) */}
-            <div className="flex items-center gap-1.5">
-              <div
-                className={`h-1.5 w-[14px] sm:w-8 rounded-full transition-all duration-300 ${
-                  bar1Active
-                    ? "bg-brand-gold shadow-[0_0_8px_rgba(184,150,62,0.4)]"
-                    : "bg-[#e8e2d8] dark:bg-white/10"
-                }`}
-                title="Step 1: Freeform Speech"
-              />
-              <div
-                className={`h-1.5 w-[14px] sm:w-8 rounded-full transition-all duration-300 ${
-                  bar2Active
-                    ? "bg-brand-gold shadow-[0_0_8px_rgba(184,150,62,0.4)]"
-                    : "bg-[#e8e2d8] dark:bg-white/10"
-                }`}
-                title="Step 2: Reading Aloud"
-              />
-            </div>
+            {/* Phase progress text */}
+            <span className="text-[10px] font-bold text-brand-navy/60 dark:text-white/50 uppercase tracking-wider font-mono">
+              {stepText}
+            </span>
           </div>
         </div>
       </header>

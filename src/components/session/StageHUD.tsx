@@ -39,11 +39,10 @@ export function StageHUD({
         <span className="text-[9px] text-white/50 font-bold uppercase tracking-wider">// PACING</span>
         <div className="w-px h-2.5 bg-white/20" />
         
-        {/* Thin progress track */}
-        <div className="w-12 h-1 bg-white/10 rounded-full overflow-hidden relative shrink-0">
+        {/* Thin progress track (hidden visually) */}
+        <div className="hidden">
           <div
             ref={pacingFillRef}
-            className="h-full bg-brand-gold rounded-full transition-all duration-300 ease-out"
             style={{ width: "43.75%" }}
           />
         </div>
