@@ -18,6 +18,8 @@ import { PendingAssignments } from "@/components/practice/PendingAssignments";
 import { ChallengeModal } from "@/components/practice/ChallengeModal";
 import { ToastNotification, Toast } from "@/components/practice/ToastNotification";
 import { PreSessionModal } from "@/components/session/PreSessionModal";
+import { PracticeLayout } from "@/components/practice/PracticeLayout";
+import { InfoSidebar } from "@/components/session/InfoSidebar";
 
 const Recorder = dynamic(() => import("@/components/Recorder").then(mod => mod.Recorder), {
   ssr: false,
@@ -74,6 +76,19 @@ function PracticeContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+
+  // Beautify filter and Alert bell timings lifted state
+  const [activeFilter, setActiveFilter] = useState("studio");
+  const [bellTiming, setBellTiming] = useState(75);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedFilter = localStorage.getItem("speak_mirror_beautify_filter");
+      if (savedFilter) setActiveFilter(savedFilter);
+      const savedBell = localStorage.getItem("speak_mirror_bell_timing");
+      if (savedBell) setBellTiming(Number(savedBell));
+    }
+  }, []);
 
   // Daily Streak State
   const [streak, setStreak] = useState<number>(0);
@@ -986,287 +1001,129 @@ function PracticeContent() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-6 animate-in fade-in duration-700 ease-out relative flex flex-col gap-6">
-      {/* 1. Prompt Selector & Header Area */}
-      <PromptSelector
-        activeRoomId={activeRoomId}
-        activeTaskId={activeTaskId}
-        isPersonal={isPersonal}
-        phase={phase}
-        streak={streak}
-        isLoadingStreak={isLoadingStreak}
-        completedWarmupToday={completedWarmupToday}
-        notificationPermission={notificationPermission}
-        onRequestNotificationPermission={handleRequestNotificationPermission}
-        onShowChallengeModal={() => setShowChallengeModal(true)}
-        taskTopic={task?.topic_of_the_day}
-        activeWorkspaceName={activeWorkspace.name}
-      />
-
-      {/* Main Two-Column practice grid */}
-      <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* Left Column: Studio Configuration (Span 4) */}
-        <div className="lg:col-span-4 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border border-white/40 dark:border-gray-700 rounded-3xl p-6 lg:p-8 shadow-xl flex flex-col gap-6">
-          
-          {/* Top row: Streak Pill and notifications */}
-          <div className="flex justify-between items-center w-full flex-wrap gap-3">
-            {isPersonal && (
-              <div className="flex items-center gap-1.5 bg-white/50 dark:bg-gray-800/50 rounded-full px-4 py-2 border border-white/20 dark:border-white/5 text-orange-500 dark:text-orange-400 font-extrabold text-xs">
-                <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500 dark:fill-orange-400 dark:text-orange-400" />
-                <span>{isLoadingStreak ? "..." : `${streak} ${streak === 1 ? 'day' : 'days'}`}</span>
-              </div>
-            )}
-
-            {/* Reminders / Daily challenge button in the configuration header */}
-            <div className="flex items-center gap-2">
-              {isPersonal && (
-                <button
-                  onClick={() => setShowChallengeModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 dark:text-white transition-all text-xs font-semibold"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-orange-400" />
-                  <span>Daily Challenge</span>
-                </button>
-              )}
-              {notificationPermission !== "unsupported" && (
-                <button
-                  onClick={notificationPermission !== "granted" ? handleRequestNotificationPermission : undefined}
-                  disabled={notificationPermission === "granted" || notificationPermission === "denied"}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all text-[10px] font-bold uppercase tracking-wider ${
-                    notificationPermission === "granted"
-                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                      : notificationPermission === "denied"
-                        ? "bg-rose-500/10 border-rose-500/20 text-rose-400 opacity-60 cursor-not-allowed"
-                        : "bg-indigo-500/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20"
-                  }`}
-                >
-                  <Bell className="w-3.5 h-3.5" />
-                  <span>{notificationPermission === "granted" ? "Active" : "Remind"}</span>
-                </button>
-              )}
-            </div>
+    <PracticeLayout
+      streak={streak}
+      isLoadingStreak={isLoadingStreak}
+      phase={phase}
+      mode={phase === "reading_recording" ? "reading" : (task?.isChallenge ? "warmup" : "freeform")}
+      isPersonal={isPersonal}
+    >
+      {phase !== "results" ? (
+        showWarmup && !hasWarmedUp && phase === "freeform_recording" ? (
+          <div className="flex-1 w-full flex items-center justify-center">
+            <PreSessionModal
+              focusMetric={profileFocusMetric}
+              goal={profileGoal}
+              experienceLevel={profileExperience}
+              practiceDuration={profileDuration}
+              streak={streak}
+              taskTopic={task?.topic_of_the_day || freeformTopic || "Free Practice"}
+              isFirstSession={isFirstSession}
+              onStartRecording={() => setHasWarmedUp(true)}
+              onClose={() => setHasWarmedUp(true)}
+            />
           </div>
+        ) : (
+          <Recorder 
+            onRecordingComplete={handleRecordingComplete} 
+            isProcessing={isProcessing} 
+            readingText={phase === "reading_recording" ? task?.reading_text : undefined}
+            taskTopic={task?.topic_of_the_day || freeformTopic}
+            initialBullets={freeformBullets}
+            onTopicGenerated={(topic, bullets) => {
+              setFreeformTopic(topic);
+              setFreeformBullets(bullets);
+            }}
+            userId={user?.id}
+            userLevel={profileExperience}
+            mode={phase === "reading_recording" ? "reading" : (task?.isChallenge ? "warmup" : "freeform")}
+            timeLimit={task?.timeLimit || 90}
+            wordOfTheDay={task?.word_of_the_day}
+            wordDefinition={task?.definition}
+            tips={task?.tips}
+            autoStart={showWarmup}
+            focusMetric={profileFocusMetric}
 
-          {/* Mode Selection Segmented Toggle */}
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-slate-500 dark:text-zinc-555 uppercase tracking-widest text-left">
-              Studio Mode
-            </label>
-            <div className="relative flex p-1 bg-slate-100 dark:bg-zinc-800/80 rounded-full border border-slate-200/50 dark:border-white/5 w-full">
-              <div
-                className="absolute top-1 bottom-1 rounded-full bg-white dark:bg-zinc-700 shadow-sm transition-all duration-300 ease-out"
-                style={{
-                  left: !activeTaskId ? "4px" : "calc(50% + 2px)",
-                  width: "calc(50% - 6px)",
-                }}
-              />
+            // Configuration state bindings
+            customSuggestedTopics={customSuggestedTopics}
+            onGenerateAITopic={handleGenerateAITopic}
+            isPersonal={isPersonal}
+            activeTaskId={activeTaskId}
+            pendingAssignments={pendingAssignments}
+            selectedChallenge={selectedChallenge}
+            completedWarmupToday={completedWarmupToday}
+            onStartChallenge={startChallenge}
+            onShuffleChallenge={handleShuffleChallenge}
+            onSelectAssignment={selectAssignment}
+            onClearAssignment={clearAssignment}
+            onShowChallengeModal={() => setShowChallengeModal(true)}
+
+            // Lifted settings states
+            activeFilter={activeFilter}
+            setActiveFilter={setActiveFilter}
+            bellTiming={bellTiming}
+            setBellTiming={setBellTiming}
+          />
+        )
+      ) : (
+        /* Two columns manually layout in results phase */
+        <div className="flex flex-col lg:flex-row gap-6 w-full items-stretch justify-center relative z-10">
+          {/* Left Column: Completion Card (brand-consistent) */}
+          <div className="flex-1 min-h-[460px] bg-brand-stage rounded-3xl border border-brand-gold/12 flex flex-col items-center justify-center p-8 text-center relative overflow-hidden select-none">
+            {/* Completion content */}
+            <div className="w-full max-w-sm flex flex-col items-center justify-center gap-4 animate-in fade-in duration-500 z-20">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 shadow-md">
+                <Check className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Session Completed!</h3>
+              <p className="text-xs text-zinc-400 font-light leading-relaxed max-w-sm">
+                Your speech has been analyzed successfully. Scroll down to view your diagnostic metrics, transcript analysis, and custom cert card.
+              </p>
               <button
-                onClick={clearAssignment}
-                className={`relative z-10 w-1/2 py-2 text-xs font-bold text-center rounded-full transition-colors cursor-pointer ${
-                  !activeTaskId
-                    ? "text-slate-800 dark:text-white"
-                    : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200"
-                }`}
+                onClick={handleRetake}
+                className="px-6 py-2.5 bg-gradient-to-r from-brand-gold to-brand-gold/80 hover:from-brand-gold/90 hover:to-brand-gold text-brand-navy rounded-xl text-xs font-bold transition-all shadow-[0_4px_15px_rgba(184,150,62,0.2)] cursor-pointer"
               >
-                Freeform
-              </button>
-              <button
-                onClick={() => {
-                  if (isPersonal) {
-                    startChallenge();
-                  } else if (pendingAssignments.length > 0) {
-                    selectAssignment(pendingAssignments[0]);
-                  } else {
-                    setShowChallengeModal(true);
-                  }
-                }}
-                className={`relative z-10 w-1/2 py-2 text-xs font-bold text-center rounded-full transition-colors cursor-pointer ${
-                  activeTaskId
-                    ? "text-slate-800 dark:text-white"
-                    : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200"
-                }`}
-              >
-                Prompt
+                Start New Session
               </button>
             </div>
+            {/* Subtle Overlay Gradient for Readability */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/80 z-10 pointer-events-none rounded-3xl" />
           </div>
 
-          {/* Dynamic Configuration content */}
-          {!activeTaskId ? (
-            /* Topic Generator badges when in Freeform Mode */
-            <div className="flex flex-col gap-4 text-left">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-bold text-slate-500 dark:text-zinc-555 uppercase tracking-widest">
-                  Topic Suggestions
-                </label>
-                <button
-                  onClick={handleGenerateAITopic}
-                  disabled={isLoadingTopic}
-                  className="text-[11px] font-bold text-[#5B7C99] dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                >
-                  {isLoadingTopic ? "Generating..." : "Generate AI Topic"}
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2.5">
-                {customSuggestedTopics.map((item, idx) => {
-                  const isSelected = (freeformTopic === item || (!freeformTopic && idx === 0));
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setFreeformTopic(item);
-                        setFreeformBullets([]);
-                      }}
-                      className={`text-xs px-3.5 py-2.5 rounded-2xl border text-left transition-all duration-200 hover:-translate-y-1 transform cursor-pointer ${
-                        isSelected
-                          ? "bg-indigo-500/10 border-indigo-500 text-indigo-700 dark:text-indigo-300 font-bold"
-                          : "bg-white/40 border-slate-200 dark:bg-white/[0.02] dark:border-white/5 text-slate-655 dark:text-zinc-400 hover:border-slate-350 dark:hover:border-white/10"
-                      }`}
-                    >
-                      {item}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            /* Prompt Mode details */
-            <div className="flex flex-col gap-4">
-              {isPersonal ? (
-                /* Daily Challenge prompt in Personal Mode */
-                <div className="flex flex-col gap-4 text-left">
-                  <div className="flex justify-between items-center">
-                    <label className="text-xs font-bold text-slate-500 dark:text-zinc-500 uppercase tracking-widest">
-                      Active Challenge Prompt
-                    </label>
-                    <button
-                      onClick={handleShuffleChallenge}
-                      className="p-1.5 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-500 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 dark:text-zinc-400 rounded-full transition-all cursor-pointer"
-                      title="Shuffle Challenge"
-                    >
-                      <Shuffle className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  {selectedChallenge && (
-                    <div 
-                      onClick={startChallenge}
-                      className={`p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${
-                        activeTaskId === `challenge-${selectedChallenge.id}`
-                          ? "bg-indigo-500/5 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.08)]"
-                          : "bg-slate-100/30 border-slate-200/50 hover:bg-slate-100/80 dark:bg-white/[0.01] dark:border-white/5 dark:hover:bg-white/[0.04] hover:border-slate-300"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold text-indigo-650 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-400/10 dark:text-indigo-400">
-                          DAILY CHALLENGE
-                        </span>
-                        {completedWarmupToday && (
-                          <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-emerald-500/20 text-emerald-655 dark:text-emerald-400 border border-emerald-500/30">
-                            Completed
-                          </span>
-                        )}
-                      </div>
-                      <h4 className="text-xs font-extrabold text-slate-800 dark:text-white leading-snug mb-2">
-                        {selectedChallenge.prompt}
-                      </h4>
-                      <p className="text-[10px] text-slate-550 dark:text-zinc-500 leading-relaxed font-light">
-                        Word of the day: <strong className="text-slate-700 dark:text-zinc-350">{selectedChallenge.word_of_the_day}</strong> - {selectedChallenge.definition}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                /* Mentor Assignments list in Team workspace */
-                <PendingAssignments
-                  isPersonal={isPersonal}
-                  activeTaskId={activeTaskId}
-                  isLoadingAssignments={isLoadingAssignments}
-                  pendingAssignments={pendingAssignments}
-                  onClearAssignment={clearAssignment}
-                  onSelectAssignment={selectAssignment}
-                />
-              )}
-            </div>
-          )}
+          {/* Right Column: InfoSidebar in read-only / results mode */}
+          <InfoSidebar
+            mode={task?.reading_text ? "reading" : (task?.isChallenge ? "warmup" : "freeform")}
+            topic={task?.topic_of_the_day || freeformTopic || "Free Practice"}
+            bullets={freeformBullets}
+            wordOfTheDay={task?.word_of_the_day}
+            wordDefinition={task?.definition}
+            tips={task?.tips}
+            focusMetric={profileFocusMetric}
+            isRecording={false}
+            isLoadingTopic={false}
+            activeFilter={activeFilter}
+            setActiveFilter={setActiveFilter}
+            bellTiming={bellTiming}
+            setBellTiming={setBellTiming}
+            timeLimit={task?.timeLimit || 90}
+            userId={user?.id}
+            isPersonal={isPersonal}
+            activeTaskId={activeTaskId}
+            pendingAssignments={pendingAssignments}
+            selectedChallenge={selectedChallenge}
+            completedWarmupToday={completedWarmupToday}
+            onStartChallenge={startChallenge}
+            onShuffleChallenge={handleShuffleChallenge}
+            onSelectAssignment={selectAssignment}
+            onClearAssignment={clearAssignment}
+            onShowChallengeModal={() => setShowChallengeModal(true)}
+          />
         </div>
+      )}
 
-        {/* Right Column: The Mirror (Span 8) */}
-        <div className="lg:col-span-8 flex items-center justify-center w-full min-h-[480px]">
-          <div className="w-full max-w-3xl p-4 sm:p-6 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-3xl shadow-2xl ring-1 ring-sky-200/50 dark:ring-sky-900/50 transition-all duration-300 flex flex-col justify-center items-center relative overflow-hidden">
-            {phase === "results" ? (
-              <div className="w-full p-8 text-center flex flex-col items-center justify-center gap-4 animate-in fade-in duration-500">
-                <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 shadow-md">
-                  <Check className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-850 dark:text-white">Session Completed!</h3>
-                <p className="text-xs text-slate-550 dark:text-zinc-400 font-light leading-relaxed max-w-sm">
-                  Your speech has been analyzed successfully. Scroll down to view your diagnostic metrics, transcript analysis, and custom cert card.
-                </p>
-                <button
-                  onClick={handleRetake}
-                  className="px-6 py-2.5 bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white rounded-xl text-xs font-bold transition-all shadow-[0_4px_15px_rgba(2,132,199,0.2)] cursor-pointer"
-                >
-                  Start New Session
-                </button>
-              </div>
-            ) : (
-              <>
-                <AnalysisLoader phase={phase} />
-
-                {isLoadingTask ? (
-                  <div className="flex flex-col items-center justify-center p-24 w-full">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#5B7C99] dark:text-indigo-400 mb-4" />
-                    <span className="text-xs font-semibold text-slate-555 dark:text-zinc-500 uppercase tracking-widest animate-pulse">Loading Task Details...</span>
-                  </div>
-                ) : (phase === "freeform_recording" || phase === "reading_recording") && (
-                  showWarmup && !hasWarmedUp && phase === "freeform_recording" ? (
-                    <PreSessionModal
-                      focusMetric={profileFocusMetric}
-                      goal={profileGoal}
-                      experienceLevel={profileExperience}
-                      practiceDuration={profileDuration}
-                      streak={streak}
-                      taskTopic={task?.topic_of_the_day || freeformTopic || "Free Practice"}
-                      isFirstSession={isFirstSession}
-                      onStartRecording={() => setHasWarmedUp(true)}
-                      onClose={() => setHasWarmedUp(true)}
-                    />
-                  ) : (
-                    <div className="w-full">
-                      <Recorder 
-                        onRecordingComplete={handleRecordingComplete} 
-                        isProcessing={isProcessing} 
-                        readingText={phase === "reading_recording" ? task?.reading_text : undefined}
-                        taskTopic={task?.topic_of_the_day || freeformTopic}
-                        initialBullets={freeformBullets}
-                        onTopicGenerated={(topic, bullets) => {
-                          setFreeformTopic(topic);
-                          setFreeformBullets(bullets);
-                        }}
-                        userId={user?.id}
-                        userLevel={profileExperience}
-                        mode={phase === "reading_recording" ? "reading" : (task?.isChallenge ? "warmup" : "freeform")}
-                        timeLimit={task?.timeLimit || 90}
-                        wordOfTheDay={task?.word_of_the_day}
-                        wordDefinition={task?.definition}
-                        tips={task?.tips}
-                        autoStart={showWarmup}
-                        focusMetric={profileFocusMetric}
-                      />
-                    </div>
-                  )
-                )}
-              </>
-            )}
-          </div>
-        </div>
-
-      </div>
-
-      {/* 2. Feedback Dashboard Reveal Area */}
+      {/* Slide-up AnalysisResults dashboard under the grid */}
       {phase === "results" && (
-        <div className="w-full animate-in fade-in slide-in-from-bottom-8 duration-500 mt-6">
+        <div className="w-full animate-in fade-in slide-in-from-bottom-8 duration-500 mt-6 relative z-20">
           <AnalysisResults
             phase={phase}
             metricsList={metricsList}
@@ -1281,7 +1138,7 @@ function PracticeContent() {
         </div>
       )}
 
-      {/* 4. Challenge Selector Modal */}
+      {/* Challenge Selector Modal */}
       <ChallengeModal
         showChallengeModal={showChallengeModal}
         onClose={() => setShowChallengeModal(false)}
@@ -1293,9 +1150,9 @@ function PracticeContent() {
         onStartChallenge={startChallenge}
       />
 
-      {/* 5. Custom Toast HUD */}
+      {/* Custom Toast HUD */}
       <ToastNotification toasts={toasts} />
-    </div>
+    </PracticeLayout>
   );
 }
 
