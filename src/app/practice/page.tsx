@@ -217,6 +217,14 @@ function PracticeContent() {
     setFreeformBullets([]);
   }, [activeTaskId]);
 
+  // Scroll to top when transitioning to results phase
+  useEffect(() => {
+    if (phase === "results") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [phase]);
+
+
   // Initialize Daily Challenge & Notification Permission on Mount
   useEffect(() => {
     const dayIndex = Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % dailyChallenges.length;

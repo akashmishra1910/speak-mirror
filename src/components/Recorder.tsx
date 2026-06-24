@@ -657,10 +657,14 @@ export function Recorder({
     rec.onend = () => {
       // Restart if still recording AND we didn't encounter a fatal error (like not-allowed or audio-capture)
       const isFatal = lastError && lastError !== "no-speech" && lastError !== "aborted";
-      if (!isFatal && mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-        try {
-          rec.start();
-        } catch (e) {}
+      if (!isFatal && isRecordingRef.current && mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        setTimeout(() => {
+          if (isRecordingRef.current && mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+            try {
+              rec.start();
+            } catch (e) {}
+          }
+        }, 1000); // 1-second safety delay to prevent tight infinite restart loops
       }
       lastError = null;
     };
