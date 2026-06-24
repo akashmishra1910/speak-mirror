@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 
 interface BreathingExerciseProps {
@@ -119,15 +119,17 @@ export function BreathingExercise({ onStepChange, onComplete }: BreathingExercis
 // Internal helper for clean opacity switches
 function AnimatePresenceModeSafe({ label, step }: { label: string; step: string }) {
   return (
-    <motion.span
-      key={step}
-      initial={{ opacity: 0, y: 5 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -5 }}
-      transition={{ duration: 0.4 }}
-      className="text-2xl font-semibold tracking-wide text-slate-800 dark:text-zinc-100 font-sans uppercase"
-    >
-      {label}
-    </motion.span>
+    <AnimatePresence mode="wait">
+      <motion.span
+        key={step}
+        initial={{ opacity: 0, y: 5 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -5 }}
+        transition={{ duration: 0.4 }}
+        className="text-2xl font-semibold tracking-wide text-slate-800 dark:text-zinc-100 font-sans uppercase"
+      >
+        {label}
+      </motion.span>
+    </AnimatePresence>
   );
 }
