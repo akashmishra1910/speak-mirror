@@ -31,27 +31,23 @@ export function PreSessionModal({
   onStartRecording,
   onClose,
 }: PreSessionModalProps) {
-  const [screen, setScreen] = useState<number>(1);
+  const [screen, setScreen] = useState<number>(2);
   const [breathingStep, setBreathingStep] = useState<string>("inhale");
 
-  const [focusTip, setFocusTip] = useState<string>("");
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [assignedDifficulty, setAssignedDifficulty] = useState<string | null>(null);
   const [difficultyExplanation, setDifficultyExplanation] = useState<string | null>(null);
-  const [isLoadingWarmup, setIsLoadingWarmup] = useState<boolean>(true);
 
-  // Fetch AI focus tip, dynamic difficulty, and previous performance insights
+  // Fetch dynamic difficulty, and previous performance insights
   useEffect(() => {
     const cacheKey = `warmup-brief-${focusMetric}-${goal}-${experienceLevel}-${streak}`;
     const cached = sessionStorage.getItem(cacheKey);
     if (cached) {
       try {
         const data = JSON.parse(cached);
-        setFocusTip(data.focusTip);
         setAiInsight(data.aiInsight);
         setAssignedDifficulty(data.assignedDifficulty);
         setDifficultyExplanation(data.explanation);
-        setIsLoadingWarmup(false);
         return;
       } catch (e) {
         console.error("Error parsing cached warmup data:", e);
@@ -75,7 +71,6 @@ export function PreSessionModal({
         });
         if (res.ok) {
           const data = await res.json();
-          setFocusTip(data.focusTip);
           setAiInsight(data.aiInsight);
           setAssignedDifficulty(data.assignedDifficulty);
           setDifficultyExplanation(data.explanation);
@@ -84,74 +79,11 @@ export function PreSessionModal({
         }
       } catch (err) {
         console.error("Failed to load warmup details:", err);
-      } finally {
-        setIsLoadingWarmup(false);
       }
     }
 
     loadWarmupData();
   }, [focusMetric, goal, experienceLevel, streak, taskTopic]);
-
-  // Screen 1: Focus Reminder - 3 seconds auto-advance
-  useEffect(() => {
-    if (screen !== 1) return;
-    const timer = setTimeout(() => {
-      setScreen(2);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [screen]);
-
-  // Map focus metrics to icons, names, and tips
-  const getMetricDetails = () => {
-    const metric = focusMetric?.toLowerCase() || "confidence";
-    switch (metric) {
-      case "confidence":
-        return {
-          name: "Confidence",
-          icon: <Zap className="w-16 h-16 text-amber-500 fill-amber-500/20" />,
-          tip: "Start strong — your first 10 seconds set the tone"
-        };
-      case "clarity":
-        return {
-          name: "Clarity",
-          icon: <Mic className="w-16 h-16 text-emerald-500" />,
-          tip: "Shorter sentences land harder than long ones"
-        };
-      case "pacing":
-        return {
-          name: "Pacing",
-          icon: <Clock className="w-16 h-16 text-indigo-500" />,
-          tip: "Speak slower than feels natural — it sounds better"
-        };
-      case "fillers":
-        return {
-          name: "Filler Words",
-          icon: <MessageSquare className="w-16 h-16 text-cyan-500" />,
-          tip: "Try pausing instead of saying um or uh"
-        };
-      case "eye_contact":
-      case "eye contact":
-        return {
-          name: "Eye Contact",
-          icon: <Eye className="w-16 h-16 text-sky-500" />,
-          tip: "Look directly at the camera, not the screen"
-        };
-      default:
-        return {
-          name: "Confidence",
-          icon: <Zap className="w-16 h-16 text-amber-500 fill-amber-500/20" />,
-          tip: "Start strong — your first 10 seconds set the tone"
-        };
-    }
-  };
-
-  const metricDetails = getMetricDetails();
-
-  // Get Goal text formatted
-  const getGoalLabel = () => {
-    if (!goal) return "Personal Growth";
-    return goal.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-  };
 
   // Get Difficulty based on experience level
   const getDifficultyBadge = () => {
@@ -192,8 +124,8 @@ export function PreSessionModal({
         <span>Cancel</span>
       </button>
 
-      {/* Top controls: Skip buttons (available on Screen 1 & 2) */}
-      {(screen === 1 || screen === 2) && (
+      {/* Top controls: Skip buttons (available on Screen 2) */}
+      {screen === 2 && (
         <button
           onClick={() => setScreen(3)}
           className="absolute top-8 right-8 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white transition-all text-xs font-bold cursor-pointer"
@@ -206,58 +138,6 @@ export function PreSessionModal({
       {/* Main Container */}
       <div className="w-full max-w-lg px-6 flex flex-col items-center justify-center min-h-[50vh]">
         <AnimatePresence mode="wait">
-          
-          {/* SCREEN 1: FOCUS REMINDER */}
-          {screen === 1 && (
-            <motion.div
-              key="screen-1"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              onClick={() => setScreen(2)}
-              className="flex flex-col items-center text-center cursor-pointer w-full"
-            >
-              {isFirstSession ? (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="p-4 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/25 mb-4 animate-pulse">
-                    <Sparkles className="w-10 h-10" />
-                  </div>
-                  <h2 className="text-3xl font-extrabold text-white">Your first session 🎉</h2>
-                  <p className="text-slate-400 text-sm font-light leading-relaxed max-w-sm mt-1">
-                    Don't worry about being perfect — just speak naturally.
-                  </p>
-                  <div className="mt-4 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-zinc-400 uppercase tracking-widest">
-                    Stated Goal: {getGoalLabel()}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-5">
-                  <div className="p-5 rounded-3xl bg-white/[0.03] border border-white/5 shadow-2xl mb-2">
-                    {metricDetails.icon}
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 font-mono">
-                      Today's focus: {metricDetails.name}
-                    </span>
-                    <h2 className="text-2xl font-bold text-white">Focus Area</h2>
-                    {isLoadingWarmup ? (
-                      <div className="flex flex-col gap-2 mt-4 items-center w-full max-w-[280px]">
-                        <div className="h-4 w-full bg-white/10 rounded animate-pulse" />
-                        <div className="h-4 w-3/4 bg-white/10 rounded animate-pulse" />
-                      </div>
-                    ) : (
-                      <p className="text-slate-300 text-base md:text-lg italic font-light leading-relaxed mt-2 max-w-sm animate-fade-in">
-                        "{focusTip || metricDetails.tip}"
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-              <span className="text-[9px] text-zinc-650 uppercase font-mono tracking-widest mt-12 animate-pulse">
-                Tap anywhere to advance
-              </span>
-            </motion.div>
-          )}
 
           {/* SCREEN 2: BREATHING EXERCISE */}
           {screen === 2 && (
