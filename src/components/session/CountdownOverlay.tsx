@@ -24,7 +24,8 @@ export function CountdownOverlay({ onComplete }: CountdownOverlayProps) {
     }
 
     return () => clearTimeout(timer);
-  }, [count, onComplete]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [count]);
 
   return (
     <div className="absolute inset-0 z-50 bg-[#0d1117]/88 flex items-center justify-center pointer-events-auto select-none">

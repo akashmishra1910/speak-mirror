@@ -203,7 +203,7 @@ export function Stage({
 
         {/* Symmetrically Centered Recording Controls (floating over video bottom) */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-auto select-none">
-          {!isProcessing && (
+          {!isProcessing && !showCountdown && (
             isRecording ? (
               <StopButton onClick={onStopRecording} isRecording={isRecording} />
             ) : (
@@ -263,6 +263,7 @@ export function Stage({
           <AnimatePresence>
             {isAssistEnabled && (
               <motion.div
+                key="assist-overlay"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
